@@ -1,0 +1,14 @@
+site,lat,lon,type,location,cover,vegclass,elevation_m,slope_d,canopy_h_m,ndvi,nbr,fire_flam,fire_sens
+jc_cen,-42.99883,146.94341,closed,arena,dirt,DOB,196,14.4,11,0.4933,0.4737,H,L
+jc_co1,-42.99764,146.93931,open,game,rock,DTO,137,25.3,18,0.44,0.35,H,L
+jc_co1_s1,-42.99724,146.93958,open,game,rock,DTO,133,27,1,0.3924,0.3253,H,L
+jc_co2,-42.99601,146.9455,open,road,dirt,FPS,228,15.8,9,0.6,0.6,MH,E
+jc_co3,-43.00068,146.94806,closed,arena,dirt,DOB,211,20,20,0.6154,0.575,H,L
+jc_co3_s16,-43.00025,146.94748,open,arena,moss,DOB,224,6.3,17,0.52,0.4615,H,L
+jc_co4,-43.00163,146.94092,open,game,rock,DTO,92,26.7,16,0.4359,0.3827,H,L
+jc_pm12,-42.99667,146.94242,open,arena,grass,DOB,143,10.5,7,0.4684,0.381,H,L
+jc_pm14,-42.99979,146.9401,closed,game,moss,DOB,109,18.2,26,0.4366,0.3973,H,L
+jc_pm14_s1,-42.99953,146.9402,closed,game,litter,DOB,118,23.4,1,0.4493,0.4493,H,L
+jc_pm23,-42.99844,146.94626,open,game,litter,WOB,226,9.6,12,0.4815,0.4286,ML,H
+jc_pm34,-43.001448,146.945403,closed,game,moss,DOB,168,24.4,17,0.5135,0.4737,H,L
+jc_pm34_s15,-43.00107,146.94408,open,arena,litter,DTO,180,9.4,9,0.4795,0.4211,H,L

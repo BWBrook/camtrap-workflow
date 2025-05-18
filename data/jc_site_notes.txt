@@ -1,0 +1,41 @@
+C:/gis/jc_map_workflow.R
+
+Whole site	
+TASVEG 4 = Dry Eucalypt Forest and Woodland (Wet Eucalypt Forest and Woodland in valleys)	
+Forest Group Code = ELF	
+Forest Group Description = Eucalypt Low Forest	
+Tenure Class = Conservation Area	
+Feature Name = Judbury Conservation Area	
+No fire in recent records (not impacted by 1967 event)	
+Soil pH = 5.6	
+Soil Permeability and Drainage = Moderate	
+Southern Forests IBRA	
+Soil Dryness Index = 121 mm	
+Soil: 40% kudosol, 40% rudosol	
+Get weather data from Judbury BOM	
+	
+TASVEG 4 Key	
+DOB = Eucalyptus obliqua dry forest	
+WPB = Eucalyptus obliqua forest with broad-leaf shrubs	
+DTO = Eucalyptus tenuiramis forest and woodland on sediments	
+FPS = Plantations for silviculture - softwood	
+FWU = Weed infestation
+FAG = Agricultural land	
+FUR = Urban areas	
+	
+Nearby	
+Private Land	
+Softwood Plantation (Pine)	
+Farmland	
+Town (Judbury)	
+	
+Digital Terrain Model 10m	
+Slope 5m	
+Landform Classification	
+Land Tenure	
+
+GDA94 MGA55
+top-left = 494660 E 5239850 N
+top-right = 496070 E 5239850 N
+bottom-right = 496070 E 5238460 N
+bottom-left = 494660 E 5238460 N
