@@ -19,6 +19,7 @@
 /*.Rcheck/
 
 # RStudio files
+.Rproj
 .Rproj.user/
 
 # produced vignettes
@@ -47,3 +48,12 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# No transient renv files
+renv/library/
+renv/python/
+_targets/
+
+# Output directories
+/output/
+/plots/

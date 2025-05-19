@@ -1,14 +1,13 @@
 # custom_funcs.R
 # Helper functions for the Judbury camera-trap workflow
-# British spelling, explicit imports throughout.
 
 #' Read a JC CSV and return a clean tibble
 #' @param path Relative file path (character)
 #' @return tibble with snake-case names
 #' @export
 read_jc_csv <- function(path) {
-  import::from(readr,   read_csv)
-  import::from(janitor, clean_names)
+  import::from("readr",   read_csv)
+  import::from("janitor", clean_names)
   
   read_csv(path, show_col_types = FALSE) |>
     clean_names()
@@ -21,7 +20,7 @@ read_jc_csv <- function(path) {
 #' @return TRUE invisibly
 #' @export
 check_keys <- function(obs, site) {
-  import::from(dplyr, pull)
+  import::from("dplyr", pull)
   
   missing_sites <- setdiff(unique(obs$site), pull(site, site))
   if (length(missing_sites) > 0L) {
@@ -38,7 +37,7 @@ check_keys <- function(obs, site) {
 #' @return TRUE invisibly
 #' @export
 validate_effort <- function(op) {
-  import::from(dplyr, across, summarise, select, everything)
+  import::from("dplyr", across, summarise, select, everything)
   
   na_summary <- op |>
     select(-date) |>

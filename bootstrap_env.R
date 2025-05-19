@@ -4,13 +4,12 @@
 if (!requireNamespace("renv", quietly = TRUE)) install.packages("renv")
 if (!requireNamespace("import", quietly = TRUE)) install.packages("import")
 
-import::from(renv, init, install, snapshot)
+import::from("renv", init, install, snapshot)
 
 # List of CRAN packages required for the Judbury camera‑trap workflow
 required_pkgs <- c(
-  "targets", "camtrapR", "unmarked", "spOccupancy", 
-  "readr", "dplyr",
-  "FD", "cowplot", "sf", "janitor", "import"
+  "targets", "camtrapR", "unmarked", "spOccupancy", "readr", "dplyr",
+  "FD", "cowplot", "sf", "janitor", "import", "here", "testthat", "fs"
 )
 
 # Initialise a bare renv project on first run
