@@ -6,4 +6,5 @@ jc_op.csv,jc_cen,int,"0 = inactive, 1 = active",Daily operational status for cam
 jc_site.csv,lat,dbl,decimal degrees,Latitude (WGS84).
 jc_site.csv,lon,dbl,decimal degrees,Longitude (WGS84).
 jc_site.csv,site,chr,—,Unique camera‐site identifier.
+jc_site.csv,type,chr,—,"open, closed"
 jc_taxa.csv,class,chr,"Aves, Mammalia, …",Taxonomic class.

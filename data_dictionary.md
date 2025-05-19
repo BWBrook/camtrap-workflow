@@ -10,7 +10,7 @@ Maintainer: <Barry Brook / barry.brook@utas.edu.au>
 | site              | chr    | —                    | Unique camera‐site identifier.      |
 | lat               | dbl    | decimal degrees      | Latitude (WGS84).                   |
 | lon               | dbl    | decimal degrees      | Longitude (WGS84).                  |
-| …                 | …      | …                    | …                                   |
+| type              | chr    | —                    | open, closed                        |
 
 ## 2 jc_taxa.csv  — Species traits
 | Column   | Type | Units / Levels       | Description       |
