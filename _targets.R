@@ -3,20 +3,23 @@
 import::from("targets", tar_option_set, tar_target, tar_cue)
 import::from("here", here)
 
-import::here(read_jc_csv, check_keys, validate_effort,
+import::here(
+  read_jc_csv, check_keys, validate_effort,
+  pivot_op_long, calc_trap_nights, filter_obs_by_effort,
   .from = "R/custom_funcs.R"
 )
 
 # Packages available to every target
 tar_option_set(
   packages = c(
-    "camtrapR", "unmarked", "spOccupancy",
-    "FD", "cowplot", "sf", "janitor", "dplyr", "readr"
+    "camtrapR", "unmarked", "spOccupancy", "readr", "dplyr",
+    "FD", "cowplot", "sf", "janitor", "tidyr", "lubridate",
+    "here"
   )
 )
 
 list(
-  ## ── DATA DICTIONARY SYNC ──────────────
+  ## ── DATA DICTIONARY SYNC ─────────────────────────────────────────────
   tar_target(
     data_dictionary_md,
     here("data_dictionary.md"),
@@ -30,13 +33,13 @@ list(
     },
     format = "file"
   ),  
-  ## ── RAW IMPORTS ───────────────────────────────────────────────────────────────
+  ## ── RAW IMPORTS ──────────────────────────────────────────────────────
   tar_target(taxa_raw, read_jc_csv(here("data", "jc_taxa.csv"))),
   tar_target(site_raw, read_jc_csv(here("data", "jc_site.csv"))),
-  tar_target(op_raw, read_jc_csv(here("data", "jc_op.csv"))),
-  tar_target(obs_raw, read_jc_csv(here("data", "jc_obs.csv"))),
+  tar_target(op_raw,   read_jc_csv(here("data", "jc_op.csv"))),
+  tar_target(obs_raw,  read_jc_csv(here("data", "jc_obs.csv"))),
   
-  ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────────────
+  ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
   tar_target(key_check,
     check_keys(obs_raw, site_raw),
     cue = tar_cue(mode = "always")
@@ -45,4 +48,8 @@ list(
     validate_effort(op_raw),
     cue = tar_cue(mode = "always")
   )
+  ## ── EFFORT STANDARDISATION ───────────────────────────────────────────
+  tar_target(op_long,      pivot_op_long(op_raw)),
+  tar_target(trap_nights,  calc_trap_nights(op_long)),
+  tar_target(obs_filtered, filter_obs_by_effort(obs_raw, op_long))
 )

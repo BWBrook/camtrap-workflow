@@ -50,3 +50,44 @@ validate_effort <- function(op) {
   }
   invisible(TRUE)
 }
+
+#' Pivot daily effort table to long format
+#' @param op  tibble (date + camera columns)
+#' @return tibble with columns: date, site, on_off (0/1)
+#' @export
+pivot_op_long <- function(op) {
+  import::from(tidyr, pivot_longer)
+  import::from(dplyr, rename)
+  
+  op |>
+    pivot_longer(-date, names_to = "site", values_to = "on_off") |>
+    rename(trap_date = date)
+}
+
+#' Summarise trap nights per site
+#' @param op_long tibble from pivot_op_long()
+#' @return tibble: site, trap_nights
+#' @export
+calc_trap_nights <- function(op_long) {
+  import::from(dplyr, group_by, summarise)
+  
+  op_long |>
+    group_by(site) |>
+    summarise(trap_nights = sum(on_off), .groups = "drop")
+}
+
+#' Filter observations to periods when camera was on
+#' @param obs tibble of detections
+#' @param op_long tibble with on/off per date-site
+#' @return filtered tibble
+#' @export
+filter_obs_by_effort <- function(obs, op_long) {
+  import::from(dplyr, left_join, filter, select)
+  import::from(lubridate, as_date)
+  
+  obs |>
+    mutate(trap_date = as_date(datetime, format = "%d/%m/%Y")) |>
+    left_join(op_long, by = c("site", "trap_date")) |>
+    filter(on_off == 1) |>
+    select(-on_off)
+}
