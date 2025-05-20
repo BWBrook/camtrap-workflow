@@ -6,6 +6,7 @@ import::from("here", here)
 import::here(
   read_jc_csv, check_keys, validate_effort,
   pivot_op_long, calc_trap_nights, filter_obs_by_effort,
+  define_events, summarise_events,
   .from = "R/custom_funcs.R"
 )
 
@@ -47,9 +48,18 @@ list(
   tar_target(effort_validation,
     validate_effort(op_raw),
     cue = tar_cue(mode = "always")
-  )
+  ),
   ## ── EFFORT STANDARDISATION ───────────────────────────────────────────
   tar_target(op_long,      pivot_op_long(op_raw)),
   tar_target(trap_nights,  calc_trap_nights(op_long)),
-  tar_target(obs_filtered, filter_obs_by_effort(obs_raw, op_long))
+  tar_target(obs_filtered, filter_obs_by_effort(obs_raw, op_long)),
+  ## ── INDEPENDENT-EVENT FILTERING ───────────────────────────────────────────────
+  tar_target(
+    obs_events,
+    define_events(obs_filtered, threshold = 15)   # 15-min gap
+  ),
+  tar_target(
+    events_per_day,
+    summarise_events(obs_events)
+  )
 )

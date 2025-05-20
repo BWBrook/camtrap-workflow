@@ -56,10 +56,12 @@ validate_effort <- function(op) {
 #' @return tibble with columns: date, site, on_off (0/1)
 #' @export
 pivot_op_long <- function(op) {
-  import::from(tidyr, pivot_longer)
-  import::from(dplyr, rename)
-  
+  import::from("tidyr",      pivot_longer)
+  import::from("dplyr",      rename, mutate)
+  import::from("lubridate",  as_date)
+
   op |>
+    mutate(date = as_date(date, format = "%d/%m/%Y")) |>  # ← parse once
     pivot_longer(-date, names_to = "site", values_to = "on_off") |>
     rename(trap_date = date)
 }
@@ -82,12 +84,53 @@ calc_trap_nights <- function(op_long) {
 #' @return filtered tibble
 #' @export
 filter_obs_by_effort <- function(obs, op_long) {
-  import::from(dplyr, left_join, filter, select)
-  import::from(lubridate, as_date)
-  
+  import::from("dplyr",      left_join, filter, select, mutate)
+  import::from("lubridate",  as_date)   # already in use
+
   obs |>
-    mutate(trap_date = as_date(datetime, format = "%d/%m/%Y")) |>
+    mutate(
+      trap_date = as_date(datetime, format = "%d/%m/%Y %H:%M:%S")
+      # alternatively: trap_date = date(lubridate::dmy_hms(datetime))
+    ) |>
     left_join(op_long, by = c("site", "trap_date")) |>
     filter(on_off == 1) |>
     select(-on_off)
+}
+
+#' Tag independent camera-trap events
+#' @param obs        tibble from obs_filtered
+#' @param threshold  gap (minutes) that separates events
+#' @return obs with new columns: dt (POSIXct) and event_id (character)
+#' @export
+define_events <- function(obs, threshold = 15) {  # 15-min gap
+  import::from("dplyr", arrange, group_by, mutate, lag, ungroup, filter)
+  import::from("lubridate", dmy_hms)
+
+  obs |>
+    mutate(
+      dt = dmy_hms(datetime, tz = "Etc/GMT-10", quiet = TRUE)  # ← fixed offset
+    ) |>
+    filter(!is.na(dt)) |>
+    arrange(site, species, dt) |>
+    group_by(site, species) |>
+    mutate(
+      gap_min  = as.numeric(difftime(dt, lag(dt), units = "mins")),
+      new_evt  = if_else(is.na(gap_min) | gap_min > threshold, 1L, 0L),
+      event_id = paste(site, species, cumsum(new_evt), sep = "_")
+    ) |>
+    ungroup() |>
+    select(-gap_min, -new_evt)
+}
+
+#' Summarise events per day–site–species
+#' @param obs_events tibble from define_events()
+#' @return tibble with columns site, species, date, events
+#' @export
+summarise_events <- function(obs_events) {
+  import::from("dplyr", group_by, summarise, n_distinct)
+  import::from("lubridate", as_date)
+  
+  obs_events |>
+    group_by(site, species, date = as_date(dt)) |>
+    summarise(events = n_distinct(event_id), .groups = "drop")
 }
