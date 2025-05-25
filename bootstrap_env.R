@@ -11,7 +11,8 @@ required_pkgs <- c(
   "targets", "camtrapR", "unmarked", "spOccupancy",
   "readr", "dplyr", "tidyr", "lubridate",
   "FD", "cowplot", "sf", "janitor",
-  "import", "here", "testthat", "fs", "visNetwork"
+  "import", "here", "testthat", "fs", "visNetwork",
+  "ggplot2", "vegan", "tibble"
 )
 
 # ensure project library exists, then reconcile

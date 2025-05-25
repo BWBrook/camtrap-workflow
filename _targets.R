@@ -7,6 +7,8 @@ import::here(
   read_jc_csv, check_keys, validate_effort,
   pivot_op_long, calc_trap_nights, filter_obs_by_effort,
   define_events, summarise_events,
+  calc_rai, calc_prop_days, calc_diel,
+  build_rarefaction, plot_rarefaction,
   .from = "R/custom_funcs.R"
 )
 
@@ -15,6 +17,7 @@ tar_option_set(
   packages = c(
     "camtrapR", "unmarked", "spOccupancy", "readr", "dplyr",
     "FD", "cowplot", "sf", "janitor", "tidyr", "lubridate",
+    "ggplot2", "vegan", "tibble",
     "here"
   )
 )
@@ -61,5 +64,38 @@ list(
   tar_target(
     events_per_day,
     summarise_events(obs_events)
+  ),
+  ## ── DESCRIPTIVE SUMMARIES ──────────────────────────────────────────────
+  tar_target(
+    rai_site_species,
+    calc_rai(events_per_day, trap_nights)$site
+  ),
+  tar_target(
+    rai_species,
+    calc_rai(events_per_day, trap_nights)$pooled
+  ),
+  tar_target(
+    prop_days_site,
+    calc_prop_days(events_per_day, trap_nights)$site
+  ),
+  tar_target(
+    prop_days_species,
+    calc_prop_days(events_per_day, trap_nights)$pooled
+  ),
+  tar_target(
+    diel_site,
+    calc_diel(obs_events, by_season = FALSE)
+  ),
+  tar_target(
+    diel_site_season,
+    calc_diel(obs_events, by_season = TRUE)
+  ),
+  tar_target(
+    rarefaction_plot,
+    {
+      df <- build_rarefaction(events_per_day, 100)
+      plot_rarefaction(df, here("outputs", "rarefaction.png"))
+    },
+    format = "file"
   )
 )

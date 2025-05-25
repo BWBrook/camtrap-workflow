@@ -55,5 +55,5 @@ renv/python/
 _targets/
 
 # Output directories
-/output/
+/outputs/
 /plots/
