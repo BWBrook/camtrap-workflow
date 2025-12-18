@@ -22,20 +22,21 @@ The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the e
 
 ### 1) Prerequisites
 - R 4.5.2
-- System build tools appropriate for your OS (especially for spatial packages)
+- Quarto (for report rendering). Verify with: `quarto --version`
+- System build tools appropriate for your OS (some R packages compile from source)
 
 ### 2) Restore the locked environment
 From the project root, run:
 
 ```r
-renv::restore()
+renv::restore(prompt = FALSE)
 ````
 
 If you do not have `renv` installed yet:
 
 ```r
 install.packages("renv")
-renv::restore()
+renv::restore(prompt = FALSE)
 ```
 
 ### 3) Run the pipeline
@@ -46,13 +47,19 @@ In R:
 targets::tar_make()
 ```
 
+Or from the shell (non-interactive):
+
+```sh
+Rscript -e 'targets::tar_make()'
+```
+
 ### 4) View outputs
 
 Outputs are written to `outputs/` (gitignored). Look for:
 
 * `outputs/report/` for the rendered report
 * `outputs/figures/` for plots
-* `outputs/tables/` for derived tables
+* `outputs/session_info.txt` for session provenance
 
 ## Running on your own dataset
 
@@ -71,6 +78,14 @@ See `docs/product_brief.md` and the data contract documentation (to be expanded)
 * Reusable functions live in `R/`.
 * Tests live in `tests/`.
 * Project decisions and milestones live in `docs/`.
+
+Run quality gates locally:
+
+```sh
+Rscript scripts/run_lint.R
+Rscript scripts/run_tests.R
+Rscript -e 'targets::tar_make()'
+```
 
 Before contributing changes, please read:
 

@@ -93,3 +93,17 @@ Rationale:
 Consequences / follow-ups:
 - Add helper utilities for writing outputs and manifests.
 - CI should upload key artefacts for review.
+
+---
+
+## 2025-12-18 — CI + report artefact via Quarto (minimal MVP)
+Decision:
+- Treat a minimal Quarto HTML report as a first-class pipeline artefact (rendered in `targets`) for MVP, using a lightweight `analysis/report.qmd` that reads precomputed pipeline outputs.
+
+Rationale:
+- The repo goal is an end-to-end workflow producing coherent scientific artefacts; a rendered report provides an immediate review surface for PI and collaborators.
+- Rendering in the pipeline makes it reproducible and CI-checkable.
+
+Consequences / follow-ups:
+- Keep the report inputs narrow and explicitly passed via a saved `report_inputs.rds` target to avoid hidden coupling.
+- Expand report sections and diagnostics (effort, event-spacing, QC summaries) as subsequent WPs land.

@@ -99,6 +99,8 @@ This is required even if results “look fine”.
 
 Before handing a snapshot back for PI review:
 - `renv.lock` is updated and complete
+- lint passes (`Rscript scripts/run_lint.R`)
+- tests pass (`Rscript scripts/run_tests.R`)
 - tests pass locally
 - lint is clean (or documented exceptions)
 - pipeline runs end-to-end on exemplar data

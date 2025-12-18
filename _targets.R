@@ -15,10 +15,18 @@ import::here(
 # Packages available to every target
 tar_option_set(
   packages = c(
-    "camtrapR", "unmarked", "spOccupancy", "readr", "dplyr",
-    "FD", "cowplot", "sf", "janitor", "tidyr", "lubridate",
-    "ggplot2", "vegan", "tibble",
-    "here"
+    "dplyr",
+    "fs",
+    "ggplot2",
+    "here",
+    "janitor",
+    "knitr",
+    "lubridate",
+    "readr",
+    "stringr",
+    "tibble",
+    "tidyr",
+    "vegan"
   )
 )
 
@@ -36,13 +44,13 @@ list(
       here("data", "data_dictionary.csv")
     },
     format = "file"
-  ),  
+  ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
   tar_target(taxa_raw, read_jc_csv(here("data", "jc_taxa.csv"))),
   tar_target(site_raw, read_jc_csv(here("data", "jc_site.csv"))),
   tar_target(op_raw,   read_jc_csv(here("data", "jc_op.csv"))),
   tar_target(obs_raw,  read_jc_csv(here("data", "jc_obs.csv"))),
-  
+
   ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
   tar_target(key_check,
     check_keys(obs_raw, site_raw),
@@ -94,7 +102,61 @@ list(
     rarefaction_plot,
     {
       df <- build_rarefaction(events_per_day, 100)
-      plot_rarefaction(df, here("outputs", "rarefaction.png"))
+      plot_rarefaction(df, here("outputs", "figures", "rarefaction.png"))
+    },
+    format = "file"
+  ),
+  tar_target(
+    session_info,
+    {
+      out_path <- here("outputs", "session_info.txt")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      writeLines(capture.output(sessionInfo()), out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    report_inputs_rds,
+    {
+      out_path <- here("outputs", "report", "report_inputs.rds")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+
+      report_inputs <- list(
+        n_sites = nrow(site_raw),
+        n_obs_raw = nrow(obs_raw),
+        n_obs_filtered = nrow(obs_filtered),
+        trap_nights = trap_nights,
+        rai_species = rai_species,
+        diel_site = diel_site
+      )
+
+      saveRDS(report_inputs, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    report_html,
+    {
+      out_dir <- here("outputs", "report")
+      dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+      system2(
+        "quarto",
+        c(
+          "render",
+          here("analysis", "report.qmd"),
+          "--output-dir",
+          out_dir,
+          "-P",
+          paste0("inputs_path:", report_inputs_rds),
+          "-P",
+          paste0("rarefaction_path:", rarefaction_plot)
+        )
+      )
+
+      here("outputs", "report", "report.html")
     },
     format = "file"
   )

@@ -1,0 +1,47 @@
+---
+title: "camtrap-workflow: Judbury exemplar report"
+format:
+  html:
+    toc: true
+    embed-resources: true
+params:
+  inputs_path: null
+  rarefaction_path: null
+---
+
+```{r}
+stopifnot(!is.null(params$inputs_path))
+inputs <- readRDS(params$inputs_path)
+```
+
+## Snapshot
+
+- Sites: `r inputs$n_sites`
+- Observations (raw rows): `r inputs$n_obs_raw`
+- Observations (filtered to active effort days): `r inputs$n_obs_filtered`
+
+## Effort (trap nights)
+
+```{r}
+knitr::kable(inputs$trap_nights)
+```
+
+## Relative abundance index (pooled)
+
+```{r}
+knitr::kable(inputs$rai_species)
+```
+
+## Diel activity (site × period)
+
+```{r}
+knitr::kable(utils::head(inputs$diel_site, 20))
+```
+
+## Rarefaction
+
+```{r}
+stopifnot(!is.null(params$rarefaction_path))
+knitr::include_graphics(params$rarefaction_path)
+```
+

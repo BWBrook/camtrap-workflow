@@ -8,7 +8,7 @@
 read_jc_csv <- function(path) {
   import::from("readr",   read_csv)
   import::from("janitor", clean_names)
-  
+
   read_csv(path, show_col_types = FALSE) |>
     clean_names()
 }
@@ -21,7 +21,7 @@ read_jc_csv <- function(path) {
 #' @export
 check_keys <- function(obs, site) {
   import::from("dplyr", pull)
-  
+
   missing_sites <- setdiff(unique(obs$site), pull(site, site))
   if (length(missing_sites) > 0L) {
     stop(
@@ -38,12 +38,12 @@ check_keys <- function(obs, site) {
 #' @export
 validate_effort <- function(op) {
   import::from("dplyr", across, summarise, select, everything)
-  
+
   na_summary <- op |>
     select(-date) |>
     summarise(across(everything(), \(x) sum(is.na(x)))) |>
     unlist()
-  
+
   total_na <- sum(na_summary)
   if (total_na > 0L) {
     stop("QC failure: effort table contains ", total_na, " NA values.")
@@ -71,8 +71,8 @@ pivot_op_long <- function(op) {
 #' @return tibble: site, trap_nights
 #' @export
 calc_trap_nights <- function(op_long) {
-  import::from(dplyr, group_by, summarise)
-  
+  import::from("dplyr", group_by, summarise)
+
   op_long |>
     group_by(site) |>
     summarise(trap_nights = sum(on_off), .groups = "drop")
@@ -90,7 +90,6 @@ filter_obs_by_effort <- function(obs, op_long) {
   obs |>
     mutate(
       trap_date = as_date(datetime, format = "%d/%m/%Y %H:%M:%S")
-      # alternatively: trap_date = date(lubridate::dmy_hms(datetime))
     ) |>
     left_join(op_long, by = c("site", "trap_date")) |>
     filter(on_off == 1) |>
@@ -102,13 +101,13 @@ filter_obs_by_effort <- function(obs, op_long) {
 #' @param threshold  gap (minutes) that separates events
 #' @return obs with new columns: dt (POSIXct) and event_id (character)
 #' @export
-define_events <- function(obs, threshold = 15) {  # 15-min gap
-  import::from("dplyr", arrange, group_by, mutate, lag, ungroup, filter)
+define_events <- function(obs, threshold = 15, tz = "Australia/Hobart") {  # 15-min gap
+  import::from("dplyr", arrange, group_by, mutate, lag, ungroup, filter, if_else, select)
   import::from("lubridate", dmy_hms)
 
   obs |>
     mutate(
-      dt = dmy_hms(datetime, tz = "Etc/GMT-10", quiet = TRUE)  # ← fixed offset
+      dt = dmy_hms(datetime, tz = tz, quiet = TRUE)
     ) |>
     filter(!is.na(dt)) |>
     arrange(site, species, dt) |>
@@ -129,7 +128,7 @@ define_events <- function(obs, threshold = 15) {  # 15-min gap
 summarise_events <- function(obs_events) {
   import::from("dplyr", group_by, summarise, n_distinct)
   import::from("lubridate", as_date)
-  
+
   obs_events |>
     group_by(site, species, date = as_date(dt)) |>
     summarise(events = n_distinct(event_id), .groups = "drop")
@@ -146,13 +145,13 @@ summarise_events <- function(obs_events) {
 #' @param trap_nights    Tibble with columns `site`, `trap_nights`
 #'   (output of `calc_trap_nights()`).
 #'
-#' @return A list with two tibbles:  
-#' * `$site`    — one row per `site` × `species`, columns `rai`.  
+#' @return A list with two tibbles:
+#' * `$site`    — one row per `site` × `species`, columns `rai`.
 #' * `$pooled` — one row per `species`, pooled across sites, column `rai`.
 #'
 #' @export
 calc_rai <- function(events_per_day, trap_nights) {
-  import::from("dplyr", group_by, summarise, left_join, mutate, across)
+  import::from("dplyr", group_by, summarise, left_join, mutate, across, select)
 
   rai_site <- events_per_day |>
     group_by(site, species) |>
@@ -178,13 +177,13 @@ calc_rai <- function(events_per_day, trap_nights) {
 #'   (see `summarise_events()`).
 #' @param trap_nights    Tibble of trap-night effort per site.
 #'
-#' @return A list with two tibbles analogous to `calc_rai()`:  
-#' * `$site`    — proportion per site × species.  
+#' @return A list with two tibbles analogous to `calc_rai()`:
+#' * `$site`    — proportion per site × species.
 #' * `$pooled` — mean proportion across sites for each species.
 #'
 #' @export
 calc_prop_days <- function(events_per_day, trap_nights) {
-  import::from("dplyr", group_by, summarise, left_join, mutate)
+  import::from("dplyr", group_by, summarise, left_join, mutate, select)
 
   days_with_event <- events_per_day |>
     group_by(site, species) |>
@@ -218,7 +217,7 @@ calc_prop_days <- function(events_per_day, trap_nights) {
 #'
 #' @export
 calc_diel <- function(obs_events, by_season = FALSE) {
-  import::from("dplyr", mutate, group_by, summarise, ungroup, across)
+  import::from("dplyr", mutate, group_by, summarise, ungroup, across, case_when, n)
   import::from("lubridate", month)
 
   df <- obs_events |>
@@ -261,8 +260,8 @@ build_rarefaction <- function(events_per_day, permutations = 100) {
   import::from("vegan", specaccum)
   import::from("dplyr", distinct, mutate)
   import::from("tidyr", pivot_wider)
-  import::from("tibble", column_to_rownames)
-  
+  import::from("tibble", column_to_rownames, tibble)
+
   # one row per site × species
   inc_mat <- events_per_day |>
     distinct(site, species) |>
@@ -270,9 +269,9 @@ build_rarefaction <- function(events_per_day, permutations = 100) {
     pivot_wider(names_from = species, values_from = pres, values_fill = 0) |>
     column_to_rownames("site") |>
     as.matrix()
-  
+
   acc <- specaccum(inc_mat, method = "random", permutations = permutations)
-  
+
   tibble(
     sites    = acc$sites,
     richness = acc$richness,
@@ -306,5 +305,5 @@ plot_rarefaction <- function(df, out_path) {
     labs(x = "Number of camera sites", y = "Species richness")
 
   ggsave(out_path, p, width = 6, height = 4, dpi = 300)
-  return(out_path)
+  out_path
 }

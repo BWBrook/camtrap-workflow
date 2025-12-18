@@ -43,8 +43,8 @@ Rscript .\bootstrap_env.R
 Rscript ./bootstrap_env.R
 ```
 
-* This will automatically install two key packages (`renv`, `import`) if missing, then set up all project dependencies.
-* On first run, this may take a few minutes.
+* This restores the project’s locked `renv` environment.
+* On first run, this may take a few minutes (packages may need to compile).
 
 ---
 
@@ -70,10 +70,10 @@ targets::tar_make()
 
 ## What’s Happening Under the Hood?
 
-* **`bootstrap_env.R`**: Sets up the project’s own R package library—no more “it worked on my machine.”
+* **`bootstrap_env.R`**: Activates the project and runs `renv::restore(prompt = FALSE)`.
 * **`renv.lock`**: Records the exact versions of all R packages needed.
 * **`_targets.R`**: Controls automated, reproducible analysis pipelines.
-* All custom code lives in `/src`.
+* Custom code lives in `R/`.
 
 ---
 
@@ -82,7 +82,7 @@ targets::tar_make()
 If you (or a collaborator) ever want to sync the project library to the locked versions, just run:
 
 ```r
-renv::restore()
+renv::restore(prompt = FALSE)
 ```
 
 ---
