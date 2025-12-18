@@ -1,0 +1,52 @@
+# Release checklist
+
+This checklist defines what must be true before tagging a release (e.g., v0.1.0, v0.9.0, v1.0.0).
+
+## 1) Reproducibility & build
+
+- [ ] `renv.lock` is present, non-empty, and matches the current codebase.
+- [ ] A fresh clone + `renv::restore()` succeeds on at least one clean machine/environment.
+- [ ] `targets::tar_make()` runs end-to-end on the exemplar dataset.
+- [ ] A rendered report exists under `outputs/report/` from the release build.
+- [ ] `outputs/session_info.txt` (or equivalent) is produced.
+
+## 2) Quality gates
+
+- [ ] Tests pass (`testthat`).
+- [ ] Lint passes (`lintr`) or exceptions are documented and minimal.
+- [ ] Pipeline smoke test runs in CI (or documented reason why not).
+- [ ] No new warnings/errors introduced (or documented as known limitations).
+
+## 3) Scientific sanity
+
+- [ ] QC checks pass for exemplar dataset.
+- [ ] Key descriptive artefacts are coherent:
+  - [ ] effort summaries
+  - [ ] event-spacing diagnostics
+  - [ ] RAI summaries
+  - [ ] diel summaries
+  - [ ] rarefaction curve
+- [ ] For Beta+ releases: occupancy results include diagnostics and are interpretable.
+- [ ] For 1.0: community and trait analyses outputs are produced and documented.
+
+## 4) Documentation
+
+- [ ] README is accurate and includes:
+  - setup steps,
+  - how to run the pipeline,
+  - where outputs are written,
+  - how to adapt to new data.
+- [ ] `docs/product_brief.md`, `docs/architecture.md`, and `docs/roadmap.md` are consistent.
+- [ ] `docs/decisions.md` is up to date.
+- [ ] `docs/questions_for_human.md` has no stale blockers (resolved or explicitly deferred).
+
+## 5) Versioning & release artefacts
+
+- [ ] Version number updated (semver).
+- [ ] CHANGELOG updated with user-facing changes and known limitations.
+- [ ] Tag created and pushed.
+- [ ] Release bundle includes or references:
+  - [ ] rendered report artefact(s),
+  - [ ] key tables/figures,
+  - [ ] `renv.lock`,
+  - [ ] session info.
