@@ -107,3 +107,44 @@ Rationale:
 Consequences / follow-ups:
 - Keep the report inputs narrow and explicitly passed via a saved `report_inputs.rds` target to avoid hidden coupling.
 - Expand report sections and diagnostics (effort, event-spacing, QC summaries) as subsequent WPs land.
+
+---
+
+## 2025-12-18 — Fix exemplar species code mismatch (`ben` → `wal`)
+Decision:
+- Treat the single `obs$species == "ben"` record as a typo and recode it to `wal` to align with `jc_taxa.csv`.
+
+Rationale:
+- Input contract requires all observation species codes to exist in the taxa table.
+- `jc_taxa.csv` already includes Bennett’s wallaby as `wal`; no `ben` entry exists.
+
+Consequences / follow-ups:
+- Documented in WP-0.3.3 log; re-run required for downstream artefacts.
+
+---
+
+## 2025-12-18 — Central configuration via `config.yml`
+Decision:
+- Use a single `config.yml` file at the project root as the primary configuration surface.
+
+Rationale:
+- Keeps key parameters (timezone, event threshold, paths, toggles) in one place.
+- Aligns with the architecture doc’s recommended options and supports reproducible runs.
+
+Consequences / follow-ups:
+- `config.yml` is now a tracked input for the pipeline.
+- Future parameters should be added here rather than hard-coded in `_targets.R`.
+
+---
+
+## 2026-01-06 — RAI uncertainty via Poisson rate confidence intervals
+Decision:
+- Compute RAI uncertainty using Poisson rate confidence intervals on event counts per unit effort.
+
+Rationale:
+- Provides a simple, transparent uncertainty estimate aligned with event count data.
+- Avoids heavy bootstrap costs for the MVP while still surfacing uncertainty.
+
+Consequences / follow-ups:
+- RAI outputs now include `rai_lower`/`rai_upper` bounds.
+- If later analyses require more complex uncertainty models, revisit with bootstrap or hierarchical methods.

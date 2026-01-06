@@ -1,0 +1,3 @@
+site,lat,lon,type,location,cover,vegclass,elevation_m,slope_d,canopy_h_m,ndvi,nbr,fire_flam,fire_sens
+site1,-42.00,146.00,forest,loc1,cover1,veg1,100,10,15,0.50,0.10,low,low
+site2,-42.10,146.10,forest,loc2,cover2,veg2,120,12,18,0.60,0.20,low,low

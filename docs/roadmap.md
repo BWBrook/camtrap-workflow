@@ -71,19 +71,19 @@ Notes:
 
 ### Line 0.3.x — Reproducible MVP: QC → Effort → Events → Descriptives → Report
 
-- [ ] **WP-0.3.1** Baseline audit + make exemplar run path real (restore → pipeline)  
-- [ ] **WP-0.3.2** Lock the environment (renv) with verified restore + deterministic dependency story  
-- [ ] **WP-0.3.3** Input data contract v0.1 + `schema_version` + validation layer that fails early and clearly  
-- [ ] **WP-0.3.4** Fix and harden the test baseline (dictionary sync, QC, smoke)  
-- [ ] **WP-0.3.5** Central configuration + run manifest (parameters, provenance, session info)  
-- [ ] **WP-0.3.6** Output contract + canonical run folder structure + output schema reference  
-- [ ] **WP-0.3.7** Effort processing hardened + effort artefacts (tables + plots)  
-- [ ] **WP-0.3.8** Time handling & clock diagnostics: timezone/DST strategy + drift flags + report section  
-- [ ] **WP-0.3.9** Independent event definition hardened + spacing diagnostics + invariants tests  
-- [ ] **WP-0.3.10** Descriptives pack: RAI (+ uncertainty), diel summaries, rarefaction (standardised outputs)  
-- [ ] **WP-0.3.11** MVP report as a first-class artefact (rendered via pipeline) + methods + limitations  
-- [ ] **WP-0.3.12** CI quality gates + artefact upload (restore, lint, tests, pipeline smoke)  
-- [ ] **WP-0.3.13** “Bring your own data” guide + template dataset folder + contract checklist  
+- [x] **WP-0.3.1** Baseline audit + make exemplar run path real (restore → pipeline)  
+- [x] **WP-0.3.2** Lock the environment (renv) with verified restore + deterministic dependency story  
+- [x] **WP-0.3.3** Input data contract v0.1 + `schema_version` + validation layer that fails early and clearly  
+- [x] **WP-0.3.4** Fix and harden the test baseline (dictionary sync, QC, smoke)  
+- [x] **WP-0.3.5** Central configuration + run manifest (parameters, provenance, session info)  
+- [x] **WP-0.3.6** Output contract + canonical run folder structure + output schema reference  
+- [x] **WP-0.3.7** Effort processing hardened + effort artefacts (tables + plots)  
+- [x] **WP-0.3.8** Time handling & clock diagnostics: timezone/DST strategy + drift flags + report section  
+- [x] **WP-0.3.9** Independent event definition hardened + spacing diagnostics + invariants tests  
+- [x] **WP-0.3.10** Descriptives pack: RAI (+ uncertainty), diel summaries, rarefaction (standardised outputs)  
+- [x] **WP-0.3.11** MVP report as a first-class artefact (rendered via pipeline) + methods + limitations  
+- [x] **WP-0.3.12** CI quality gates + artefact upload (restore, lint, tests, pipeline smoke)  
+- [x] **WP-0.3.13** “Bring your own data” guide + template dataset folder + contract checklist  
 
 ### Line 0.4.x — Beta: occupancy-ready data + single-species occupancy modelling
 

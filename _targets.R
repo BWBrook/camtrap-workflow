@@ -12,6 +12,61 @@ import::here(
   .from = "R/custom_funcs.R"
 )
 
+import::here(
+  summarise_effort,
+  validate_effort_censoring,
+  plot_effort_histogram,
+  plot_effort_heatmap,
+  .from = "R/effort_outputs.R"
+)
+
+import::here(
+  input_schema_v0_1,
+  validate_input_contract,
+  .from = "R/qc_schema.R"
+)
+
+import::here(
+  get_schema_version,
+  .from = "R/schema_version.R"
+)
+
+import::here(
+  read_config,
+  .from = "R/config.R"
+)
+
+import::here(
+  write_run_manifest,
+  .from = "R/run_manifest.R"
+)
+
+import::here(
+  write_disabled_file,
+  .from = "R/output_helpers.R"
+)
+
+import::here(
+  compute_time_qc,
+  plot_time_qc_backwards,
+  .from = "R/time_qc.R"
+)
+
+import::here(
+  compute_event_spacing,
+  plot_event_spacing,
+  validate_event_invariants,
+  .from = "R/event_outputs.R"
+)
+
+import::here(
+  calc_rai_with_ci,
+  plot_rai_species,
+  summarise_diel_overall,
+  plot_diel_overall,
+  .from = "R/descriptive_outputs.R"
+)
+
 # Packages available to every target
 tar_option_set(
   packages = c(
@@ -20,17 +75,37 @@ tar_option_set(
     "ggplot2",
     "here",
     "janitor",
+    "jsonlite",
     "knitr",
     "lubridate",
     "readr",
     "stringr",
     "tibble",
     "tidyr",
-    "vegan"
+    "vegan",
+    "yaml"
   )
 )
 
 list(
+  ## ── CONFIG ───────────────────────────────────────────────────────────
+  tar_target(
+    config_file,
+    here("config.yml"),
+    format = "file"
+  ),
+  tar_target(
+    config,
+    read_config(config_file)
+  ),
+  tar_target(
+    outputs_root,
+    here(config$paths$outputs)
+  ),
+  tar_target(
+    run_dir,
+    file.path(outputs_root, "runs", config$run_id)
+  ),
   ## ── DATA DICTIONARY SYNC ─────────────────────────────────────────────
   tar_target(
     data_dictionary_md,
@@ -46,12 +121,18 @@ list(
     format = "file"
   ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
-  tar_target(taxa_raw, read_jc_csv(here("data", "jc_taxa.csv"))),
-  tar_target(site_raw, read_jc_csv(here("data", "jc_site.csv"))),
-  tar_target(op_raw,   read_jc_csv(here("data", "jc_op.csv"))),
-  tar_target(obs_raw,  read_jc_csv(here("data", "jc_obs.csv"))),
+  tar_target(taxa_raw, read_jc_csv(config$paths$inputs$taxa)),
+  tar_target(site_raw, read_jc_csv(config$paths$inputs$site)),
+  tar_target(op_raw,   read_jc_csv(config$paths$inputs$op)),
+  tar_target(obs_raw,  read_jc_csv(config$paths$inputs$obs)),
+  tar_target(schema_version, get_schema_version(config$schema_version_path)),
 
   ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
+  tar_target(
+    input_contract_validation,
+    validate_input_contract(site_raw, op_raw, obs_raw, taxa_raw, tz = config$timezone),
+    cue = tar_cue(mode = "always")
+  ),
   tar_target(key_check,
     check_keys(obs_raw, site_raw),
     cue = tar_cue(mode = "always")
@@ -60,27 +141,140 @@ list(
     validate_effort(op_raw),
     cue = tar_cue(mode = "always")
   ),
+  ## ── TIME DIAGNOSTICS ────────────────────────────────────────────────
+  tar_target(
+    time_qc,
+    compute_time_qc(
+      obs_raw,
+      tz = config$timezone,
+      backward_threshold_hours = config$time_qc$backward_jump_threshold_hours
+    )
+  ),
+  tar_target(
+    time_qc_summary_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "time_qc_summary.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(time_qc$summary, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    time_qc_flags_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "time_qc_flags.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(time_qc$flags, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    time_qc_backwards_plot,
+    plot_time_qc_backwards(
+      time_qc$summary,
+      file.path(run_dir, "figures", "time_qc_backward_jumps.png")
+    ),
+    format = "file"
+  ),
   ## ── EFFORT STANDARDISATION ───────────────────────────────────────────
   tar_target(op_long,      pivot_op_long(op_raw)),
   tar_target(trap_nights,  calc_trap_nights(op_long)),
   tar_target(obs_filtered, filter_obs_by_effort(obs_raw, op_long)),
+  tar_target(
+    effort_censoring_check,
+    validate_effort_censoring(obs_filtered, op_long),
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    effort_summary,
+    summarise_effort(op_long)
+  ),
+  tar_target(
+    effort_summary_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "effort_summary.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(effort_summary, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    effort_histogram_plot,
+    plot_effort_histogram(
+      effort_summary,
+      file.path(run_dir, "figures", "effort_histogram.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    effort_heatmap_plot,
+    plot_effort_heatmap(
+      op_long,
+      file.path(run_dir, "figures", "effort_heatmap.png")
+    ),
+    format = "file"
+  ),
   ## ── INDEPENDENT-EVENT FILTERING ───────────────────────────────────────────────
   tar_target(
     obs_events,
-    define_events(obs_filtered, threshold = 15)   # 15-min gap
+    define_events(obs_filtered, threshold = config$event_threshold_minutes, tz = config$timezone)
+  ),
+  tar_target(
+    event_invariants_check,
+    validate_event_invariants(obs_events, obs_filtered),
+    cue = tar_cue(mode = "always")
   ),
   tar_target(
     events_per_day,
     summarise_events(obs_events)
   ),
+  tar_target(
+    events_per_day_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "events_per_day.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(events_per_day, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    event_spacing,
+    compute_event_spacing(obs_events)
+  ),
+  tar_target(
+    event_spacing_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "event_spacing.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(event_spacing, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    event_spacing_plot,
+    plot_event_spacing(
+      event_spacing,
+      file.path(run_dir, "figures", "event_spacing.png")
+    ),
+    format = "file"
+  ),
   ## ── DESCRIPTIVE SUMMARIES ──────────────────────────────────────────────
   tar_target(
-    rai_site_species,
-    calc_rai(events_per_day, trap_nights)$site
+    rai_with_ci,
+    calc_rai_with_ci(events_per_day, trap_nights)
   ),
   tar_target(
     rai_species,
-    calc_rai(events_per_day, trap_nights)$pooled
+    rai_with_ci$pooled
+  ),
+  tar_target(
+    rai_site_species,
+    rai_with_ci$site
   ),
   tar_target(
     prop_days_site,
@@ -99,17 +293,118 @@ list(
     calc_diel(obs_events, by_season = TRUE)
   ),
   tar_target(
+    diel_overall,
+    summarise_diel_overall(obs_events)
+  ),
+  tar_target(
+    rai_site_species_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "rai_site_species.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(rai_site_species, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    rai_species_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "rai_species.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(rai_species, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    rai_species_plot,
+    plot_rai_species(
+      rai_species,
+      file.path(run_dir, "figures", "rai_species.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    diel_site_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "diel_site.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(diel_site, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    diel_site_season_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "diel_site_season.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(diel_site_season, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    diel_overall_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "diel_overall.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(diel_overall, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    diel_overall_plot,
+    plot_diel_overall(
+      diel_overall,
+      file.path(run_dir, "figures", "diel_overall.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    rarefaction_data,
+    {
+      if (isTRUE(config$analysis$rarefaction)) {
+        build_rarefaction(events_per_day, 100)
+      } else {
+        tibble::tibble()
+      }
+    }
+  ),
+  tar_target(
+    rarefaction_table_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "rarefaction.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+
+      if (isTRUE(config$analysis$rarefaction)) {
+        readr::write_csv(rarefaction_data, out_path)
+      } else {
+        write_disabled_file(out_path, "Rarefaction disabled by config.")
+      }
+
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
     rarefaction_plot,
     {
-      df <- build_rarefaction(events_per_day, 100)
-      plot_rarefaction(df, here("outputs", "figures", "rarefaction.png"))
+      out_path <- file.path(run_dir, "figures", "rarefaction.png")
+
+      if (isTRUE(config$analysis$rarefaction)) {
+        plot_rarefaction(rarefaction_data, out_path)
+      } else {
+        write_disabled_file(out_path, "Rarefaction disabled by config.")
+      }
     },
     format = "file"
   ),
   tar_target(
     session_info,
     {
-      out_path <- here("outputs", "session_info.txt")
+      out_path <- file.path(run_dir, "session_info.txt")
       dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
       writeLines(capture.output(sessionInfo()), out_path)
       out_path
@@ -119,19 +414,33 @@ list(
   tar_target(
     report_inputs_rds,
     {
-      out_path <- here("outputs", "report", "report_inputs.rds")
+      out_path <- file.path(run_dir, "report", "report_inputs.rds")
       dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
-      report_inputs <- list(
-        n_sites = nrow(site_raw),
-        n_obs_raw = nrow(obs_raw),
-        n_obs_filtered = nrow(obs_filtered),
-        trap_nights = trap_nights,
-        rai_species = rai_species,
-        diel_site = diel_site
-      )
+      if (isTRUE(config$analysis$report)) {
+        report_inputs <- list(
+          n_sites = nrow(site_raw),
+          n_obs_raw = nrow(obs_raw),
+          n_obs_filtered = nrow(obs_filtered),
+          trap_nights = trap_nights,
+          effort_summary = effort_summary,
+          time_qc_summary = time_qc$summary,
+          time_qc_flags = time_qc$flags,
+          events_per_day = events_per_day,
+          event_spacing = event_spacing,
+          rai_species = rai_species,
+          diel_site = diel_site,
+          diel_overall = diel_overall,
+          rarefaction_data = rarefaction_data,
+          schema_version = schema_version,
+          params = config
+        )
 
-      saveRDS(report_inputs, out_path)
+        saveRDS(report_inputs, out_path)
+      } else {
+        saveRDS(list(message = "Report disabled by config."), out_path)
+      }
+
       out_path
     },
     format = "file"
@@ -139,24 +448,84 @@ list(
   tar_target(
     report_html,
     {
-      out_dir <- here("outputs", "report")
+      out_dir <- file.path(run_dir, "report")
+      out_path <- file.path(out_dir, "report.html")
       dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-      system2(
-        "quarto",
-        c(
-          "render",
-          here("analysis", "report.qmd"),
-          "--output-dir",
-          out_dir,
-          "-P",
-          paste0("inputs_path:", report_inputs_rds),
-          "-P",
-          paste0("rarefaction_path:", rarefaction_plot)
+      if (isTRUE(config$analysis$report)) {
+        system2(
+          "quarto",
+          c(
+            "render",
+            here("analysis", "report.qmd"),
+            "--output-dir",
+            out_dir,
+            "-P",
+            paste0("inputs_path:", report_inputs_rds),
+            "-P",
+            paste0("rarefaction_path:", rarefaction_plot),
+            "-P",
+            paste0("effort_histogram_path:", effort_histogram_plot),
+            "-P",
+            paste0("effort_heatmap_path:", effort_heatmap_plot),
+            "-P",
+            paste0("time_qc_plot_path:", time_qc_backwards_plot),
+            "-P",
+            paste0("event_spacing_path:", event_spacing_plot),
+            "-P",
+            paste0("rai_species_path:", rai_species_plot),
+            "-P",
+            paste0("diel_overall_path:", diel_overall_plot),
+            "-P",
+            paste0("run_dir:", run_dir)
+          )
         )
+      } else {
+        write_disabled_file(out_path, "Report disabled by config.")
+      }
+
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    run_manifest,
+    {
+      out_path <- file.path(run_dir, "run_manifest.json")
+      outputs <- list(
+        tables = list(
+          effort_summary = effort_summary_csv,
+          time_qc_summary = time_qc_summary_csv,
+          time_qc_flags = time_qc_flags_csv,
+          events_per_day = events_per_day_csv,
+          event_spacing = event_spacing_csv,
+          rai_site_species = rai_site_species_csv,
+          rai_species = rai_species_csv,
+          diel_site = diel_site_csv,
+          diel_site_season = diel_site_season_csv,
+          diel_overall = diel_overall_csv,
+          rarefaction = rarefaction_table_csv
+        ),
+        figures = list(
+          rarefaction = rarefaction_plot,
+          effort_histogram = effort_histogram_plot,
+          effort_heatmap = effort_heatmap_plot,
+          time_qc_backward_jumps = time_qc_backwards_plot,
+          event_spacing = event_spacing_plot,
+          rai_species = rai_species_plot,
+          diel_overall = diel_overall_plot
+        ),
+        report = report_html,
+        session_info = session_info
       )
 
-      here("outputs", "report", "report.html")
+      write_run_manifest(
+        path = out_path,
+        schema_version = schema_version,
+        params = config,
+        outputs = outputs,
+        session_info_path = session_info
+      )
     },
     format = "file"
   )

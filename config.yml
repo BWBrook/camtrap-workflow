@@ -1,0 +1,19 @@
+schema_version_path: "schema_version.txt"
+run_id: "latest"
+timezone: "Australia/Hobart"
+event_threshold_minutes: 15
+
+paths:
+  inputs:
+    site: "data/jc_site.csv"
+    op: "data/jc_op.csv"
+    obs: "data/jc_obs.csv"
+    taxa: "data/jc_taxa.csv"
+  outputs: "outputs"
+
+analysis:
+  rarefaction: true
+  report: true
+
+time_qc:
+  backward_jump_threshold_hours: 1

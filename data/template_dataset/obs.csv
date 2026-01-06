@@ -1,0 +1,5 @@
+index,site,datetime,flash,count,species,filename,age,sex,imageid
+1,site1,01/01/2020 00:10:00,0,1,sp1,img1.jpg,adult,U,1
+2,site1,02/01/2020 01:00:00,1,1,sp2,img2.jpg,adult,U,2
+3,site2,01/01/2020 02:30:00,1,1,sp1,img3.jpg,adult,U,1
+4,site2,03/01/2020 03:15:00,0,1,sp2,img4.jpg,adult,U,2

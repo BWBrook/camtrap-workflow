@@ -3,6 +3,7 @@ import::from("tibble", tibble)
 import::from("here", here)
 
 source(here("R", "custom_funcs.R"))
+source(here("R", "effort_outputs.R"))
 
 test_that("QC: check_keys fails fast on unknown sites", {
   obs <- tibble(
@@ -171,3 +172,50 @@ test_that("Rarefaction: plot_rarefaction writes a file target", {
   expect_true(file.exists(out_path))
 })
 
+test_that("Effort: summarise_effort computes totals and proportions", {
+  op_long <- tibble(
+    trap_date = as.Date(c("2020-01-01", "2020-01-02", "2020-01-01", "2020-01-02")),
+    site = c("A", "A", "B", "B"),
+    on_off = c(1, 0, 1, 1)
+  )
+
+  summary <- summarise_effort(op_long)
+  expect_equal(summary$trap_nights[summary$site == "A"], 1)
+  expect_equal(summary$days_total[summary$site == "A"], 2)
+  expect_equal(summary$prop_active[summary$site == "A"], 0.5)
+})
+
+test_that("Effort: validate_effort_censoring fails on inactive detections", {
+  op_long <- tibble(
+    trap_date = as.Date(c("2020-01-01", "2020-01-02")),
+    site = c("A", "A"),
+    on_off = c(1, 0)
+  )
+  obs_filtered <- tibble(
+    site = c("A", "A"),
+    trap_date = as.Date(c("2020-01-01", "2020-01-02"))
+  )
+
+  expect_error(
+    validate_effort_censoring(obs_filtered, op_long),
+    "detections found on inactive"
+  )
+})
+
+test_that("Effort plots write files", {
+  op_long <- tibble(
+    trap_date = as.Date(c("2020-01-01", "2020-01-02")),
+    site = c("A", "A"),
+    on_off = c(1, 0)
+  )
+  summary <- summarise_effort(op_long)
+
+  hist_path <- tempfile(fileext = ".png")
+  heat_path <- tempfile(fileext = ".png")
+
+  plot_effort_histogram(summary, hist_path)
+  plot_effort_heatmap(op_long, heat_path)
+
+  expect_true(file.exists(hist_path))
+  expect_true(file.exists(heat_path))
+})

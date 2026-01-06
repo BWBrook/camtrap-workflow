@@ -7,6 +7,13 @@ format:
 params:
   inputs_path: null
   rarefaction_path: null
+  effort_histogram_path: null
+  effort_heatmap_path: null
+  time_qc_plot_path: null
+  event_spacing_path: null
+  rai_species_path: null
+  diel_overall_path: null
+  run_dir: null
 ---
 
 ```{r}
@@ -19,23 +26,104 @@ inputs <- readRDS(params$inputs_path)
 - Sites: `r inputs$n_sites`
 - Observations (raw rows): `r inputs$n_obs_raw`
 - Observations (filtered to active effort days): `r inputs$n_obs_filtered`
+- Input schema version: `r inputs$schema_version`
+
+## QC summary
+
+```{r}
+qc_totals <- data.frame(
+  total_obs = sum(inputs$time_qc_summary$total_obs),
+  parse_fail = sum(inputs$time_qc_summary$parse_fail),
+  dst_gap = sum(inputs$time_qc_summary$dst_gap),
+  backward_jumps = sum(inputs$time_qc_summary$backward_jumps)
+)
+knitr::kable(qc_totals)
+```
 
 ## Effort (trap nights)
 
 ```{r}
-knitr::kable(inputs$trap_nights)
+knitr::kable(inputs$effort_summary)
+```
+
+```{r}
+stopifnot(!is.null(params$effort_histogram_path))
+knitr::include_graphics(params$effort_histogram_path)
+```
+
+```{r}
+stopifnot(!is.null(params$effort_heatmap_path))
+knitr::include_graphics(params$effort_heatmap_path)
+```
+
+## Time handling & limitations
+
+Timezone configured: `r inputs$params$timezone`  
+Backward-jump threshold (hours): `r inputs$params$time_qc$backward_jump_threshold_hours`
+
+Datetime strings are parsed in the configured timezone. Values that fall into daylight saving gaps
+or indicate backward jumps are flagged for review rather than automatically corrected.
+
+```{r}
+knitr::kable(inputs$time_qc_summary)
+```
+
+```{r}
+stopifnot(!is.null(params$time_qc_plot_path))
+knitr::include_graphics(params$time_qc_plot_path)
+```
+
+```{r}
+flagged_rows <- nrow(inputs$time_qc_flags)
+if (flagged_rows > 0) {
+  knitr::kable(utils::head(inputs$time_qc_flags, 20))
+} else {
+  cat("No time QC flags detected.")
+}
+```
+
+## Event definition & spacing diagnostics
+
+Independent events are defined by clustering detections of the same species at the same site
+with a gap threshold of `r inputs$params$event_threshold_minutes` minutes.
+
+```{r}
+total_events <- sum(inputs$events_per_day$events)
+median_gap <- median(inputs$event_spacing$gap_hours, na.rm = TRUE)
+data.frame(
+  total_events = total_events,
+  median_gap_hours = round(median_gap, 2)
+) |>
+  knitr::kable()
+```
+
+```{r}
+stopifnot(!is.null(params$event_spacing_path))
+knitr::include_graphics(params$event_spacing_path)
 ```
 
 ## Relative abundance index (pooled)
 
+RAI is defined as independent events per trap night, with Poisson confidence intervals.
+
 ```{r}
 knitr::kable(inputs$rai_species)
+```
+
+```{r}
+stopifnot(!is.null(params$rai_species_path))
+knitr::include_graphics(params$rai_species_path)
 ```
 
 ## Diel activity (site × period)
 
 ```{r}
 knitr::kable(utils::head(inputs$diel_site, 20))
+```
+
+```{r}
+stopifnot(!is.null(params$diel_overall_path))
+knitr::include_graphics(params$diel_overall_path)
 ```
 
 ## Rarefaction
@@ -45,3 +133,15 @@ stopifnot(!is.null(params$rarefaction_path))
 knitr::include_graphics(params$rarefaction_path)
 ```
 
+## Limitations & assumptions
+
+- Datetimes are interpreted in the configured timezone; DST gaps and clock resets are flagged, not corrected.
+- Independent events depend on the gap threshold; sensitivity analysis is planned for later work.
+- Diel proportions use `flash` as a day/night proxy and do not account for sunrise/sunset variation.
+- RAI reflects relative detection rates, not absolute abundance.
+
+## Provenance
+
+Run outputs are stored under: `r params$run_dir`  
+Run manifest: `r file.path(params$run_dir, "run_manifest.json")`  
+Session info: `r file.path(params$run_dir, "session_info.txt")`

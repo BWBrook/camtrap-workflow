@@ -1,0 +1,3 @@
+class,order,family,genus,species,common,short,diet,sec_diet,activity,habitat,status,body_size,sociality,mobility,reproductive,litter
+Mammalia,Order1,Family1,Genus1,species1,Common1,sp1,herbivore,none,nocturnal,forest,least concern,small,solitary,terrestrial,seasonal,small
+Mammalia,Order2,Family2,Genus2,species2,Common2,sp2,omnivore,none,nocturnal,forest,least concern,medium,solitary,terrestrial,seasonal,small

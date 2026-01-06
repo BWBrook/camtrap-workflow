@@ -38,7 +38,10 @@ jobs:
         with:
           name: outputs
           path: |
-            outputs/report/report.html
-            outputs/figures/rarefaction.png
-            outputs/session_info.txt
-
+            outputs/runs/latest/report/report.html
+            outputs/runs/latest/figures/rarefaction.png
+            outputs/runs/latest/figures/event_spacing.png
+            outputs/runs/latest/figures/rai_species.png
+            outputs/runs/latest/figures/diel_overall.png
+            outputs/runs/latest/session_info.txt
+            outputs/runs/latest/run_manifest.json

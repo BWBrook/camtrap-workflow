@@ -57,9 +57,10 @@ Rscript -e 'targets::tar_make()'
 
 Outputs are written to `outputs/` (gitignored). Look for:
 
-* `outputs/report/` for the rendered report
-* `outputs/figures/` for plots
-* `outputs/session_info.txt` for session provenance
+* `outputs/runs/<run_id>/report/` for the rendered report
+* `outputs/runs/<run_id>/figures/` for plots
+* `outputs/runs/<run_id>/session_info.txt` for session provenance
+* `outputs/runs/<run_id>/run_manifest.json` for run provenance
 
 ## Running on your own dataset
 
@@ -70,7 +71,11 @@ This workflow assumes you already have:
 * labelled detections (`obs`)
 * taxa/traits (`taxa`)
 
-See `docs/product_brief.md` and the data contract documentation (to be expanded) for required columns and formats.
+Start with the template dataset in `data/template_dataset/` and follow the step-by-step guide:
+`docs/bring_your_own_data.md`.
+
+See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
+Update `config.yml` to point to your input file paths and parameters (timezone, event threshold).
 
 ## Development workflow
 

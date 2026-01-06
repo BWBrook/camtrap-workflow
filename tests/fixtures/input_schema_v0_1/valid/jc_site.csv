@@ -1,0 +1,3 @@
+site,lat,lon,type,location,cover,vegclass,elevation_m,slope_d,canopy_h_m,ndvi,nbr,fire_flam,fire_sens
+jc_a,-42.9000,147.3000,open,road,rock,DOB,120,5,12,0.45,0.62,H,L
+jc_b,-42.9100,147.3100,closed,trail,grass,DTO,140,7,15,0.50,0.58,L,H

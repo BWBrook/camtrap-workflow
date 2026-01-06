@@ -1,0 +1,69 @@
+# Bring your own data (four-table contract)
+
+This workflow expects four CSV tables: `site`, `op`, `obs`, and `taxa`.
+Use the template dataset in `data/template_dataset/` as a starting point.
+
+## Quick start
+
+1) Copy the template folder and rename it:
+
+```bash
+cp -r data/template_dataset data/my_project
+```
+
+2) Replace the CSV contents with your own data (keep column names and formats).
+
+3) Update `config.yml` to point to your new files:
+
+```yaml
+paths:
+  inputs:
+    site: "data/my_project/site.csv"
+    op: "data/my_project/op.csv"
+    obs: "data/my_project/obs.csv"
+    taxa: "data/my_project/taxa.csv"
+```
+
+4) Validate the inputs (fast check):
+
+```bash
+Rscript -e 'targets::tar_make(names = "input_contract_validation", callr_function = NULL)'
+```
+
+5) Run the full pipeline:
+
+```bash
+Rscript -e 'targets::tar_make(callr_function = NULL)'
+```
+
+Outputs will appear under `outputs/runs/<run_id>/` (see `config.yml`).
+
+## Contract checklist
+
+- [ ] Four tables exist: `site.csv`, `op.csv`, `obs.csv`, `taxa.csv`.
+- [ ] Required columns match the schema (see `docs/reference/input_schema_v0.1.md`).
+- [ ] `op.csv` has a `date` column formatted as `DD/MM/YYYY`.
+- [ ] `obs.csv$datetime` formatted as `DD/MM/YYYY hh:mm:ss`.
+- [ ] All `op.csv` site columns match `site.csv$site`.
+- [ ] All `obs.csv$site` values exist in `site.csv$site`.
+- [ ] All `obs.csv$species` values exist in `taxa.csv$short`.
+- [ ] `flash` values are 0/1; `count` and `imageid` are integers.
+
+## Common validation errors and fixes
+
+- **Missing required columns**
+  - Fix: add the missing column with the correct name and type.
+
+- **Datetime parsing failures**
+  - Fix: ensure `obs.csv$datetime` uses `DD/MM/YYYY hh:mm:ss`.
+
+- **Site mismatch between `op.csv` and `site.csv`**
+  - Fix: rename `op.csv` columns to match `site.csv$site` exactly.
+
+- **Species codes not in taxa table**
+  - Fix: update `taxa.csv$short` or correct `obs.csv$species` codes.
+
+- **Effort matrix contains NA or non-0/1 values**
+  - Fix: replace with 0/1 and remove NA values.
+
+If validation fails, the error message indicates which table/column needs attention.
