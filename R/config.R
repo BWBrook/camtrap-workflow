@@ -27,7 +27,17 @@ default_config <- function() {
       backward_jump_threshold_hours = 1
     ),
     sensitivity = list(
-      event_threshold_minutes = c(5, 15, 30, 60)
+      event_threshold_minutes = c(5, 15, 30, 60),
+      occasion_length_days = c(3, 7, 14, 30)
+    ),
+    detection_history = list(
+      occasion_length_days = 7,
+      start_date = NULL
+    ),
+    occupancy = list(
+      species = NULL,
+      top_n = 3,
+      covariates = c("canopy_h_m", "ndvi")
     )
   )
 }
@@ -65,7 +75,9 @@ validate_config <- function(config) {
     "paths",
     "analysis",
     "time_qc",
-    "sensitivity"
+    "sensitivity",
+    "detection_history",
+    "occupancy"
   )
 
   missing <- setdiff(required_paths, names(config))
@@ -117,6 +129,44 @@ validate_config <- function(config) {
   if (!is.numeric(config$sensitivity$event_threshold_minutes) ||
         length(config$sensitivity$event_threshold_minutes) < 1) {
     stop("config.yml sensitivity.event_threshold_minutes must be a numeric vector.")
+  }
+
+  if (is.null(config$sensitivity$occasion_length_days) ||
+        !is.numeric(config$sensitivity$occasion_length_days) ||
+        length(config$sensitivity$occasion_length_days) < 1) {
+    stop("config.yml sensitivity.occasion_length_days must be a numeric vector.")
+  }
+
+  if (!is.list(config$detection_history) || is.null(config$detection_history$occasion_length_days)) {
+    stop("config.yml detection_history.occasion_length_days must be provided.")
+  }
+
+  if (!is.numeric(config$detection_history$occasion_length_days) ||
+        length(config$detection_history$occasion_length_days) != 1 ||
+        config$detection_history$occasion_length_days < 1) {
+    stop("config.yml detection_history.occasion_length_days must be a positive integer.")
+  }
+
+  if (!is.list(config$occupancy)) {
+    stop("config.yml occupancy must be provided as a list.")
+  }
+
+  if (!is.null(config$occupancy$species) &&
+        !is.character(config$occupancy$species)) {
+    stop("config.yml occupancy.species must be NULL or a character vector.")
+  }
+
+  if (is.null(config$occupancy$top_n) ||
+        !is.numeric(config$occupancy$top_n) ||
+        length(config$occupancy$top_n) != 1 ||
+        config$occupancy$top_n < 1) {
+    stop("config.yml occupancy.top_n must be a positive integer.")
+  }
+
+  if (is.null(config$occupancy$covariates) ||
+        !is.character(config$occupancy$covariates) ||
+        length(config$occupancy$covariates) < 1) {
+    stop("config.yml occupancy.covariates must be a character vector.")
   }
 
   invisible(config)

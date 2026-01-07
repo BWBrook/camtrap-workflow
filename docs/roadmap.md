@@ -88,12 +88,12 @@ Notes:
 
 ### Line 0.4.x — Beta: occupancy-ready data + single-species occupancy modelling
 
-- [ ] **WP-0.4.1** Detection history builder (configurable occasion) + alignment checks vs effort  
-- [ ] **WP-0.4.2** Single-species occupancy modelling interface (unmarked) + stable outputs  
-- [ ] **WP-0.4.3** Occupancy diagnostics + predictions + report integration  
-- [ ] **WP-0.4.4** Sensitivity suite (occasion length + event threshold) with explicit artefacts  
-- [ ] **WP-0.4.5** Model comparison outputs (AIC tables / candidate set discipline) + guardrails  
-- [ ] **WP-0.4.6** Decide on “advanced occupancy” track (spOccupancy / ubms): adopt vs defer (Decision WP)  
+- [x] **WP-0.4.1** Detection history builder (configurable occasion) + alignment checks vs effort  
+- [x] **WP-0.4.2** Single-species occupancy modelling interface (unmarked) + stable outputs  
+- [x] **WP-0.4.3** Occupancy diagnostics + predictions + report integration  
+- [x] **WP-0.4.4** Sensitivity suite (occasion length + event threshold) with explicit artefacts  
+- [x] **WP-0.4.5** Model comparison outputs (AIC tables / candidate set discipline) + guardrails  
+- [x] **WP-0.4.6** Decide on “advanced occupancy” track (spOccupancy / ubms): adopt vs defer (Decision WP)  
 
 ### Line 0.5.x — Community & traits: diversity + functional ecology
 

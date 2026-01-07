@@ -15,6 +15,9 @@ Required columns:
 - `effort` (int) — 0/1 effort indicator for the occasion.
 - `occasion_start` (dttm or date) — start of occasion window.
 - `occasion_end` (dttm or date) — end of occasion window (exclusive).
+Optional columns:
+- `effort_days` (int) — number of active days within the occasion.
+- `total_days` (int) — total number of days within the occasion.
 
 ## Alignment rules
 

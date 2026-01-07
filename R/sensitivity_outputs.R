@@ -55,3 +55,76 @@ plot_event_threshold_sens <- function(sensitivity_tbl, out_path) {
   ggsave(out_path, p, width = 6, height = 4, dpi = 300)
   out_path
 }
+
+#' Compute occasion-length sensitivity metrics
+#'
+#' @param op_long Effort table in long form.
+#' @param events_per_day Events per day table.
+#' @param species_list Species codes to include.
+#' @param occasion_lengths Vector of occasion lengths (days).
+#' @param start_date Optional start date (YYYY-MM-DD).
+#' @return Tibble with naive occupancy and detection rates by occasion length.
+#' @export
+compute_occasion_length_sens <- function(op_long,
+                                         events_per_day,
+                                         species_list,
+                                         occasion_lengths,
+                                         start_date = NULL) {
+  import::from("dplyr", group_by, summarise, bind_rows, left_join)
+  import::from("tibble", tibble)
+
+  occasion_lengths <- sort(unique(as.numeric(occasion_lengths)))
+  if (length(occasion_lengths) == 0) {
+    return(tibble())
+  }
+
+  results <- lapply(occasion_lengths, function(length_days) {
+    history <- build_detection_history(
+      op_long,
+      events_per_day,
+      species_list = species_list,
+      occasion_length_days = length_days,
+      start_date = start_date
+    )
+
+    naive <- history |>
+      group_by(site, species) |>
+      summarise(detected_any = max(detected), .groups = "drop") |>
+      group_by(species) |>
+      summarise(naive_occupancy = mean(detected_any), .groups = "drop")
+
+    det_rate <- history |>
+      group_by(species) |>
+      summarise(detection_rate = mean(detected), .groups = "drop")
+
+    left_join(naive, det_rate, by = "species") |>
+      mutate(occasion_length_days = length_days)
+  })
+
+  bind_rows(results)
+}
+
+#' Plot occasion-length sensitivity
+#'
+#' @param sensitivity_tbl Output of `compute_occasion_length_sens()`.
+#' @param out_path File path where the figure is saved.
+#' @return `out_path` invisibly.
+#' @export
+plot_occasion_length_sens <- function(sensitivity_tbl, out_path) {
+  import::from("dplyr", arrange)
+  import::from("ggplot2", ggplot, aes, geom_line, geom_point, theme_minimal, labs, ggsave)
+
+  dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+
+  plot_data <- sensitivity_tbl |>
+    arrange(occasion_length_days)
+
+  p <- ggplot(plot_data, aes(x = occasion_length_days, y = naive_occupancy, color = species)) +
+    geom_line() +
+    geom_point() +
+    theme_minimal() +
+    labs(x = "Occasion length (days)", y = "Naive occupancy")
+
+  ggsave(out_path, p, width = 6, height = 4, dpi = 300)
+  out_path
+}

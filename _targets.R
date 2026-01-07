@@ -70,7 +70,31 @@ import::here(
 import::here(
   compute_event_threshold_sens,
   plot_event_threshold_sens,
+  compute_occasion_length_sens,
+  plot_occasion_length_sens,
   .from = "R/sensitivity_outputs.R"
+)
+
+import::here(
+  build_detection_history,
+  .from = "R/detection_history.R"
+)
+
+import::here(
+  validate_det_hist_alignment,
+  .from = "R/detection_history_checks.R"
+)
+
+import::here(
+  select_occupancy_species,
+  prepare_site_covariates,
+  build_occupancy_model_specs,
+  build_unmarked_frame,
+  fit_occupancy_models,
+  summarise_occupancy_model,
+  occupancy_aic_df,
+  plot_occupancy_predictions,
+  .from = "R/occupancy_models.R"
 )
 
 # Packages available to every target
@@ -88,6 +112,7 @@ tar_option_set(
     "stringr",
     "tibble",
     "tidyr",
+    "unmarked",
     "vegan",
     "yaml"
   )
@@ -296,6 +321,210 @@ list(
     ),
     format = "file"
   ),
+  tar_target(
+    occasion_length_sensitivity,
+    compute_occasion_length_sens(
+      op_long,
+      events_per_day,
+      species_list = occupancy_species,
+      occasion_lengths = config$sensitivity$occasion_length_days,
+      start_date = config$detection_history$start_date
+    )
+  ),
+  tar_target(
+    occasion_length_sensitivity_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "occasion_length_sensitivity.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(occasion_length_sensitivity, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    occasion_length_sensitivity_plot,
+    plot_occasion_length_sens(
+      occasion_length_sensitivity,
+      file.path(run_dir, "figures", "occasion_length_sensitivity.png")
+    ),
+    format = "file"
+  ),
+  ## ── DETECTION HISTORY (OCCUPANCY PREP) ───────────────────────────────
+  tar_target(
+    detection_history,
+    build_detection_history(
+      op_long,
+      events_per_day,
+      species_list = taxa_raw$short,
+      occasion_length_days = config$detection_history$occasion_length_days,
+      start_date = config$detection_history$start_date
+    )
+  ),
+  tar_target(
+    detection_history_alignment_check,
+    validate_det_hist_alignment(detection_history),
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    detection_history_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "detection_history.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(detection_history, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  ## ── OCCUPANCY MODELS (SINGLE-SEASON) ─────────────────────────────────
+  tar_target(
+    occupancy_species,
+    select_occupancy_species(
+      events_per_day,
+      species_override = config$occupancy$species,
+      top_n = config$occupancy$top_n
+    )
+  ),
+  tar_target(
+    occupancy_site_covs,
+    prepare_site_covariates(site_raw, config$occupancy$covariates)
+  ),
+  tar_target(
+    occupancy_model_specs,
+    build_occupancy_model_specs(config$occupancy$covariates)
+  ),
+  tar_target(
+    occupancy_models,
+    lapply(occupancy_species, function(sp) {
+      umf <- build_unmarked_frame(detection_history, occupancy_site_covs, sp)
+      models <- fit_occupancy_models(umf, occupancy_model_specs)
+
+      list(
+        species = sp,
+        umf = umf,
+        models = models
+      )
+    })
+  ),
+  tar_target(
+    occupancy_aic_tables,
+    lapply(occupancy_models, function(item) {
+      tbl <- occupancy_aic_df(item$models)
+      tbl$species <- item$species
+      tbl
+    })
+  ),
+  tar_target(
+    occupancy_aic_tbl,
+    dplyr::bind_rows(occupancy_aic_tables)
+  ),
+  tar_target(
+    occupancy_summary,
+    lapply(occupancy_models, function(item) {
+      aic_tbl <- occupancy_aic_df(item$models)
+      best_name <- aic_tbl$model[which.min(aic_tbl$AIC)][1]
+      best_model <- item$models[[best_name]]
+      estimates <- summarise_occupancy_model(best_model)
+
+      data.frame(
+        species = item$species,
+        best_model = best_name,
+        psi = estimates$psi["est"],
+        psi_lower = estimates$psi["lower"],
+        psi_upper = estimates$psi["upper"],
+        p = estimates$p["est"],
+        p_lower = estimates$p["lower"],
+        p_upper = estimates$p["upper"]
+      )
+    })
+  ),
+  tar_target(
+    occupancy_summary_table,
+    dplyr::bind_rows(occupancy_summary)
+  ),
+  tar_target(
+    occupancy_predictions,
+    lapply(occupancy_models, function(item) {
+      aic_tbl <- occupancy_aic_df(item$models)
+      best_name <- aic_tbl$model[which.min(aic_tbl$AIC)][1]
+      best_model <- item$models[[best_name]]
+
+      preds <- predict(best_model, type = "state")
+      data.frame(
+        site = rownames(preds),
+        species = item$species,
+        psi = preds$Predicted,
+        psi_lower = ifelse(is.na(preds$lower), preds$Predicted, preds$lower),
+        psi_upper = ifelse(is.na(preds$upper), preds$Predicted, preds$upper)
+      )
+    })
+  ),
+  tar_target(
+    occupancy_predictions_table,
+    dplyr::bind_rows(occupancy_predictions)
+  ),
+  tar_target(
+    occupancy_model_rds,
+    {
+      out_dir <- file.path(run_dir, "models")
+      dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+      paths <- lapply(occupancy_models, function(item) {
+        aic_tbl <- occupancy_aic_df(item$models)
+        best_name <- aic_tbl$model[which.min(aic_tbl$AIC)][1]
+        best_model <- item$models[[best_name]]
+
+        out_path <- file.path(out_dir, paste0("occu_", item$species, "_", best_name, ".rds"))
+        saveRDS(best_model, out_path)
+        out_path
+      })
+      unlist(paths, use.names = FALSE)
+    },
+    format = "file"
+  ),
+  tar_target(
+    occupancy_prediction_plots,
+    {
+      out_dir <- file.path(run_dir, "figures")
+      dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+      paths <- lapply(occupancy_species, function(sp) {
+        out_path <- file.path(out_dir, paste0("occupancy_pred_", sp, ".png"))
+        plot_occupancy_predictions(occupancy_predictions_table, sp, out_path)
+      })
+      unlist(paths, use.names = FALSE)
+    },
+    format = "file"
+  ),
+  tar_target(
+    occupancy_summary_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "occupancy_summary.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(occupancy_summary_table, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    occupancy_aic_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "occupancy_aic.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(occupancy_aic_tbl, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    occupancy_predictions_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "occupancy_predictions.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(occupancy_predictions_table, out_path)
+      out_path
+    },
+    format = "file"
+  ),
   ## ── DESCRIPTIVE SUMMARIES ──────────────────────────────────────────────
   tar_target(
     rai_with_ci,
@@ -462,10 +691,15 @@ list(
           events_per_day = events_per_day,
           event_spacing = event_spacing,
           event_threshold_sensitivity = event_threshold_sensitivity,
+          occasion_length_sensitivity = occasion_length_sensitivity,
           rai_species = rai_species,
           diel_site = diel_site,
           diel_overall = diel_overall,
           rarefaction_data = rarefaction_data,
+          occupancy_summary = occupancy_summary_table,
+          occupancy_aic = occupancy_aic_tbl,
+          occupancy_species = occupancy_species,
+          occupancy_predictions = occupancy_predictions_table,
           schema_version = schema_version,
           params = config
         )
@@ -590,6 +824,11 @@ list(
           events_per_day = events_per_day_csv,
           event_spacing = event_spacing_csv,
           event_threshold_sensitivity = event_threshold_sensitivity_csv,
+          occasion_length_sensitivity = occasion_length_sensitivity_csv,
+          detection_history = detection_history_csv,
+          occupancy_summary = occupancy_summary_csv,
+          occupancy_aic = occupancy_aic_csv,
+          occupancy_predictions = occupancy_predictions_csv,
           rai_site_species = rai_site_species_csv,
           rai_species = rai_species_csv,
           diel_site = diel_site_csv,
@@ -604,9 +843,12 @@ list(
           time_qc_backward_jumps = time_qc_backwards_plot,
           event_spacing = event_spacing_plot,
           event_threshold_sensitivity = event_threshold_sensitivity_plot,
+          occasion_length_sensitivity = occasion_length_sensitivity_plot,
+          occupancy_predictions = occupancy_prediction_plots,
           rai_species = rai_species_plot,
           diel_overall = diel_overall_plot
         ),
+        models = list(occupancy = occupancy_model_rds),
         report = list(html = report_html, pdf = report_pdf),
         session_info = session_info
       )

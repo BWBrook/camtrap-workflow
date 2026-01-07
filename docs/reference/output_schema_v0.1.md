@@ -25,6 +25,11 @@ Expected (current MVP):
 - `tables/events_per_day.csv` — independent event counts per site/species/day.
 - `tables/event_spacing.csv` — gap (hours) between successive independent events.
 - `tables/event_threshold_sensitivity.csv` — event totals per threshold and events per trap night.
+- `tables/occasion_length_sensitivity.csv` — naive occupancy and detection rates by occasion length.
+- `tables/detection_history.csv` — detection histories in long format (site × species × occasion).
+- `tables/occupancy_summary.csv` — occupancy estimates (psi, p) for exemplar species.
+- `tables/occupancy_aic.csv` — AIC table for candidate occupancy models.
+- `tables/occupancy_predictions.csv` — site-level occupancy predictions for exemplar species.
 - `tables/rai_site_species.csv` — RAI per site/species with Poisson CIs.
 - `tables/rai_species.csv` — pooled RAI per species with Poisson CIs.
 - `tables/diel_site.csv` — diel proportions per site/species.
@@ -40,6 +45,8 @@ Expected (current MVP):
 - `figures/time_qc_backward_jumps.png` — per-site count of backward time jumps.
 - `figures/event_spacing.png` — distribution of time gaps between independent events.
 - `figures/event_threshold_sensitivity.png` — sensitivity of event rate to threshold choice.
+- `figures/occasion_length_sensitivity.png` — sensitivity of naive occupancy to occasion length.
+- `figures/occupancy_pred_<species>.png` — site-level occupancy predictions for each modelled species.
 - `figures/rai_species.png` — pooled RAI by species with confidence intervals.
 - `figures/diel_overall.png` — overall day/night event proportions.
 
@@ -48,6 +55,10 @@ Expected (current MVP):
 - `report/report.html` — rendered Quarto report.
 - `report/report.pdf` — rendered Quarto report (PDF).
 - `report/report_inputs.rds` — inputs passed to the report (for reproducibility).
+
+## Models (Beta)
+
+- `models/occu_<species>_<model>.rds` — fitted occupancy models for exemplar species.
 
 ## Provenance
 

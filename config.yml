@@ -20,3 +20,13 @@ time_qc:
 
 sensitivity:
   event_threshold_minutes: [5, 15, 30, 60]
+  occasion_length_days: [3, 7, 14, 30]
+
+detection_history:
+  occasion_length_days: 7
+  start_date: null
+
+occupancy:
+  species: null
+  top_n: 3
+  covariates: ["canopy_h_m", "ndvi"]

@@ -89,3 +89,42 @@ Notes:
 - Event rates decline as the threshold increases, as expected for more aggressive clustering.
 - The curve is smooth across 5–60 minutes, suggesting no abrupt threshold artifacts for this dataset.
 - Sensitivity output provides a baseline for choosing thresholds in later occupancy work.
+
+---
+
+## 2026-01-07 — Detection history output (WP-0.4.1)
+
+Artefacts:
+- `outputs/runs/latest/tables/detection_history.csv` — site × species × occasion detections with effort.
+
+Notes:
+- Detection histories show no detections during zero-effort occasions (alignment check passed).
+- Occasions are 7-day windows starting from the first effort date.
+
+---
+
+## 2026-01-07 — Occupancy outputs (WP-0.4.2–0.4.5)
+
+Artefacts:
+- `outputs/runs/latest/tables/occupancy_summary.csv` — psi/p summaries for exemplar species.
+- `outputs/runs/latest/tables/occupancy_aic.csv` — candidate model AIC table.
+- `outputs/runs/latest/tables/occupancy_predictions.csv` — site-level occupancy predictions.
+- `outputs/runs/latest/figures/occupancy_pred_<species>.png` — prediction plots.
+- `outputs/runs/latest/models/occu_<species>_<model>.rds` — fitted models.
+
+Notes:
+- Best models for exemplar species often include effort and/or NDVI covariates; AIC tables show clear separation from the null model.
+- Occupancy estimates for dominant species (`pos`, `pad`, `wal`) are high, as expected given widespread detections.
+- Site-level prediction plots show limited spatial contrast for these dominant species; consider additional covariates in later WPs.
+
+---
+
+## 2026-01-07 — Occasion-length sensitivity (WP-0.4.4)
+
+Artefacts:
+- `outputs/runs/latest/tables/occasion_length_sensitivity.csv`
+- `outputs/runs/latest/figures/occasion_length_sensitivity.png`
+
+Notes:
+- Naive occupancy remains stable across 3–30 day occasions for the top species, indicating robustness to occasion length in this dataset.
+- Detection rates increase modestly with longer occasions, as expected from aggregation.

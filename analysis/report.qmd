@@ -118,6 +118,40 @@ stopifnot(!is.null(params$event_threshold_sensitivity_path))
 knitr::include_graphics(params$event_threshold_sensitivity_path)
 ```
 
+## Occasion length sensitivity
+
+```{r}
+knitr::kable(inputs$occasion_length_sensitivity)
+```
+
+```{r}
+occ_plot <- file.path(params$run_dir, "figures", "occasion_length_sensitivity.png")
+if (file.exists(occ_plot)) {
+  knitr::include_graphics(occ_plot)
+}
+```
+
+## Occupancy (single-season)
+
+```{r}
+knitr::kable(inputs$occupancy_summary)
+```
+
+```{r}
+knitr::kable(utils::head(inputs$occupancy_aic, 12))
+```
+
+```{r}
+if (!is.null(inputs$occupancy_species)) {
+  for (sp in inputs$occupancy_species) {
+    fig_path <- file.path(params$run_dir, "figures", paste0("occupancy_pred_", sp, ".png"))
+    if (file.exists(fig_path)) {
+      knitr::include_graphics(fig_path)
+    }
+  }
+}
+```
+
 ## Relative abundance index (pooled)
 
 RAI is defined as independent events per trap night, with Poisson confidence intervals.
@@ -155,6 +189,7 @@ knitr::include_graphics(params$rarefaction_path)
 - Independent events depend on the gap threshold; sensitivity analysis is planned for later work.
 - Diel proportions use `flash` as a day/night proxy and do not account for sunrise/sunset variation.
 - RAI reflects relative detection rates, not absolute abundance.
+- Occupancy models are single-season and illustrative; covariates are limited to site summaries and effort-days.
 
 ## Provenance
 

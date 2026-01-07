@@ -190,3 +190,16 @@ Rationale:
 Consequences / follow-ups:
 - CI is now manual (`workflow_dispatch`) only.
 - Re-enable push/PR triggers once GLPK installation (or binary package strategy) is in place.
+
+---
+
+## 2026-01-07 — Defer advanced occupancy track (spOccupancy/ubms)
+Decision:
+- Defer advanced occupancy modelling (spOccupancy/ubms) until after community and trait outputs are complete.
+
+Rationale:
+- Single-season `unmarked` models satisfy the Beta milestone requirements.
+- Advanced models add complexity before the community/trait pipeline is stable.
+
+Consequences / follow-ups:
+- Revisit in WP-0.4.6+ if spatial or multi-species models become necessary.
