@@ -1,0 +1,40 @@
+schema_version_path: "schema_version.txt"
+run_id: "camtrapdp_example"
+timezone: "UTC"
+event_threshold_minutes: 15
+input_mode: "camtrapdp"
+
+paths:
+  inputs:
+    site: "data/jc_site.csv"
+    op: "data/jc_op.csv"
+    obs: "data/jc_obs.csv"
+    taxa: "data/jc_taxa.csv"
+    camtrapdp: "https://raw.githubusercontent.com/tdwg/camtrap-dp/1.0.1/example/datapackage.json"
+  outputs: "outputs"
+
+analysis:
+  rarefaction: true
+  report: true
+
+time_qc:
+  backward_jump_threshold_hours: 1
+
+sensitivity:
+  event_threshold_minutes: [5, 15, 30, 60]
+  occasion_length_days: [3, 7, 14, 30]
+
+detection_history:
+  occasion_length_days: 7
+  start_date: null
+
+occupancy:
+  species: null
+  top_n: 3
+  covariates: ["canopy_h_m", "ndvi"]
+
+traits:
+  species_column: "short"
+  columns: ["diet", "sec_diet", "activity", "habitat", "status", "body_size", "sociality", "mobility"]
+  association_traits: ["diet", "activity", "habitat", "body_size", "status"]
+  environment_vars: ["elevation_m", "canopy_h_m", "ndvi"]

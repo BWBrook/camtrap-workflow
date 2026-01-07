@@ -83,6 +83,7 @@ Rules:
 Notes:
 - `datetime` values are interpreted in the configured timezone and may be flagged if they fall in DST gaps.
 - Unparseable datetimes fail validation immediately.
+- Camtrap DP ingestion uses a mapping adapter before validation (see `docs/reference/camtrapdp_mapping_v0.1.md`).
 
 ## Validation failures
 

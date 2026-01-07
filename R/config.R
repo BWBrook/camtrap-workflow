@@ -10,12 +10,14 @@ default_config <- function() {
     run_id = "latest",
     timezone = "Australia/Hobart",
     event_threshold_minutes = 15,
+    input_mode = "four_table",
     paths = list(
       inputs = list(
         site = "data/jc_site.csv",
         op = "data/jc_op.csv",
         obs = "data/jc_obs.csv",
-        taxa = "data/jc_taxa.csv"
+        taxa = "data/jc_taxa.csv",
+        camtrapdp = NULL
       ),
       outputs = "outputs"
     ),
@@ -78,6 +80,7 @@ validate_config <- function(config) {
     "run_id",
     "timezone",
     "event_threshold_minutes",
+    "input_mode",
     "paths",
     "analysis",
     "time_qc",
@@ -102,6 +105,14 @@ validate_config <- function(config) {
 
   if (!is.character(config$run_id) || length(config$run_id) != 1) {
     stop("config.yml field run_id must be a single character value.")
+  }
+
+  if (!is.character(config$input_mode) || length(config$input_mode) != 1) {
+    stop("config.yml field input_mode must be a single character value.")
+  }
+
+  if (!config$input_mode %in% c("four_table", "camtrapdp")) {
+    stop("config.yml input_mode must be 'four_table' or 'camtrapdp'.")
   }
 
   analysis_fields <- c("rarefaction", "report")
@@ -156,6 +167,13 @@ validate_config <- function(config) {
 
   if (!is.list(config$occupancy)) {
     stop("config.yml occupancy must be provided as a list.")
+  }
+
+  if (config$input_mode == "camtrapdp") {
+    camtrap_path <- config$paths$inputs$camtrapdp
+    if (is.null(camtrap_path) || !is.character(camtrap_path) || !nzchar(camtrap_path)) {
+      stop("config.yml paths.inputs.camtrapdp must be a non-empty string when input_mode = 'camtrapdp'.")
+    }
   }
 
   if (!is.null(config$occupancy$species) &&

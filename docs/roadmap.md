@@ -107,8 +107,8 @@ Notes:
 
 ### Line 0.6.x — Interoperability & pedagogy
 
-- [ ] **WP-0.6.1** WildObsR evaluation for this repo (matrix generation / Camtrap DP) + adopt/defer decision  
-- [ ] **WP-0.6.2** Camtrap DP ingestion adapter (via WildObsR and/or frictionless) **(Large)**  
+- [x] **WP-0.6.1** WildObsR evaluation for this repo (matrix generation / Camtrap DP) + adopt/defer decision  
+- [x] **WP-0.6.2** Camtrap DP ingestion adapter (via WildObsR and/or frictionless) **(Large)**  
 - [ ] **WP-0.6.3** Optional: Camtrap DP export (publish-ready package) **(Large)**  
 - [ ] **WP-0.6.4** Teaching module: guided exercises + “change params → observe outputs” harness  
 - [ ] **WP-0.6.5** Reproducibility benchmark: cold-run protocol + runtime notes + CI strategy for heavy runs  

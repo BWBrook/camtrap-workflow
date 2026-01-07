@@ -257,3 +257,72 @@ Rationale:
 
 Consequences / follow-ups:
 - Report now highlights only associations passing FDR 0.1 (or falls back to strongest unadjusted correlations if none pass).
+
+---
+
+## 2026-01-07 — Defer WildObsR integration; adopt camtrapdp for Camtrap DP ingestion
+Decision:
+- Defer WildObsR integration for now and use the CRAN `camtrapdp` package for Camtrap DP ingestion.
+
+Rationale:
+- WildObsR is not currently on CRAN (GitHub-only), which adds dependency weight and install friction.
+- `camtrapdp` provides core Camtrap DP parsing/validation utilities needed for the ingestion adapter with a lighter footprint.
+
+Consequences / follow-ups:
+- Revisit WildObsR if matrix-generation utilities or DP validation needs expand beyond camtrapdp’s scope.
+
+---
+
+## 2026-01-07 — Camtrap DP mapping uses deploymentID as site and eventStart for datetime
+Decision:
+- Map Camtrap DP `deploymentID` to the internal `site` field and use `observations.eventStart` (fallback to media timestamp) for `obs$datetime`.
+
+Rationale:
+- `deploymentID` aligns directly with observation records and avoids ambiguity across locations.
+- `eventStart` best represents the detection time for event‑level observations.
+
+Consequences / follow-ups:
+- If multiple deployments per location need merging, revisit and add a location‑level mapping option.
+- Trait fields are left `NA` unless a taxon reference is provided.
+
+---
+
+## 2026-01-07 — Drop non-informative occupancy covariates automatically
+Decision:
+- Remove occupancy covariates that are missing from the site table, all-NA, or zero variance before fitting models.
+
+Rationale:
+- Camtrap DP datasets often lack site covariates used in the exemplar, which otherwise causes degenerate model fits.
+- The occupancy interface should gracefully fall back to base/effort-only models.
+
+Consequences / follow-ups:
+- Occupancy predictions may be constant across sites if no covariates remain.
+- If a dataset supplies valid covariates, the full candidate set is still used.
+
+---
+
+## 2026-01-07 — Functional diversity ignores single-level trait columns
+Decision:
+- Drop trait columns with only one unique level before dummy encoding and functional diversity calculation; if no informative traits remain, return NA metrics and a placeholder plot.
+
+Rationale:
+- Dummy encoding fails when categorical traits have a single level.
+- Camtrap DP example data contain no trait annotations; reporting NA avoids misleading metrics.
+
+Consequences / follow-ups:
+- Functional diversity plots may show a “no metrics available” placeholder for DP runs.
+- Users should supply trait data if they require functional diversity outputs.
+
+---
+
+## 2026-01-07 — Disable GitHub Actions workflow pending system deps
+Decision:
+- Remove the GitHub Actions workflow file temporarily and rely on local quality gates until GLPK (and other system dependencies) are resolved.
+
+Rationale:
+- The CI runner lacks `libglpk.so.40`, causing `igraph` (and thus `renv::restore()`) to fail.
+- The PI requested disabling CI until the roadmap is complete and dependencies are settled.
+
+Consequences / follow-ups:
+- CI will not run automatically; developers must run lint/tests/pipeline locally.
+- Re‑enable CI once system dependencies are installed or a container strategy is adopted.

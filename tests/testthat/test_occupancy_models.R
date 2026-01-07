@@ -38,3 +38,18 @@ test_that("build_unmarked_frame creates expected dimensions", {
   expect_true(is.na(umf@y[1, 2]))
   expect_equal(rownames(umf@siteCovs), c("A", "B"))
 })
+
+test_that("select_occupancy_covariates drops missing or non-informative covariates", {
+  site_raw <- tibble(
+    site = c("A", "B", "C"),
+    canopy_h_m = c(NA_real_, NA_real_, NA_real_),
+    ndvi = c(1, 1, 1),
+    elevation_m = c(10, 20, 30)
+  )
+
+  selected <- suppressWarnings(
+    select_occupancy_covariates(site_raw, c("canopy_h_m", "ndvi", "elevation_m", "missing"))
+  )
+
+  expect_equal(selected, "elevation_m")
+})

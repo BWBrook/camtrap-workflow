@@ -32,12 +32,51 @@ prepare_site_covariates <- function(site_raw, covariate_names) {
   import::from("dplyr", select, across, mutate)
 
   covs <- site_raw |>
-    select(site, all_of(covariate_names)) |>
-    mutate(across(all_of(covariate_names), \(x) as.numeric(scale(x))))
+    select(site, all_of(covariate_names))
+
+  if (length(covariate_names) > 0) {
+    covs <- covs |>
+      mutate(across(all_of(covariate_names), \(x) as.numeric(scale(x))))
+  }
 
   covs <- as.data.frame(covs)
   rownames(covs) <- covs$site
   covs
+}
+
+#' Select occupancy covariates with sufficient data/variance
+#'
+#' @param site_raw Site table.
+#' @param covariate_names Candidate covariate names.
+#' @return Character vector of covariates retained for modelling.
+#' @export
+select_occupancy_covariates <- function(site_raw, covariate_names) {
+  import::from("dplyr", select)
+
+  if (is.null(covariate_names) || length(covariate_names) == 0) {
+    return(character())
+  }
+
+  missing <- setdiff(covariate_names, names(site_raw))
+  if (length(missing) > 0) {
+    warning("Dropping missing occupancy covariates: ", paste(missing, collapse = ", "))
+  }
+
+  covariate_names <- intersect(covariate_names, names(site_raw))
+  if (length(covariate_names) == 0) {
+    return(character())
+  }
+
+  covs <- site_raw |>
+    select(all_of(covariate_names))
+
+  keep <- vapply(covariate_names, function(name) {
+    x <- as.numeric(covs[[name]])
+    x <- x[!is.na(x)]
+    length(x) > 1 && stats::sd(x) > 0
+  }, logical(1))
+
+  covariate_names[keep]
 }
 
 #' Build candidate model specifications for occupancy
@@ -102,7 +141,12 @@ build_unmarked_frame <- function(detection_history, site_covs, species) {
     arrange(site)
 
   cov_df <- as.data.frame(covs[, setdiff(names(covs), "site"), drop = FALSE])
-  rownames(cov_df) <- covs$site
+
+  if (ncol(cov_df) == 0) {
+    cov_df <- NULL
+  } else {
+    rownames(cov_df) <- covs$site
+  }
 
   unmarkedFrameOccu(
     y = y,

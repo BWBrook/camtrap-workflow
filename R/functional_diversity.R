@@ -26,6 +26,17 @@ compute_functional_diversity <- function(community_abundance, traits_aligned) {
     mutate(across(everything(), ~ ifelse(is.na(.x), "unknown", as.character(.x)))) |>
     mutate(across(everything(), ~ as.factor(.x)))
 
+  informative <- vapply(trait_matrix, function(x) {
+    length(unique(x[!is.na(x)])) > 1
+  }, logical(1))
+
+  trait_matrix <- trait_matrix[, informative, drop = FALSE]
+
+  if (ncol(trait_matrix) == 0) {
+    metrics <- tibble(site = community_abundance$site, FRic = NA_real_, FDiv = NA_real_, FDis = NA_real_)
+    return(list(metrics = metrics, dropped_species = tibble(species = species_cols)))
+  }
+
   trait_df <- as.data.frame(trait_matrix)
   rownames(trait_df) <- traits_filtered$species
 
@@ -84,7 +95,19 @@ compute_functional_diversity <- function(community_abundance, traits_aligned) {
 #' @return `out_path` invisibly.
 #' @export
 plot_functional_diversity <- function(fd_metrics, out_path) {
-  import::from("ggplot2", ggplot, aes, geom_col, theme_minimal, labs, coord_flip, facet_wrap, ggsave)
+  import::from(
+    "ggplot2",
+    ggplot,
+    aes,
+    geom_col,
+    theme_minimal,
+    theme_void,
+    labs,
+    coord_flip,
+    facet_wrap,
+    ggsave,
+    annotate
+  )
   import::from("tidyr", pivot_longer)
 
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
@@ -92,6 +115,15 @@ plot_functional_diversity <- function(fd_metrics, out_path) {
   fd_long <- fd_metrics |>
     pivot_longer(-site, names_to = "metric", values_to = "value") |>
     dplyr::filter(!is.na(value))
+
+  if (nrow(fd_long) == 0) {
+    p <- ggplot() +
+      theme_void() +
+      annotate("text", x = 0, y = 0, label = "No functional diversity metrics available") +
+      labs(x = NULL, y = NULL)
+    ggsave(out_path, p, width = 7, height = 5, dpi = 300)
+    return(out_path)
+  }
 
   p <- ggplot(fd_long, aes(x = reorder(site, value), y = value)) +
     geom_col() +

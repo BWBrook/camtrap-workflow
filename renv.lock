@@ -9,6 +9,55 @@
     ]
   },
   "Packages": {
+    "EML": {
+      "Package": "EML",
+      "Version": "2.0.7",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Read and Write Ecological Metadata Language Files",
+      "Description": "Work with Ecological Metadata Language ('EML') files.  'EML' is a widely used metadata standard in the ecological and environmental sciences, described in Jones et al. (2006), <doi:10.1146/annurev.ecolsys.37.091305.110031>.",
+      "Authors@R": "c( person(\"Carl\", \"Boettiger\",  email = \"cboettig@gmail.com\",  role = c(\"aut\", \"cre\", \"cph\"), comment=c(ORCID = \"0000-0002-1642-628X\")), person(\"Matthew B.\", \"Jones\", role=\"aut\",  comment = c(ORCID=\"0000-0003-0077-4738\")),       person(\"Mitchell\", \"Maier\",  role = c(\"ctb\"), comment= c(ORCID = \"0000-0001-6955-0535\")), person(\"Bryce\", \"Mecum\", role = \"ctb\",  email = \"brycemecum@gmail.com\", comment = c(ORCID = \"0000-0002-0381-3766\")), person(\"Maëlle\", \"Salmon\", role = \"ctb\",  email = \"maelle.salmon@yahoo.se\",  comment = c(ORCID = \"0000-0002-2815-0399\")), person(\"Jeanette\", \"Clark\", role = \"ctb\",  email = \"jclark@nceas.ucsb.edu\", comment = c(ORCID = \"0000-0003-4703-1974\")) )",
+      "License": "MIT + file LICENSE",
+      "URL": "https://docs.ropensci.org/EML/, https://github.com/ropensci/EML/",
+      "BugReports": "https://github.com/ropensci/EML/issues",
+      "Encoding": "UTF-8",
+      "LazyData": "true",
+      "Depends": [
+        "R (>= 2.10)"
+      ],
+      "Suggests": [
+        "knitr",
+        "taxadb",
+        "tibble",
+        "testthat",
+        "covr",
+        "EML",
+        "units",
+        "htmlwidgets",
+        "shiny",
+        "shinyjs",
+        "spelling"
+      ],
+      "Imports": [
+        "xml2",
+        "methods",
+        "digest",
+        "emld (>= 0.5.0)",
+        "jqr",
+        "jsonlite",
+        "uuid",
+        "rmarkdown",
+        "utils",
+        "dplyr"
+      ],
+      "VignetteBuilder": "knitr",
+      "RoxygenNote": "7.3.2",
+      "Language": "en-US",
+      "NeedsCompilation": "no",
+      "Author": "Carl Boettiger [aut, cre, cph] (ORCID: <https://orcid.org/0000-0002-1642-628X>), Matthew B. Jones [aut] (ORCID: <https://orcid.org/0000-0003-0077-4738>), Mitchell Maier [ctb] (ORCID: <https://orcid.org/0000-0001-6955-0535>), Bryce Mecum [ctb] (ORCID: <https://orcid.org/0000-0002-0381-3766>), Maëlle Salmon [ctb] (ORCID: <https://orcid.org/0000-0002-2815-0399>), Jeanette Clark [ctb] (ORCID: <https://orcid.org/0000-0003-4703-1974>)",
+      "Maintainer": "Carl Boettiger <cboettig@gmail.com>",
+      "Repository": "CRAN"
+    },
     "FD": {
       "Package": "FD",
       "Version": "1.0-12.3",
@@ -395,6 +444,42 @@
       "NeedsCompilation": "yes",
       "Repository": "CRAN"
     },
+    "V8": {
+      "Package": "V8",
+      "Version": "8.0.1",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Embedded JavaScript and WebAssembly Engine for R",
+      "Authors@R": "c( person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\")), person(\"George\", \"Stagg\", role = \"ctb\", comment = c(ORCID = \"0009-0006-3173-9846\")), person(\"Jan Marvin\", \"Garbuszus\", role = \"ctb\"))",
+      "Description": "An R interface to V8 <https://v8.dev>: Google's open source JavaScript and WebAssembly engine. This package can be compiled either with V8 or NodeJS  when built as a shared library.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://jeroen.r-universe.dev/V8",
+      "BugReports": "https://github.com/jeroen/v8/issues",
+      "SystemRequirements": "On Linux you can build against libv8-dev (Debian) or v8-devel (Fedora). We also provide static libv8 binaries for most platforms, see the README for details.",
+      "NeedsCompilation": "yes",
+      "VignetteBuilder": "knitr",
+      "Imports": [
+        "Rcpp (>= 0.12.12)",
+        "jsonlite (>= 1.0)",
+        "curl (>= 1.0)",
+        "utils"
+      ],
+      "LinkingTo": [
+        "Rcpp"
+      ],
+      "Suggests": [
+        "testthat",
+        "knitr",
+        "rmarkdown"
+      ],
+      "RoxygenNote": "7.3.1",
+      "Language": "en-US",
+      "Encoding": "UTF-8",
+      "Biarch": "true",
+      "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>), George Stagg [ctb] (ORCID: <https://orcid.org/0009-0006-3173-9846>), Jan Marvin Garbuszus [ctb]",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
+      "Repository": "CRAN"
+    },
     "abind": {
       "Package": "abind",
       "Version": "1.4-8",
@@ -511,6 +596,31 @@
       "NeedsCompilation": "yes",
       "Author": "Emmanuel Paradis [aut, cre, cph] (<https://orcid.org/0000-0003-3092-2199>), Simon Blomberg [aut, cph] (<https://orcid.org/0000-0003-1062-0839>), Ben Bolker [aut, cph] (<https://orcid.org/0000-0002-2127-0443>), Joseph Brown [aut, cph] (<https://orcid.org/0000-0002-3835-8062>), Santiago Claramunt [aut, cph] (<https://orcid.org/0000-0002-8926-5974>), Julien Claude [aut, cph] (<https://orcid.org/0000-0002-9267-1228>), Hoa Sien Cuong [aut, cph], Richard Desper [aut, cph], Gilles Didier [aut, cph] (<https://orcid.org/0000-0003-0596-9112>), Benoit Durand [aut, cph], Julien Dutheil [aut, cph] (<https://orcid.org/0000-0001-7753-4121>), RJ Ewing [aut, cph], Olivier Gascuel [aut, cph], Thomas Guillerme [aut, cph] (<https://orcid.org/0000-0003-4325-1275>), Christoph Heibl [aut, cph] (<https://orcid.org/0000-0002-7655-3299>), Anthony Ives [aut, cph] (<https://orcid.org/0000-0001-9375-9523>), Bradley Jones [aut, cph] (<https://orcid.org/0000-0003-4498-1069>), Franz Krah [aut, cph] (<https://orcid.org/0000-0001-7866-7508>), Daniel Lawson [aut, cph] (<https://orcid.org/0000-0002-5311-6213>), Vincent Lefort [aut, cph], Pierre Legendre [aut, cph] (<https://orcid.org/0000-0002-3838-3305>), Jim Lemon [aut, cph], Guillaume Louvel [aut, cph] (<https://orcid.org/0000-0002-7745-0785>), Federico Marotta [aut, cph], Eric Marcon [aut, cph] (<https://orcid.org/0000-0002-5249-321X>), Rosemary McCloskey [aut, cph] (<https://orcid.org/0000-0002-9772-8553>), Johan Nylander [aut, cph], Rainer Opgen-Rhein [aut, cph], Andrei-Alin Popescu [aut, cph], Manuela Royer-Carenzi [aut, cph], Klaus Schliep [aut, cph] (<https://orcid.org/0000-0003-2941-0161>), Korbinian Strimmer [aut, cph] (<https://orcid.org/0000-0001-7917-2056>), Damien de Vienne [aut, cph] (<https://orcid.org/0000-0001-9532-5251>)",
       "Maintainer": "Emmanuel Paradis <Emmanuel.Paradis@ird.fr>",
+      "Repository": "CRAN"
+    },
+    "askpass": {
+      "Package": "askpass",
+      "Version": "1.2.1",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Password Entry Utilities for R, Git, and SSH",
+      "Authors@R": "person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"),  email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\"))",
+      "Description": "Cross-platform utilities for prompting the user for credentials or a  passphrase, for example to authenticate with a server or read a protected key. Includes native programs for MacOS and Windows, hence no 'tcltk' is required.  Password entry can be invoked in two different ways: directly from R via the  askpass() function, or indirectly as password-entry back-end for 'ssh-agent'  or 'git-credential' via the SSH_ASKPASS and GIT_ASKPASS environment variables. Thereby the user can be prompted for credentials or a passphrase if needed  when R calls out to git or ssh.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://r-lib.r-universe.dev/askpass",
+      "BugReports": "https://github.com/r-lib/askpass/issues",
+      "Encoding": "UTF-8",
+      "Imports": [
+        "sys (>= 2.1)"
+      ],
+      "RoxygenNote": "7.2.3",
+      "Suggests": [
+        "testthat"
+      ],
+      "Language": "en-US",
+      "NeedsCompilation": "yes",
+      "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
       "Repository": "CRAN"
     },
     "backports": {
@@ -801,6 +911,47 @@
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
     },
+    "camtrapdp": {
+      "Package": "camtrapdp",
+      "Version": "0.4.0",
+      "Source": "Repository",
+      "Title": "Read and Manipulate Camera Trap Data Packages",
+      "Date": "2025-06-06",
+      "Authors@R": "c( person(\"Peter\", \"Desmet\", , \"peter.desmet@inbo.be\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-8442-8025\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Sanne\", \"Govaert\", , \"sanne.govaert@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0002-8939-1305\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Pieter\", \"Huybrechts\", , \"pieter.huybrechts@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0002-6658-6062\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Damiano\", \"Oldoni\", , \"damiano.oldoni@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0003-3445-7562\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Research Institute for Nature and Forest (INBO)\", role = \"cph\", comment = c(ROR = \"00j54wy13\")), person(\"Research Foundation - Flanders\", role = \"fnd\", comment = \"https://lifewatch.be\") )",
+      "Description": "Read and manipulate Camera Trap Data Packages ('Camtrap DP'). 'Camtrap DP' (<https://camtrap-dp.tdwg.org>) is a data exchange format for camera trap data. With 'camtrapdp' you can read, filter and transform data (including to Darwin Core) before further analysis in e.g. 'camtraptor' or 'camtrapR'.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/inbo/camtrapdp, https://inbo.github.io/camtrapdp/",
+      "BugReports": "https://github.com/inbo/camtrapdp/issues",
+      "Depends": [
+        "R (>= 3.6.0)"
+      ],
+      "Imports": [
+        "cli",
+        "dplyr",
+        "EML",
+        "frictionless (>= 1.2.1)",
+        "memoise",
+        "purrr",
+        "readr",
+        "rlang",
+        "stringr",
+        "uuid"
+      ],
+      "Suggests": [
+        "jsonlite",
+        "lubridate",
+        "testthat (>= 3.0.0)",
+        "tibble",
+        "xml2"
+      ],
+      "Config/testthat/edition": "3",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Peter Desmet [aut, cre] (ORCID: <https://orcid.org/0000-0002-8442-8025>, affiliation: Research Institute for Nature and Forest (INBO)), Sanne Govaert [aut] (ORCID: <https://orcid.org/0000-0002-8939-1305>, affiliation: Research Institute for Nature and Forest (INBO)), Pieter Huybrechts [aut] (ORCID: <https://orcid.org/0000-0002-6658-6062>, affiliation: Research Institute for Nature and Forest (INBO)), Damiano Oldoni [aut] (ORCID: <https://orcid.org/0000-0003-3445-7562>, affiliation: Research Institute for Nature and Forest (INBO)), Research Institute for Nature and Forest (INBO) [cph] (ROR: <https://ror.org/00j54wy13>), Research Foundation - Flanders [fnd] (https://lifewatch.be)",
+      "Maintainer": "Peter Desmet <peter.desmet@inbo.be>",
+      "Repository": "CRAN"
+    },
     "cli": {
       "Package": "cli",
       "Version": "3.6.5",
@@ -1039,6 +1190,40 @@
       "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
     },
+    "curl": {
+      "Package": "curl",
+      "Version": "7.0.0",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "A Modern and Flexible Web Client for R",
+      "Authors@R": "c( person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\")), person(\"Hadley\", \"Wickham\", role = \"ctb\"), person(\"Posit Software, PBC\", role = \"cph\"))",
+      "Description": "Bindings to 'libcurl' <https://curl.se/libcurl/> for performing fully configurable HTTP/FTP requests where responses can be processed in memory, on disk, or streaming via the callback or connection interfaces. Some knowledge of 'libcurl' is recommended; for a more-user-friendly web client see the  'httr2' package which builds on this package with http specific tools and logic.",
+      "License": "MIT + file LICENSE",
+      "SystemRequirements": "libcurl (>= 7.73): libcurl-devel (rpm) or libcurl4-openssl-dev (deb)",
+      "URL": "https://jeroen.r-universe.dev/curl",
+      "BugReports": "https://github.com/jeroen/curl/issues",
+      "Suggests": [
+        "spelling",
+        "testthat (>= 1.0.0)",
+        "knitr",
+        "jsonlite",
+        "later",
+        "rmarkdown",
+        "httpuv (>= 1.4.4)",
+        "webutils"
+      ],
+      "VignetteBuilder": "knitr",
+      "Depends": [
+        "R (>= 3.0.0)"
+      ],
+      "RoxygenNote": "7.3.2",
+      "Encoding": "UTF-8",
+      "Language": "en-US",
+      "NeedsCompilation": "yes",
+      "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>), Hadley Wickham [ctb], Posit Software, PBC [cph]",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
+      "Repository": "CRAN"
+    },
     "data.table": {
       "Package": "data.table",
       "Version": "1.17.8",
@@ -1237,6 +1422,45 @@
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "CRAN"
     },
+    "emld": {
+      "Package": "emld",
+      "Version": "0.5.2",
+      "Source": "Repository",
+      "Title": "Ecological Metadata as Linked Data",
+      "Authors@R": "c( person(\"Carl\", \"Boettiger\",  email = \"cboettig@gmail.com\",  role = c(\"aut\", \"cre\", \"cph\"), comment=c(ORCID = \"0000-0002-1642-628X\")), person(\"Matthew B.\", \"Jones\",  email = \"jones@nceas.ucsb.edu\",  role = c(\"aut\", \"cph\"), comment=c(ORCID = \"0000-0003-0077-4738\")), person(\"Bryce\", \"Mecum\",  email = \"mecum@nceas.ucsb.edu\",  role = c(\"aut\", \"cph\"), comment=c(ORCID = \"0000-0002-0381-3766\"))      )",
+      "Description": "This is a utility for transforming Ecological Metadata Language ('EML') files into 'JSON-LD' and back into 'EML.'  Doing so creates a list-based representation of 'EML' in R, so that 'EML' data can easily be manipulated using standard 'R' tools. This makes this package an effective backend for other 'R'-based tools  working with 'EML.' By abstracting away the complexity of 'XML' Schema, developers can build around native 'R' list objects and not have to worry about satisfying many of the additional constraints of set by the schema (such as element ordering, which is handled automatically). Additionally, the 'JSON-LD'  representation enables the use of developer-friendly 'JSON' parsing and serialization that may facilitate the use of 'EML' in contexts outside of 'R,' as well as the informatics-friendly serializations such as 'RDF' and 'SPARQL' queries.",
+      "URL": "https://docs.ropensci.org/emld/, https://github.com/ropensci/emld",
+      "BugReports": "https://github.com/ropensci/emld/issues",
+      "Depends": [
+        "R (>= 3.1.0)"
+      ],
+      "License": "MIT + file LICENSE",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.3",
+      "Suggests": [
+        "spelling",
+        "testthat",
+        "magrittr",
+        "rmarkdown",
+        "covr",
+        "knitr",
+        "rdflib",
+        "jqr"
+      ],
+      "Imports": [
+        "xml2",
+        "jsonlite",
+        "jsonld",
+        "methods",
+        "yaml"
+      ],
+      "VignetteBuilder": "knitr",
+      "Language": "en-US",
+      "NeedsCompilation": "no",
+      "Author": "Carl Boettiger [aut, cre, cph] (ORCID: <https://orcid.org/0000-0002-1642-628X>), Matthew B. Jones [aut, cph] (ORCID: <https://orcid.org/0000-0003-0077-4738>), Bryce Mecum [aut, cph] (ORCID: <https://orcid.org/0000-0002-0381-3766>)",
+      "Maintainer": "Carl Boettiger <cboettig@gmail.com>",
+      "Repository": "CRAN"
+    },
     "evaluate": {
       "Package": "evaluate",
       "Version": "1.0.5",
@@ -1349,6 +1573,49 @@
       "NeedsCompilation": "no",
       "Author": "Richard Iannone [aut, cre] (<https://orcid.org/0000-0003-3925-190X>), Christophe Dervieux [ctb] (<https://orcid.org/0000-0003-4474-2498>), Winston Chang [ctb], Dave Gandy [ctb, cph] (Font-Awesome font), Posit Software, PBC [cph, fnd]",
       "Maintainer": "Richard Iannone <rich@posit.co>",
+      "Repository": "CRAN"
+    },
+    "frictionless": {
+      "Package": "frictionless",
+      "Version": "1.2.1",
+      "Source": "Repository",
+      "Title": "Read and Write Frictionless Data Packages",
+      "Date": "2025-05-23",
+      "Authors@R": "c( person(\"Peter\", \"Desmet\", , \"peter.desmet@inbo.be\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-8442-8025\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Damiano\", \"Oldoni\", , \"damiano.oldoni@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0003-3445-7562\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Pieter\", \"Huybrechts\", , \"pieter.huybrechts@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0002-6658-6062\", affiliation = \"Research Institute for Nature and Forest (INBO)\")), person(\"Sanne\", \"Govaert\", , \"sanne.govaert@inbo.be\", role = \"aut\", comment = c(ORCID = \"0000-0002-8939-1305\", affiliation = \"Research Institute for Nature and Forest (INBO)\")),        person(\"Kyle\", \"Husmann\", , \"kdh38@psu.edu\", role = \"ctb\", comment = c(ORCID = \"0000-0001-9875-8976\", affiliation = \"Pennsylvania State University\")), person(\"Research Institute for Nature and Forest (INBO)\", role = \"cph\", comment = c(ROR = \"00j54wy13\")), person(\"Research Foundation - Flanders\", role = \"fnd\", comment = \"https://lifewatch.be\"), person(\"Beatriz\", \"Milz\", , \"milz.bea@gmail.com\", role = \"rev\", comment = c(ORCID = \"0000-0002-3064-4486\")), person(\"João\", \"Martins\", , \"joao.martins@gmx.net\", role = \"rev\", comment = c(ORCID = \"0000-0001-7961-4280\")) )",
+      "Description": "Read and write Frictionless Data Packages. A 'Data Package' (<https://specs.frictionlessdata.io/data-package/>) is a simple container format and standard to describe and package a collection of (tabular) data. It is typically used to publish FAIR (<https://www.go-fair.org/fair-principles/>) and open datasets.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://github.com/frictionlessdata/frictionless-r, https://docs.ropensci.org/frictionless/",
+      "BugReports": "https://github.com/frictionlessdata/frictionless-r/issues",
+      "Depends": [
+        "R (>= 3.6.0)"
+      ],
+      "Imports": [
+        "cli",
+        "dplyr",
+        "httr",
+        "jsonlite",
+        "purrr",
+        "readr (>= 2.1.0)",
+        "rlang",
+        "utils",
+        "yaml"
+      ],
+      "Suggests": [
+        "hms",
+        "knitr",
+        "lubridate",
+        "rmarkdown",
+        "stringi",
+        "testthat (>= 3.0.0)",
+        "tibble"
+      ],
+      "VignetteBuilder": "knitr",
+      "Config/testthat/edition": "3",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.2",
+      "NeedsCompilation": "no",
+      "Author": "Peter Desmet [aut, cre] (ORCID: <https://orcid.org/0000-0002-8442-8025>, affiliation: Research Institute for Nature and Forest (INBO)), Damiano Oldoni [aut] (ORCID: <https://orcid.org/0000-0003-3445-7562>, affiliation: Research Institute for Nature and Forest (INBO)), Pieter Huybrechts [aut] (ORCID: <https://orcid.org/0000-0002-6658-6062>, affiliation: Research Institute for Nature and Forest (INBO)), Sanne Govaert [aut] (ORCID: <https://orcid.org/0000-0002-8939-1305>, affiliation: Research Institute for Nature and Forest (INBO)), Kyle Husmann [ctb] (ORCID: <https://orcid.org/0000-0001-9875-8976>, affiliation: Pennsylvania State University), Research Institute for Nature and Forest (INBO) [cph] (ROR: <https://ror.org/00j54wy13>), Research Foundation - Flanders [fnd] (https://lifewatch.be), Beatriz Milz [rev] (ORCID: <https://orcid.org/0000-0002-3064-4486>), João Martins [rev] (ORCID: <https://orcid.org/0000-0001-7961-4280>)",
+      "Maintainer": "Peter Desmet <peter.desmet@inbo.be>",
       "Repository": "CRAN"
     },
     "fs": {
@@ -1804,6 +2071,46 @@
       "Maintainer": "Winston Chang <winston@posit.co>",
       "Repository": "CRAN"
     },
+    "httr": {
+      "Package": "httr",
+      "Version": "1.4.7",
+      "Source": "Repository",
+      "Title": "Tools for Working with URLs and HTTP",
+      "Authors@R": "c( person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\")), person(\"Posit, PBC\", role = c(\"cph\", \"fnd\")) )",
+      "Description": "Useful tools for working with HTTP organised by HTTP verbs (GET(), POST(), etc). Configuration functions make it easy to control additional request components (authenticate(), add_headers() and so on).",
+      "License": "MIT + file LICENSE",
+      "URL": "https://httr.r-lib.org/, https://github.com/r-lib/httr",
+      "BugReports": "https://github.com/r-lib/httr/issues",
+      "Depends": [
+        "R (>= 3.5)"
+      ],
+      "Imports": [
+        "curl (>= 5.0.2)",
+        "jsonlite",
+        "mime",
+        "openssl (>= 0.8)",
+        "R6"
+      ],
+      "Suggests": [
+        "covr",
+        "httpuv",
+        "jpeg",
+        "knitr",
+        "png",
+        "readr",
+        "rmarkdown",
+        "testthat (>= 0.8.0)",
+        "xml2"
+      ],
+      "VignetteBuilder": "knitr",
+      "Config/Needs/website": "tidyverse/tidytemplate",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.2.3",
+      "NeedsCompilation": "no",
+      "Author": "Hadley Wickham [aut, cre], Posit, PBC [cph, fnd]",
+      "Maintainer": "Hadley Wickham <hadley@posit.co>",
+      "Repository": "CRAN"
+    },
     "igraph": {
       "Package": "igraph",
       "Version": "2.2.1",
@@ -1986,6 +2293,37 @@
       "Maintainer": "Sam Firke <samuel.firke@gmail.com>",
       "Repository": "CRAN"
     },
+    "jqr": {
+      "Package": "jqr",
+      "Version": "1.4.0",
+      "Source": "Repository",
+      "Title": "Client for 'jq', a 'JSON' Processor",
+      "Description": "Client for 'jq', a 'JSON' processor (<https://jqlang.github.io/jq/>),  written in C. 'jq' allows the following with 'JSON' data: index into, parse,  do calculations, cut up and filter, change key names and values, perform  conditionals and comparisons, and more.",
+      "Depends": [
+        "R (>= 3.1.2)"
+      ],
+      "License": "MIT + file LICENSE",
+      "Encoding": "UTF-8",
+      "Language": "en-US",
+      "LazyData": "true",
+      "Authors@R": "c(person(\"Rich\", \"FitzJohn\", role = \"aut\", email = \"rich.fitzjohn@gmail.com\"), person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\"), person(\"Scott\", \"Chamberlain\", role = \"aut\", email = \"myrmecocystus@gmail.com\"), person(\"Stefan Milton Bache\", role = \"aut\", email = \"stefan@stefanbache.dk\"))",
+      "URL": "https://docs.ropensci.org/jqr/ https://ropensci.r-universe.dev/jqr",
+      "BugReports": "https://github.com/ropensci/jqr/issues",
+      "SystemRequirements": "libjq: jq-devel (rpm) or libjq-dev (deb)",
+      "Imports": [
+        "magrittr",
+        "lazyeval"
+      ],
+      "Suggests": [
+        "jsonlite",
+        "testthat"
+      ],
+      "RoxygenNote": "7.3.2.9000",
+      "NeedsCompilation": "yes",
+      "Author": "Rich FitzJohn [aut], Jeroen Ooms [aut, cre], Scott Chamberlain [aut], Stefan Milton Bache [aut]",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
+      "Repository": "CRAN"
+    },
     "jquerylib": {
       "Package": "jquerylib",
       "Version": "0.1.4",
@@ -2006,6 +2344,32 @@
       "NeedsCompilation": "no",
       "Author": "Carson Sievert [aut, cre] (<https://orcid.org/0000-0002-4958-2844>), Joe Cheng [aut], RStudio [cph], jQuery Foundation [cph] (jQuery library and jQuery UI library), jQuery contributors [ctb, cph] (jQuery library; authors listed in inst/lib/jquery-AUTHORS.txt)",
       "Maintainer": "Carson Sievert <carson@rstudio.com>",
+      "Repository": "CRAN"
+    },
+    "jsonld": {
+      "Package": "jsonld",
+      "Version": "2.2.1",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "JSON for Linking Data",
+      "Authors@R": "person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\"))",
+      "Description": "JSON-LD <https://www.w3.org/TR/json-ld/> is a light-weight syntax for  expressing linked data. It is primarily intended for web-based programming environments, interoperable web services and for storing linked data in  JSON-based databases. This package provides bindings to the JavaScript  library for converting, expanding and compacting JSON-LD documents.",
+      "License": "BSD_3_clause + file LICENSE",
+      "URL": "https://docs.ropensci.org/jsonld/, https://ropensci.r-universe.dev/jsonld",
+      "BugReports": "https://github.com/ropensci/jsonld/issues",
+      "Imports": [
+        "V8",
+        "jsonlite",
+        "curl (>= 2.7)"
+      ],
+      "RoxygenNote": "5.0.1.9000",
+      "Suggests": [
+        "spelling"
+      ],
+      "Language": "en-US",
+      "NeedsCompilation": "no",
+      "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
       "Repository": "CRAN"
     },
     "jsonlite": {
@@ -2563,6 +2927,39 @@
       "NeedsCompilation": "yes",
       "Author": "José Pinheiro [aut] (S version), Douglas Bates [aut] (up to 2007), Saikat DebRoy [ctb] (up to 2002), Deepayan Sarkar [ctb] (up to 2005), EISPACK authors [ctb] (src/rs.f), Siem Heisterkamp [ctb] (Author fixed sigma), Bert Van Willigen [ctb] (Programmer fixed sigma), Johannes Ranke [ctb] (varConstProp()), R Core Team [aut, cre] (02zz1nj61)",
       "Maintainer": "R Core Team <R-core@R-project.org>",
+      "Repository": "CRAN"
+    },
+    "openssl": {
+      "Package": "openssl",
+      "Version": "2.3.4",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Toolkit for Encryption, Signatures and Certificates Based on OpenSSL",
+      "Authors@R": "c(person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"), email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\")), person(\"Oliver\", \"Keyes\", role = \"ctb\"))",
+      "Description": "Bindings to OpenSSL libssl and libcrypto, plus custom SSH key parsers. Supports RSA, DSA and EC curves P-256, P-384, P-521, and curve25519. Cryptographic signatures can either be created and verified manually or via x509 certificates.  AES can be used in cbc, ctr or gcm mode for symmetric encryption; RSA for asymmetric (public key) encryption or EC for Diffie Hellman. High-level envelope functions  combine RSA and AES for encrypting arbitrary sized data. Other utilities include key generators, hash functions (md5, sha1, sha256, etc), base64 encoder, a secure random number generator, and 'bignum' math methods for manually performing crypto  calculations on large multibyte integers.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://jeroen.r-universe.dev/openssl",
+      "BugReports": "https://github.com/jeroen/openssl/issues",
+      "SystemRequirements": "OpenSSL >= 1.0.2",
+      "VignetteBuilder": "knitr",
+      "Imports": [
+        "askpass"
+      ],
+      "Suggests": [
+        "curl",
+        "testthat (>= 2.1.0)",
+        "digest",
+        "knitr",
+        "rmarkdown",
+        "jsonlite",
+        "jose",
+        "sodium"
+      ],
+      "RoxygenNote": "7.3.2",
+      "Encoding": "UTF-8",
+      "NeedsCompilation": "yes",
+      "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>), Oliver Keyes [ctb]",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
       "Repository": "CRAN"
     },
     "otel": {
@@ -3795,6 +4192,30 @@
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "https://packagemanager.posit.co/cran/__linux__/noble/latest"
     },
+    "sys": {
+      "Package": "sys",
+      "Version": "3.4.3",
+      "Source": "Repository",
+      "Type": "Package",
+      "Title": "Powerful and Reliable Tools for Running System Commands in R",
+      "Authors@R": "c(person(\"Jeroen\", \"Ooms\", role = c(\"aut\", \"cre\"),  email = \"jeroenooms@gmail.com\", comment = c(ORCID = \"0000-0002-4035-0289\")), person(\"Gábor\", \"Csárdi\", , \"csardi.gabor@gmail.com\", role = \"ctb\"))",
+      "Description": "Drop-in replacements for the base system2() function with fine control and consistent behavior across platforms. Supports clean interruption, timeout,  background tasks, and streaming STDIN / STDOUT / STDERR over binary or text  connections. Arguments on Windows automatically get encoded and quoted to work  on different locales.",
+      "License": "MIT + file LICENSE",
+      "URL": "https://jeroen.r-universe.dev/sys",
+      "BugReports": "https://github.com/jeroen/sys/issues",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.1.1",
+      "Suggests": [
+        "unix (>= 1.4)",
+        "spelling",
+        "testthat"
+      ],
+      "Language": "en-US",
+      "NeedsCompilation": "yes",
+      "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>), Gábor Csárdi [ctb]",
+      "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
+      "Repository": "CRAN"
+    },
     "targets": {
       "Package": "targets",
       "Version": "1.11.4",
@@ -4257,6 +4678,24 @@
       "NeedsCompilation": "yes",
       "Author": "Patrick O. Perry [aut, cph], Kirill Müller [cre] (ORCID: <https://orcid.org/0000-0002-1416-3412>), Unicode, Inc. [cph, dtc] (Unicode Character Database)",
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
+      "Repository": "CRAN"
+    },
+    "uuid": {
+      "Package": "uuid",
+      "Version": "1.2-1",
+      "Source": "Repository",
+      "Title": "Tools for Generating and Handling of UUIDs",
+      "Author": "Simon Urbanek [aut, cre, cph] (https://urbanek.org, <https://orcid.org/0000-0003-2297-1732>), Theodore Ts'o [aut, cph] (libuuid)",
+      "Maintainer": "Simon Urbanek <Simon.Urbanek@r-project.org>",
+      "Authors@R": "c(person(\"Simon\", \"Urbanek\", role=c(\"aut\",\"cre\",\"cph\"), email=\"Simon.Urbanek@r-project.org\", comment=c(\"https://urbanek.org\", ORCID=\"0000-0003-2297-1732\")), person(\"Theodore\",\"Ts'o\", email=\"tytso@thunk.org\", role=c(\"aut\",\"cph\"), comment=\"libuuid\"))",
+      "Depends": [
+        "R (>= 2.9.0)"
+      ],
+      "Description": "Tools for generating and handling of UUIDs (Universally Unique Identifiers).",
+      "License": "MIT + file LICENSE",
+      "URL": "https://www.rforge.net/uuid",
+      "BugReports": "https://github.com/s-u/uuid/issues",
+      "NeedsCompilation": "yes",
       "Repository": "CRAN"
     },
     "vctrs": {

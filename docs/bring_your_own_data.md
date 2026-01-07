@@ -67,3 +67,29 @@ Outputs will appear under `outputs/runs/<run_id>/` (see `config.yml`).
   - Fix: replace with 0/1 and remove NA values.
 
 If validation fails, the error message indicates which table/column needs attention.
+
+---
+
+# Camtrap DP ingestion (optional)
+
+If your data are already packaged as a Camtrap Data Package (Camtrap DP), you can ingest it directly.
+
+1) Create a config file that points to the DP `datapackage.json`:
+
+```yaml
+input_mode: "camtrapdp"
+paths:
+  inputs:
+    camtrapdp: "path/to/datapackage.json"
+```
+
+2) Run the pipeline with that config:
+
+```sh
+CAMTRAP_CONFIG=config.camtrapdp_example.yml Rscript -e 'targets::tar_make()'
+```
+
+Notes:
+- The adapter maps Camtrap DP `deploymentID` to the internal `site` field.
+- Observation `eventStart` (or media `timestamp`) is used for `obs$datetime`.
+- Trait columns are included but populated with `NA` unless you extend the mapping.

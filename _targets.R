@@ -37,6 +37,11 @@ import::here(
 )
 
 import::here(
+  load_inputs,
+  .from = "R/input_loader.R"
+)
+
+import::here(
   write_run_manifest,
   .from = "R/run_manifest.R"
 )
@@ -87,6 +92,7 @@ import::here(
 
 import::here(
   select_occupancy_species,
+  select_occupancy_covariates,
   prepare_site_covariates,
   build_occupancy_model_specs,
   build_unmarked_frame,
@@ -138,6 +144,7 @@ import::here(
 tar_option_set(
   packages = c(
     "FD",
+    "camtrapdp",
     "dplyr",
     "fs",
     "ggplot2",
@@ -147,6 +154,7 @@ tar_option_set(
     "knitr",
     "lubridate",
     "readr",
+    "purrr",
     "stringr",
     "tibble",
     "tidyr",
@@ -160,8 +168,16 @@ list(
   ## ── CONFIG ───────────────────────────────────────────────────────────
   tar_target(
     config_file,
-    here("config.yml"),
-    format = "file"
+    {
+      config_path <- Sys.getenv("CAMTRAP_CONFIG", unset = "config.yml")
+      if (fs::is_absolute_path(config_path)) {
+        config_path
+      } else {
+        here(config_path)
+      }
+    },
+    format = "file",
+    cue = tar_cue(mode = "always")
   ),
   tar_target(
     config,
@@ -190,10 +206,26 @@ list(
     format = "file"
   ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
-  tar_target(taxa_raw, read_jc_csv(config$paths$inputs$taxa)),
-  tar_target(site_raw, read_jc_csv(config$paths$inputs$site)),
-  tar_target(op_raw,   read_jc_csv(config$paths$inputs$op)),
-  tar_target(obs_raw,  read_jc_csv(config$paths$inputs$obs)),
+  tar_target(
+    raw_inputs,
+    load_inputs(config)
+  ),
+  tar_target(
+    site_raw,
+    raw_inputs$site
+  ),
+  tar_target(
+    op_raw,
+    raw_inputs$op
+  ),
+  tar_target(
+    obs_raw,
+    raw_inputs$obs
+  ),
+  tar_target(
+    taxa_raw,
+    raw_inputs$taxa
+  ),
   tar_target(schema_version, get_schema_version(config$schema_version_path)),
 
   ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
@@ -423,12 +455,16 @@ list(
     )
   ),
   tar_target(
+    occupancy_covariates,
+    select_occupancy_covariates(site_raw, config$occupancy$covariates)
+  ),
+  tar_target(
     occupancy_site_covs,
-    prepare_site_covariates(site_raw, config$occupancy$covariates)
+    prepare_site_covariates(site_raw, occupancy_covariates)
   ),
   tar_target(
     occupancy_model_specs,
-    build_occupancy_model_specs(config$occupancy$covariates)
+    build_occupancy_model_specs(occupancy_covariates)
   ),
   tar_target(
     occupancy_models,
@@ -487,11 +523,10 @@ list(
       best_model <- item$models[[best_name]]
 
       preds <- predict(best_model, type = "state")
+      pred_sites <- rownames(best_model@data@y)
       site_names <- rownames(best_model@data@siteCovs)
-      if (length(site_names) == nrow(preds)) {
+      if (!is.null(site_names) && length(site_names) == nrow(preds)) {
         pred_sites <- site_names
-      } else {
-        pred_sites <- rownames(preds)
       }
       data.frame(
         site = pred_sites,

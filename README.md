@@ -54,6 +54,12 @@ Or from the shell (non-interactive):
 Rscript -e 'targets::tar_make()'
 ```
 
+To run with an alternate config file:
+
+```sh
+CAMTRAP_CONFIG=config.camtrapdp_example.yml Rscript -e 'targets::tar_make()'
+```
+
 ### 4) View outputs
 
 Outputs are written to `outputs/` (gitignored). Look for:
@@ -77,6 +83,8 @@ This workflow assumes you already have:
 
 Start with the template dataset in `data/template_dataset/` and follow the step-by-step guide:
 `docs/bring_your_own_data.md`.
+
+Camtrap DP datasets are also supported via `camtrapdp` (see the Camtrap DP section in `docs/bring_your_own_data.md`).
 
 See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
 Update `config.yml` to point to your input file paths and parameters (timezone, event threshold).

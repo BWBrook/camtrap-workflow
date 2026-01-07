@@ -16,12 +16,16 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `event_threshold_minutes`  
   Gap threshold (minutes) for independent-event clustering.
 
+- `input_mode`  
+  Input mode selector: `four_table` (default) or `camtrapdp`.
+
 - `paths.inputs`  
   Input table paths for the four-table contract:
   - `site`
   - `op`
   - `obs`
   - `taxa`
+  - `camtrapdp` (path or URL to `datapackage.json` when `input_mode = camtrapdp`)
 
 - `paths.outputs`  
   Base output directory for all artefacts (default `outputs`).
@@ -54,7 +58,7 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   Number of top species (by events) to model when `occupancy.species` is null.
 
 - `occupancy.covariates`  
-  Vector of site covariate names to include in occupancy candidate models.
+  Vector of site covariate names to include in occupancy candidate models. Covariates with all-NA values or zero variance are dropped automatically (models fall back to base/effort-only if none remain).
 
 - `traits.species_column`  
   Column in the taxa table that identifies the species short code used by observations.

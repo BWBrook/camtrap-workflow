@@ -219,3 +219,19 @@ Artefacts:
 Notes:
 - BH-adjusted p-values are all > 0.1 in the exemplar dataset (no associations pass FDR), reinforcing that results are exploratory.
 - Heatmap patterns show some alignment between canopy/elevation and diet/activity categories, but no single covariate dominates across traits.
+
+---
+
+## 2026-01-07 — Camtrap DP example run (WP-0.6.2)
+
+Artefacts:
+- `outputs/runs/camtrapdp_example/report/report.html`
+- `outputs/runs/camtrapdp_example/report/report.pdf`
+- `outputs/runs/camtrapdp_example/tables/occupancy_summary.csv`
+- `outputs/runs/camtrapdp_example/figures/occupancy_pred_*.png`
+- `outputs/runs/camtrapdp_example/figures/functional_diversity.png`
+
+Notes:
+- The Camtrap DP example contains only 4 deployments and no site covariates, so occupancy models fall back to base/effort-only and yield constant psi estimates across sites.
+- The “unknown” taxon dominates detections in the example, leading to psi ≈ 1 with wide uncertainty; named taxa show lower psi (~0.25–0.52) and broad intervals given sparse detections.
+- Functional diversity metrics are not computed because traits are missing; the plot is a placeholder indicating no available metrics.
