@@ -31,9 +31,13 @@ select_occupancy_species <- function(events_per_day, species_override = NULL, to
 prepare_site_covariates <- function(site_raw, covariate_names) {
   import::from("dplyr", select, across, mutate)
 
-  site_raw |>
+  covs <- site_raw |>
     select(site, all_of(covariate_names)) |>
     mutate(across(all_of(covariate_names), \(x) as.numeric(scale(x))))
+
+  covs <- as.data.frame(covs)
+  rownames(covs) <- covs$site
+  covs
 }
 
 #' Build candidate model specifications for occupancy
@@ -90,14 +94,19 @@ build_unmarked_frame <- function(detection_history, site_covs, species) {
 
   y <- as.matrix(unclass(xtabs(detected ~ site + occasion, data = det)))
   effort_mat <- as.matrix(unclass(xtabs(effort_days ~ site + occasion, data = effort_days)))
+  y[effort_mat <= 0] <- NA
+  effort_mat[effort_mat <= 0] <- NA
 
   covs <- site_covs |>
     filter(site %in% rownames(y)) |>
     arrange(site)
 
+  cov_df <- as.data.frame(covs[, setdiff(names(covs), "site"), drop = FALSE])
+  rownames(cov_df) <- covs$site
+
   unmarkedFrameOccu(
     y = y,
-    siteCovs = as.data.frame(covs[, setdiff(names(covs), "site"), drop = FALSE]),
+    siteCovs = cov_df,
     obsCovs = list(effort_days = effort_mat)
   )
 }
@@ -183,7 +192,7 @@ occupancy_aic_df <- function(models) {
 #' @export
 plot_occupancy_predictions <- function(predictions, species, out_path) {
   import::from("dplyr", filter, arrange)
-  import::from("ggplot2", ggplot, aes, geom_col, geom_errorbar, theme_minimal, labs, coord_flip, ggsave)
+  import::from("ggplot2", ggplot, aes, geom_point, geom_errorbar, theme_minimal, labs, coord_flip, ggsave)
 
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
@@ -192,7 +201,7 @@ plot_occupancy_predictions <- function(predictions, species, out_path) {
     arrange(psi)
 
   p <- ggplot(plot_data, aes(x = reorder(site, psi), y = psi)) +
-    geom_col() +
+    geom_point(size = 2, color = "#2c7fb8") +
     geom_errorbar(aes(ymin = psi_lower, ymax = psi_upper), width = 0.2) +
     coord_flip() +
     theme_minimal() +

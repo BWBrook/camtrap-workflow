@@ -487,8 +487,14 @@ list(
       best_model <- item$models[[best_name]]
 
       preds <- predict(best_model, type = "state")
+      site_names <- rownames(best_model@data@siteCovs)
+      if (length(site_names) == nrow(preds)) {
+        pred_sites <- site_names
+      } else {
+        pred_sites <- rownames(preds)
+      }
       data.frame(
-        site = rownames(preds),
+        site = pred_sites,
         species = item$species,
         psi = preds$Predicted,
         psi_lower = ifelse(is.na(preds$lower), preds$Predicted, preds$lower),

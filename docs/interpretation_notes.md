@@ -119,6 +119,21 @@ Notes:
 
 ---
 
+## 2026-01-07 — Occupancy predictions sanity fix (pad/pos/wal + cat/sbb)
+
+Artefacts:
+- `outputs/runs/latest/figures/occupancy_pred_pad.png`
+- `outputs/runs/latest/figures/occupancy_pred_pos.png`
+- `outputs/runs/latest/figures/occupancy_pred_wal.png`
+- `outputs/runs/latest/figures/occupancy_pred_cat.png`
+- `outputs/runs/latest/figures/occupancy_pred_sbb.png`
+
+Notes:
+- Point estimates are now visible (psi near 1 for pad/wal; pos slightly lower at some sites), and intervals are wide but bounded by data‑driven effort filtering.
+- Rarer species (cat, sbb) show lower psi and wider uncertainty, consistent with fewer detections.
+
+---
+
 ## 2026-01-07 — Occasion-length sensitivity (WP-0.4.4)
 
 Artefacts:

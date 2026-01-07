@@ -21,8 +21,8 @@ test_that("build_unmarked_frame creates expected dimensions", {
     site = c("A", "A", "B", "B"),
     species = c("sp1", "sp1", "sp1", "sp1"),
     occasion = c(1, 2, 1, 2),
-    effort_days = c(2, 2, 2, 2),
-    effort = c(1, 1, 1, 1),
+    effort_days = c(2, 0, 2, 2),
+    effort = c(1, 0, 1, 1),
     detected = c(1, 0, 0, 1)
   )
   site_covs <- tibble(
@@ -35,4 +35,6 @@ test_that("build_unmarked_frame creates expected dimensions", {
   expect_equal(nrow(umf@y), 2)
   expect_equal(ncol(umf@y), 2)
   expect_true(all(dim(umf@obsCovs$effort_days) == c(2, 2)))
+  expect_true(is.na(umf@y[1, 2]))
+  expect_equal(rownames(umf@siteCovs), c("A", "B"))
 })

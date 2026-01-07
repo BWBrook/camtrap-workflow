@@ -27,7 +27,7 @@ detection_history:
   start_date: null
 
 occupancy:
-  species: null
+  species: ["pad", "pos", "wal", "cat", "sbb"]
   top_n: 3
   covariates: ["canopy_h_m", "ndvi"]
 
