@@ -1,5 +1,27 @@
 # camtrapdp_export.R
 
+#' Parse observation datetimes for Camtrap DP export and audit drops
+#'
+#' @param obs Internal observations table.
+#' @param tz Timezone.
+#' @return List with parsed observations and dropped-row audit.
+parse_camtrapdp_datetimes <- function(obs, tz = "UTC") {
+  import::from("dplyr", mutate, filter)
+  import::from("lubridate", dmy_hms)
+
+  parsed <- obs |>
+    mutate(event_time = dmy_hms(datetime, tz = tz, quiet = TRUE))
+
+  dropped <- parsed |>
+    filter(is.na(event_time)) |>
+    mutate(reason = "unparseable_datetime", timezone = tz)
+
+  parsed <- parsed |>
+    filter(!is.na(event_time))
+
+  list(parsed = parsed, dropped = dropped)
+}
+
 #' Build Camtrap DP deployments table from internal site/op tables
 #'
 #' @param site Internal site table.
@@ -84,12 +106,13 @@ build_camtrapdp_media <- function(obs, tz = "UTC") {
   import::from("lubridate", dmy_hms)
   import::from("stringr", str_replace_all)
 
+  has_event_time <- "event_time" %in% names(obs)
   media_tbl <- obs |>
     mutate(
       mediaID = as.character(ifelse(!is.na(imageid), imageid, index)),
       deploymentID = site,
       eventID = NA_character_,
-      timestamp = dmy_hms(datetime, tz = tz, quiet = TRUE),
+      timestamp = if (has_event_time) event_time else dmy_hms(datetime, tz = tz, quiet = TRUE),
       fileName = ifelse(!is.na(filename) & filename != "", basename(filename), paste0(mediaID, ".jpg")),
       fileName = str_replace_all(fileName, "\\s+", "_"),
       filePath = paste0("media/", fileName),
@@ -131,6 +154,7 @@ build_camtrapdp_observations <- function(obs, taxa, tz = "UTC") {
   import::from("lubridate", dmy_hms)
   import::from("stringr", str_to_lower)
 
+  has_event_time <- "event_time" %in% names(obs)
   taxa_map <- taxa |>
     mutate(
       scientificName = dplyr::case_when(
@@ -147,7 +171,7 @@ build_camtrapdp_observations <- function(obs, taxa, tz = "UTC") {
       deploymentID = site,
       mediaID = as.character(ifelse(!is.na(imageid), imageid, index)),
       eventID = NA_character_,
-      eventStart = dmy_hms(datetime, tz = tz, quiet = TRUE),
+      eventStart = if (has_event_time) event_time else dmy_hms(datetime, tz = tz, quiet = TRUE),
       eventEnd = eventStart,
       observationLevel = "media",
       observationType = dplyr::if_else(
@@ -270,12 +294,18 @@ export_camtrapdp_package <- function(site, op, obs, taxa, export_config, run_dir
   out_dir <- file.path(run_dir, "camtrapdp_export")
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-  obs_parsed <- obs |>
-    dplyr::mutate(event_time = lubridate::dmy_hms(datetime, tz = tz, quiet = TRUE))
-  if (any(is.na(obs_parsed$event_time))) {
-    dropped <- sum(is.na(obs_parsed$event_time))
-    warning("Dropping ", dropped, " observations with unparseable datetime for Camtrap DP export.")
-    obs_parsed <- obs_parsed[!is.na(obs_parsed$event_time), , drop = FALSE]
+  parse_result <- parse_camtrapdp_datetimes(obs, tz = tz)
+  obs_parsed <- parse_result$parsed
+  dropped_obs <- parse_result$dropped
+  dropped_count <- nrow(dropped_obs)
+  if (dropped_count > 0) {
+    warning("Dropping ", dropped_count, " observations with unparseable datetime for Camtrap DP export.")
+    audit_path <- file.path(out_dir, "dropped_observations.csv")
+    readr::write_csv(
+      dropped_obs |>
+        dplyr::select(index, site, datetime, species, imageid, reason, timezone),
+      audit_path
+    )
   }
 
   deployments_tbl <- build_camtrapdp_deployments(site, op, tz = tz)
@@ -310,6 +340,7 @@ export_camtrapdp_package <- function(site, op, obs, taxa, export_config, run_dir
   writeLines(
     c(
       "Camtrap DP export validation: OK",
+      paste("Dropped observations (unparseable datetime):", dropped_count),
       paste("Generated:", format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"))
     ),
     validation_path

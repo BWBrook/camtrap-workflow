@@ -1314,7 +1314,8 @@ list(
         schema_version = schema_version,
         params = config,
         outputs = outputs,
-        session_info_path = session_info
+        session_info_path = session_info,
+        config_file = config_file
       )
     },
     format = "file"

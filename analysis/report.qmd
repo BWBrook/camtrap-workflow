@@ -233,7 +233,7 @@ if (!is.null(params$trait_env_path)) {
 
 ## Relative abundance index (pooled)
 
-RAI is defined as independent events per trap night, with Poisson confidence intervals.
+RAI is defined as independent events per trap night, pooled over total survey effort across all included sites (Poisson confidence intervals).
 
 ```{r}
 knitr::kable(inputs$rai_species)

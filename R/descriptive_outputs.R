@@ -11,6 +11,8 @@ calc_rai_with_ci <- function(events_per_day, trap_nights, alpha = 0.05) {
   import::from("dplyr", group_by, summarise, left_join, mutate, select)
   import::from("stats", qchisq)
 
+  total_trap_nights <- sum(trap_nights$trap_nights, na.rm = TRUE)
+
   poisson_rate_ci <- function(events, exposure) {
     lower_count <- ifelse(events == 0, 0, 0.5 * qchisq(alpha / 2, 2 * events))
     upper_count <- 0.5 * qchisq(1 - alpha / 2, 2 * (events + 1))
@@ -32,14 +34,16 @@ calc_rai_with_ci <- function(events_per_day, trap_nights, alpha = 0.05) {
     mutate(rai_lower = site_ci$lower, rai_upper = site_ci$upper) |>
     select(site, species, events, trap_nights, rai, rai_lower, rai_upper)
 
-  pooled <- site |>
+  pooled <- events_per_day |>
     group_by(species) |>
     summarise(
       events = sum(events),
-      trap_nights = sum(trap_nights),
       .groups = "drop"
     ) |>
-    mutate(rai = ifelse(trap_nights > 0, events / trap_nights, NA_real_))
+    mutate(
+      trap_nights = total_trap_nights,
+      rai = ifelse(trap_nights > 0, events / trap_nights, NA_real_)
+    )
 
   pooled_ci <- poisson_rate_ci(pooled$events, pooled$trap_nights)
   pooled <- pooled |>

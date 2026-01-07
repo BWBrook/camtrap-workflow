@@ -27,7 +27,7 @@ Expected (current MVP):
 - `tables/event_threshold_sensitivity.csv` — event totals per threshold and events per trap night.
 - `tables/occasion_length_sensitivity.csv` — naive occupancy and detection rates by occasion length.
 - `tables/detection_history.csv` — detection histories in long format (site × species × occasion).
-- `tables/occupancy_summary.csv` — occupancy estimates (psi, p) for exemplar species.
+- `tables/occupancy_summary.csv` — occupancy estimates (psi, p) for exemplar species; `p` is the mean predicted detection probability across observed occasions with effort > 0.
 - `tables/occupancy_aic.csv` — AIC table for candidate occupancy models.
 - `tables/occupancy_predictions.csv` — site-level occupancy predictions for exemplar species.
 - `tables/community_abundance.csv` — site × species abundance matrix (events).
@@ -42,7 +42,7 @@ Expected (current MVP):
 - `tables/trait_site_proportions.csv` — abundance-weighted trait proportions by site.
 - `tables/trait_env_associations.csv` — trait–environment association results (Spearman rho, p-values, BH-adjusted p-values).
 - `tables/rai_site_species.csv` — RAI per site/species with Poisson CIs.
-- `tables/rai_species.csv` — pooled RAI per species with Poisson CIs.
+- `tables/rai_species.csv` — pooled RAI per species with Poisson CIs (denominator is total trap nights across all included sites).
 - `tables/diel_site.csv` — diel proportions per site/species.
 - `tables/diel_site_season.csv` — diel proportions per site/species/season.
 - `tables/diel_overall.csv` — overall day/night proportions.
@@ -88,6 +88,7 @@ Expected (current MVP):
 ## Camtrap DP export (optional)
 
 - `camtrapdp_export/datapackage.json` — Camtrap Data Package export of the internal tables.
+- `camtrapdp_export/dropped_observations.csv` — audit log of observations dropped due to unparseable datetimes (e.g., DST gaps).
 - `camtrapdp_export/deployments.csv` — deployment metadata derived from site/effort.
 - `camtrapdp_export/media.csv` — media metadata (one row per observation by default).
 - `camtrapdp_export/observations.csv` — observation records with eventStart/eventEnd.

@@ -39,3 +39,4 @@ Mapped tables are validated against the existing input schema (`input_schema_v0.
 Notes:
 - Export requires valid `lat/lon` and non‑empty effort for each site.
 - Observations are exported at `observationLevel = "media"` with `observationType = "animal"` by default.
+- Observations with unparseable local datetimes (e.g., DST gaps) are dropped and recorded in `camtrapdp_export/dropped_observations.csv` with a count reported in `validation.txt`.

@@ -53,3 +53,27 @@ test_that("select_occupancy_covariates drops missing or non-informative covariat
 
   expect_equal(selected, "elevation_m")
 })
+
+test_that("summarise_occupancy_model returns non-missing p estimates", {
+  detection_history <- tibble(
+    site = rep(c("A", "B"), each = 3),
+    species = "sp1",
+    occasion = rep(1:3, times = 2),
+    effort_days = c(1, 1, 1, 1, 0, 1),
+    effort = c(1, 1, 1, 1, 0, 1),
+    detected = c(1, 0, 1, 0, 0, 1)
+  )
+  site_covs <- tibble(
+    site = c("A", "B"),
+    canopy_h_m = c(0.1, -0.1),
+    ndvi = c(0.2, -0.2)
+  )
+
+  umf <- build_unmarked_frame(detection_history, site_covs, "sp1")
+  model <- suppressWarnings(unmarked::occu(~effort_days ~1, data = umf))
+  summary <- summarise_occupancy_model(model)
+
+  expect_true(!is.na(summary$p["est"]))
+  expect_true(summary$p["est"] >= 0)
+  expect_true(summary$p["est"] <= 1)
+})

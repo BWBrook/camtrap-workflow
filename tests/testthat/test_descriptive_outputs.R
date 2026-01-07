@@ -18,6 +18,8 @@ test_that("calc_rai_with_ci returns non-negative rates within CI bounds", {
   expect_true(all(rai$pooled$rai >= 0))
   expect_true(all(rai$pooled$rai >= rai$pooled$rai_lower))
   expect_true(all(rai$pooled$rai <= rai$pooled$rai_upper))
+  expect_equal(length(unique(rai$pooled$trap_nights)), 1)
+  expect_equal(unique(rai$pooled$trap_nights), sum(trap_nights$trap_nights))
 })
 
 test_that("plot_rai_species writes a file", {

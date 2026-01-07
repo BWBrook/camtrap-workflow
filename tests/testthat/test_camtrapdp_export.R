@@ -83,3 +83,63 @@ test_that("build_camtrapdp_observations returns required columns", {
   expect_true(all(required %in% names(obs_tbl)))
   expect_true(all(!is.na(obs_tbl$eventStart)))
 })
+
+test_that("parse_camtrapdp_datetimes audits DST-gap timestamps", {
+  obs <- tibble(
+    index = 1,
+    site = "A",
+    datetime = "04/10/2020 02:30:00",
+    flash = 0,
+    count = 1,
+    species = "sp1",
+    filename = "img1.jpg",
+    age = "adult",
+    sex = "female",
+    imageid = 10
+  )
+
+  parsed <- parse_camtrapdp_datetimes(obs, tz = "Australia/Hobart")
+  expect_equal(nrow(parsed$parsed), 0)
+  expect_equal(nrow(parsed$dropped), 1)
+  expect_equal(parsed$dropped$reason, "unparseable_datetime")
+})
+
+test_that("export_camtrapdp_package writes audit file for dropped observations", {
+  bad_obs <- dplyr::bind_rows(
+    sample_obs,
+    tibble(
+      index = 3,
+      site = "A",
+      datetime = "04/10/2020 02:30:00",
+      flash = 0,
+      count = 1,
+      species = "sp1",
+      filename = "img3.jpg",
+      age = "adult",
+      sex = "female",
+      imageid = 12
+    )
+  )
+  export_config <- list(
+    name = "camtrapdp-test",
+    title = "Camtrap DP test",
+    description = "Test export",
+    version = "0.0.0",
+    license = "CC-BY-4.0"
+  )
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+
+  op_dst <- tibble(
+    date = c("03/10/2020", "04/10/2020"),
+    A = c(1, 1),
+    B = c(1, 1)
+  )
+
+  export_camtrapdp_package(sample_site, op_dst, bad_obs, sample_taxa, export_config, tmp_dir, tz = "Australia/Hobart")
+
+  audit_path <- file.path(tmp_dir, "camtrapdp_export", "dropped_observations.csv")
+  expect_true(file.exists(audit_path))
+  audit <- readr::read_csv(audit_path, show_col_types = FALSE)
+  expect_true(nrow(audit) >= 1)
+})

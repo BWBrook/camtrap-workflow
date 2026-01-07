@@ -5,14 +5,24 @@ import::from("here", here)
 source(here("R", "run_manifest.R"))
 
 test_that("write_run_manifest creates a JSON file with required fields", {
-  tmp <- tempfile(fileext = ".json")
+  tmp_dir <- tempfile()
+  dir.create(tmp_dir)
+  tmp <- file.path(tmp_dir, "run_manifest.json")
+  config_file <- file.path(tmp_dir, "config.yml")
+  writeLines("run_id: test", config_file)
+  output_path <- file.path(tmp_dir, "figures", "rarefaction.png")
+  dir.create(dirname(output_path), recursive = TRUE, showWarnings = FALSE)
+  file.create(output_path)
+  session_info_path <- file.path(tmp_dir, "session_info.txt")
+  file.create(session_info_path)
 
   write_run_manifest(
     path = tmp,
     schema_version = "0.1.0",
     params = list(timezone = "Australia/Hobart"),
-    outputs = list(figures = list(rarefaction = "path/rarefaction.png")),
-    session_info_path = "path/session_info.txt"
+    outputs = list(figures = list(rarefaction = output_path)),
+    session_info_path = session_info_path,
+    config_file = config_file
   )
 
   expect_true(file.exists(tmp))
@@ -22,4 +32,7 @@ test_that("write_run_manifest creates a JSON file with required fields", {
   expect_true("run_id" %in% names(manifest))
   expect_true("timestamp_utc" %in% names(manifest))
   expect_true("outputs" %in% names(manifest))
+  expect_true(!grepl("^/", manifest$outputs$figures$rarefaction))
+  expect_true(!grepl("^/", manifest$session_info))
+  expect_equal(manifest$config$path, "config.yml")
 })

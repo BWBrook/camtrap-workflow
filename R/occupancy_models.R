@@ -183,22 +183,24 @@ fit_occupancy_models <- function(umf, model_specs) {
 #' @return List with psi and p estimates.
 #' @export
 summarise_occupancy_model <- function(model) {
-  psi_pred <- predict(model, type = "state")
-  p_pred <- predict(model, type = "det")
+  psi_pred <- unmarked::predict(model, type = "state")
+  p_pred <- unmarked::predict(model, type = "det")
 
-  psi_est <- mean(psi_pred$Predicted)
+  psi_est <- mean(psi_pred$Predicted, na.rm = TRUE)
   psi_lower <- mean(psi_pred$lower, na.rm = TRUE)
   psi_upper <- mean(psi_pred$upper, na.rm = TRUE)
 
-  if (is.nan(psi_lower)) psi_lower <- psi_est
-  if (is.nan(psi_upper)) psi_upper <- psi_est
+  if (is.nan(psi_est) || is.na(psi_est)) psi_est <- NA_real_
+  if (is.nan(psi_lower) || is.na(psi_lower)) psi_lower <- psi_est
+  if (is.nan(psi_upper) || is.na(psi_upper)) psi_upper <- psi_est
 
-  p_est <- mean(p_pred$Predicted)
+  p_est <- mean(p_pred$Predicted, na.rm = TRUE)
   p_lower <- mean(p_pred$lower, na.rm = TRUE)
   p_upper <- mean(p_pred$upper, na.rm = TRUE)
 
-  if (is.nan(p_lower)) p_lower <- p_est
-  if (is.nan(p_upper)) p_upper <- p_est
+  if (is.nan(p_est) || is.na(p_est)) p_est <- NA_real_
+  if (is.nan(p_lower) || is.na(p_lower)) p_lower <- p_est
+  if (is.nan(p_upper) || is.na(p_upper)) p_upper <- p_est
 
   list(
     psi = c(est = psi_est, lower = psi_lower, upper = psi_upper),

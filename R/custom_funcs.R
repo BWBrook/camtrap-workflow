@@ -153,6 +153,8 @@ summarise_events <- function(obs_events) {
 calc_rai <- function(events_per_day, trap_nights) {
   import::from("dplyr", group_by, summarise, left_join, mutate, across, select)
 
+  total_trap_nights <- sum(trap_nights$trap_nights, na.rm = TRUE)
+
   rai_site <- events_per_day |>
     group_by(site, species) |>
     summarise(events = sum(events), .groups = "drop") |>
@@ -160,9 +162,14 @@ calc_rai <- function(events_per_day, trap_nights) {
     mutate(rai = events / trap_nights) |>
     select(site, species, rai)
 
-  rai_species <- rai_site |>
+  rai_species <- events_per_day |>
     group_by(species) |>
-    summarise(rai = sum(rai), .groups = "drop")
+    summarise(events = sum(events), .groups = "drop") |>
+    mutate(
+      trap_nights = total_trap_nights,
+      rai = ifelse(trap_nights > 0, events / trap_nights, NA_real_)
+    ) |>
+    select(species, rai)
 
   list(site = rai_site, pooled = rai_species)
 }

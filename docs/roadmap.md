@@ -1078,3 +1078,15 @@ The PI review ZIP must include:
 - GBIF camera trap best practices guide: https://docs.gbif.org/camera-trap-guide/en/
 - camtrapR (detection history tooling, broader camera-trap workflow ecosystem): https://cran.r-project.org/package=camtrapR
 - Camtrap DP paper (open standard for FAIR exchange): https://zslpublications.onlinelibrary.wiley.com/doi/10.1002/rse2.374
+
+---
+
+## Roadmap v2 (mirror status)
+
+See `docs/roadmap_v2.md` for full WP specs. Status mirrored here for completion tracking.
+
+- [x] WP-0.7.1.1 — Re-enable CI with required system deps
+- [x] WP-0.7.1.2 — Fix pooled RAI denominator + align report definition
+- [x] WP-0.7.1.3 — Fix occupancy summary p missingness + define semantics
+- [x] WP-0.7.1.4 — Make run manifests portable + document real schema
+- [x] WP-0.7.1.5 — Camtrap DP export: DST-gap handling and auditable drop log

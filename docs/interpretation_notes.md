@@ -259,3 +259,37 @@ Artefacts:
 Notes:
 - Template run completes end‑to‑end; rarefaction ribbon warns about sparse rows (expected with tiny datasets).
 - All core tables/figures are produced, confirming the template dataset is runnable.
+
+## 2026-01-07 — RAI denominator semantics (WP-0.7.1.2)
+
+- `outputs/runs/latest/tables/rai_species.csv`
+- `outputs/runs/latest/figures/rai_species.png`
+
+Notes:
+- Pooled RAI now divides total events per species by total trap nights across all included sites, so `trap_nights` is constant across species within a run.
+- This lowers pooled RAI for species detected at only a subset of sites (as expected) and aligns interpretation with survey-wide effort.
+
+## 2026-01-07 — Occupancy summary detection probabilities (WP-0.7.1.3)
+
+- `outputs/runs/latest/tables/occupancy_summary.csv`
+- `outputs/runs/latest/figures/occupancy_pred_*.png`
+
+Notes:
+- Detection probability summaries (`p`, `p_lower`, `p_upper`) are now non-missing for the exemplar species; values fall within [0, 1] as expected.
+- Rare species (`cat`, `sbb`) have lower mean detection probabilities than common taxa, consistent with sparse detections.
+
+## 2026-01-07 — Run manifest portability (WP-0.7.1.4)
+
+- `outputs/runs/latest/run_manifest.json`
+
+Notes:
+- Manifest paths are now stored relative to the run directory, avoiding absolute machine paths.
+- Config file md5 and path are recorded to improve provenance.
+
+## 2026-01-07 — Camtrap DP export audit log (WP-0.7.1.5)
+
+- `outputs/runs/camtrapdp_export_example/camtrapdp_export/dropped_observations.csv`
+- `outputs/runs/camtrapdp_export_example/camtrapdp_export/validation.txt`
+
+Notes:
+- One observation in the Judbury exemplar falls in a timezone gap and is excluded from the export; the dropped row is recorded in the audit file and counted in `validation.txt`.

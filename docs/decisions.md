@@ -376,3 +376,28 @@ Rationale:
 Consequences / follow-ups:
 - Container builds are larger due to TeX dependencies.
 - Update the Quarto version in `Dockerfile` if needed.
+
+---
+
+## 2026-01-07 — Pooled RAI denominator uses total survey effort
+Decision:
+- Define pooled RAI as total independent events per species divided by total trap nights across all included sites (not detection-only sites).
+
+Rationale:
+- Matches the report definition and standard interpretation of RAI as survey-wide effort-normalized rates.
+
+Consequences / follow-ups:
+- `rai_species.csv` now has constant `trap_nights` across species within a run.
+- If a detected-sites-only variant is needed later, it should be a separately named output.
+
+---
+
+## 2026-01-07 — Run manifests store run-relative paths
+Decision:
+- Store all manifest paths relative to the run directory and include a config file hash for provenance.
+
+Rationale:
+- Ensures manifests are portable across machines and remain reviewable in zip bundles.
+
+Consequences / follow-ups:
+- Tests enforce that manifests contain no absolute paths.
