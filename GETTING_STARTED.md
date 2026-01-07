@@ -48,14 +48,21 @@ Rscript ./bootstrap_env.R
 
 ---
 
-### 4. **Open the Project in RStudio**
+### 4. **Install Quarto + PDF tools (for reports)**
+
+* Install Quarto: <https://quarto.org/docs/get-started/>
+* For PDF reports, install TinyTeX or another LaTeX distribution.
+
+---
+
+### 5. **Open the Project in RStudio**
 
 * Open the project folder.
 * RStudio will detect and activate the project environment automatically via `.Rprofile`.
 
 ---
 
-### 5. **Run the Analysis Pipeline**
+### 6. **Run the Analysis Pipeline**
 
 In your RStudio Console or R terminal:
 

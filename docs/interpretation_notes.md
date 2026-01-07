@@ -58,6 +58,7 @@ Notes:
 - Event spacing shows a right-skewed distribution: most gaps are on the order of hours to days, with a long tail reflecting multi-month gaps between detections.
 - Median gap is ~33 hours with a 75th percentile around ~119 hours, which is consistent with intermittent detections and uneven effort.
 - No evidence that event counts exceed detections (invariants validated); the spacing plot provides a visual sanity check for clustering threshold effects.
+- Event spacing histogram is shown on a log10-hours axis to make short gaps visible alongside long tails.
 
 ---
 

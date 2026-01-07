@@ -492,6 +492,8 @@ list(
           c(
             "render",
             here("analysis", "report.qmd"),
+            "--to",
+            "html",
             "--output-dir",
             out_dir,
             "-P",
@@ -516,6 +518,58 @@ list(
             paste0("run_dir:", run_dir)
           )
         )
+      } else {
+        write_disabled_file(out_path, "Report disabled by config.")
+      }
+
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    report_pdf,
+    {
+      out_path <- file.path(run_dir, "report", "report.pdf")
+
+      if (isTRUE(config$analysis$report)) {
+        out_dir <- file.path(run_dir, "report")
+        dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+        status <- system2(
+          "quarto",
+          c(
+            "render",
+            here("analysis", "report.qmd"),
+            "--to",
+            "pdf",
+            "--output-dir",
+            out_dir,
+            "-P",
+            paste0("inputs_path:", report_inputs_rds),
+            "-P",
+            paste0("rarefaction_path:", rarefaction_plot),
+            "-P",
+            paste0("effort_histogram_path:", effort_histogram_plot),
+            "-P",
+            paste0("effort_heatmap_path:", effort_heatmap_plot),
+            "-P",
+            paste0("time_qc_plot_path:", time_qc_backwards_plot),
+            "-P",
+            paste0("event_spacing_path:", event_spacing_plot),
+            "-P",
+            paste0("event_threshold_sensitivity_path:", event_threshold_sensitivity_plot),
+            "-P",
+            paste0("rai_species_path:", rai_species_plot),
+            "-P",
+            paste0("diel_overall_path:", diel_overall_plot),
+            "-P",
+            paste0("run_dir:", run_dir)
+          )
+        )
+
+        if (!is.null(status) && status != 0) {
+          stop("Quarto PDF render failed. Ensure LaTeX/TinyTeX is installed.")
+        }
       } else {
         write_disabled_file(out_path, "Report disabled by config.")
       }
@@ -553,7 +607,7 @@ list(
           rai_species = rai_species_plot,
           diel_overall = diel_overall_plot
         ),
-        report = report_html,
+        report = list(html = report_html, pdf = report_pdf),
         session_info = session_info
       )
 

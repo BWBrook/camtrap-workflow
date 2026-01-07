@@ -4,6 +4,8 @@ format:
   html:
     toc: true
     embed-resources: true
+  pdf:
+    toc: true
 params:
   inputs_path: null
   rarefaction_path: null
@@ -102,6 +104,8 @@ data.frame(
 stopifnot(!is.null(params$event_spacing_path))
 knitr::include_graphics(params$event_spacing_path)
 ```
+
+Note: the event spacing plot uses a log10 x-axis to resolve short-interval spikes.
 
 ## Event threshold sensitivity
 

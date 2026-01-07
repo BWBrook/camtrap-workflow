@@ -23,6 +23,7 @@ The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the e
 ### 1) Prerequisites
 - R 4.5.2
 - Quarto (for report rendering). Verify with: `quarto --version`
+- LaTeX/TinyTeX (for PDF report rendering)
 - System build tools appropriate for your OS (some R packages compile from source)
 
 ### 2) Restore the locked environment
@@ -58,6 +59,8 @@ Rscript -e 'targets::tar_make()'
 Outputs are written to `outputs/` (gitignored). Look for:
 
 * `outputs/runs/<run_id>/report/` for the rendered report
+  - HTML: `report.html`
+  - PDF: `report.pdf`
 * `outputs/runs/<run_id>/figures/` for plots
 * `outputs/runs/<run_id>/session_info.txt` for session provenance
 * `outputs/runs/<run_id>/run_manifest.json` for run provenance

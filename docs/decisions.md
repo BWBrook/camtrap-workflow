@@ -176,3 +176,17 @@ Rationale:
 Consequences / follow-ups:
 - Documented in `docs/reference/detection_history_schema_v0.1.md`.
 - Alignment checks will enforce `detected == 1` only when `effort == 1`.
+
+---
+
+## 2026-01-07 — Temporarily disable CI on push/PR (GLPK dependency)
+Decision:
+- Disable GitHub Actions runs on push/PR until the system dependency for `igraph` (GLPK) is resolved.
+
+Rationale:
+- CI failed during `renv::restore()` with missing `libglpk.so.40` on GitHub runners.
+- Avoids noisy failures while the dependency strategy is decided.
+
+Consequences / follow-ups:
+- CI is now manual (`workflow_dispatch`) only.
+- Re-enable push/PR triggers once GLPK installation (or binary package strategy) is in place.

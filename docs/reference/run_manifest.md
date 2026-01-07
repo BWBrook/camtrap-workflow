@@ -28,7 +28,7 @@ It enables auditing and comparison of runs without reading code.
 - `outputs`:
   - tables produced (paths)
   - figures produced (paths)
-  - report path
+  - report paths (HTML + PDF)
   - session info path
 - `session_info`: captured output of `sessionInfo()`
 - `warnings`: any warnings surfaced during the run (if captured)

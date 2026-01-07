@@ -24,18 +24,19 @@ compute_event_spacing <- function(obs_events) {
 #' @return `out_path` invisibly.
 #' @export
 plot_event_spacing <- function(event_spacing, out_path) {
-  import::from("ggplot2", ggplot, aes, geom_histogram, theme_minimal, labs, ggsave)
+  import::from("ggplot2", ggplot, aes, geom_histogram, theme_minimal, labs, ggsave, scale_x_log10)
   import::from("dplyr", filter)
 
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
   plot_data <- event_spacing |>
-    filter(!is.na(gap_hours))
+    filter(!is.na(gap_hours), gap_hours > 0)
 
   p <- ggplot(plot_data, aes(x = gap_hours)) +
     geom_histogram(bins = 30) +
     theme_minimal() +
-    labs(x = "Gap between events (hours)", y = "Count")
+    scale_x_log10() +
+    labs(x = "Gap between events (hours, log10 scale)", y = "Count")
 
   ggsave(out_path, p, width = 8, height = 4, dpi = 300)
   out_path

@@ -46,6 +46,7 @@ Expected (current MVP):
 ## Report
 
 - `report/report.html` — rendered Quarto report.
+- `report/report.pdf` — rendered Quarto report (PDF).
 - `report/report_inputs.rds` — inputs passed to the report (for reproducibility).
 
 ## Provenance

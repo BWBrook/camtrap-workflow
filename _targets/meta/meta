@@ -19,7 +19,6 @@ time_qc_summary_csv|stem|4a7627faa65a28b9|eedd3cb65bf82d7d|eae5248777d50251|1281
 time_qc_flags_csv|stem|314c069d2a8d1d20|28c427c21638cf51|eae5248777d50251|-419953921|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/time_qc_flags.csv|t20459.5031796784s|s4891b|4891|file|local|vector|||0.009||
 event_spacing|stem|df5b16199f3f368d|67f6741e4731d3b3|5fea1372b1757888|-1679542458||t20459.5059504498s|s134498b|134498|rds|local|vector|||1.738||
 event_spacing_csv|stem|e37ae1c2e8b59eb5|ad896e8a1e0094a7|3db0097c3957bed2|270518584|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/event_spacing.csv|t20459.5059648944s|s753404b|753404|file|local|vector|||1.219||
-event_spacing_plot|stem|791203213948a083|d7444f8fa520e696|9547420f391d34b5|-1609991907|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/event_spacing.png|t20459.5059729153s|s46023b|46023|file|local|vector|||0.663||
 events_per_day_csv|stem|a68abbc6493164d2|2facbc4150a9efc4|2fe0eadd12e9aa3e|-1219976866|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/events_per_day.csv|t20459.5059823598s|s209404b|209404|file|local|vector|||0.806||
 diel_overall|stem|9c6f9220d5512bf8|b974f06fb13897dd|0234e185b8d79a9e|934027728||t20459.5093500914s|s189b|189|rds|local|vector|||0.069||
 rai_with_ci|stem|2361702106b569c3|e213f566e313fabd|4fac5c693d8adc4a|-813487492||t20459.5093509826s|s4920b|4920|rds|local|vector|||0.053||
@@ -48,12 +47,22 @@ event_threshold_sensitivity_csv|stem|41104360e4f14779|fc5b1ab2421dd201|34c9d4d5b
 rarefaction_data|stem|28414bb550d9a6a2|eeb17df92c235d5f|9a974593a464834f|1831778606||t20460.0753046372s|s386b|386|rds|local|vector|||0.063||
 rarefaction_plot|stem|ab2b3b8f4d81a1de|ff0509b123e0627d|b6fdf1038c07f12c|1485518623|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/rarefaction.png|t20460.0753096141s|s66122b|66122|file|local|vector|||0.422||
 report_inputs_rds|stem|04127d16b48da9ee|d3eb48fe4e45e7ee|e90116bc9d1d8a1a|-1986917168|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report_inputs.rds|t20460.0753113271s|s161576b|161576|file|local|vector|||0.049||
-report_html|stem|cdf33944581f0b06|036d9bb8f3dda9b2|ae7bdedcf1e074b0|-1074260523|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.html|t20460.0754043023s|s1900446b|1900446|file|local|vector|||8.1||
 taxa_raw|stem|a80ce936d9f54998|135b74484d355883|7463044675733bf4|1897506289||t20460.0771962369s|s1750b|1750|rds|local|vector|||0.057||
+effort_validation|stem|bfc7e9c51e23c8db|517c2be365d02d66|ba6a3b3e3a4f7774|1636523425||t20460.0773671525s|s48b|48|rds|local|vector|||0.053||
+key_check|stem|bfc7e9c51e23c8db|782fae9d143863b9|08893d15ea9101cf|1320036140||t20460.0773681942s|s48b|48|rds|local|vector|||0.006||
+effort_censoring_check|stem|bfc7e9c51e23c8db|e276486b5ce2abd6|30482d94a2fbfe2d|-1921144467||t20460.0773718285s|s48b|48|rds|local|vector|||0.024||
+event_threshold_sensitivity|stem|1f1dc3d03432e765|f243eb3e2f7bd5de|bdb85983799ddccf|1187042413||t20460.0774015509s|s248b|248|rds|local|vector|||2.518||
+event_invariants_check|stem|bfc7e9c51e23c8db|bff1570628c81e35|c034fae43bedf886|720832660||t20460.077403044s|s48b|48|rds|local|vector|||0.027||
+event_threshold_sensitivity_plot|stem|92a95424f404f1c5|ad1f7b24c3be684d|a990876558fce13c|756473892|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/event_threshold_sensitivity.png|t20460.0774093287s|s80805b|80805|file|local|vector|||0.528||
+rarefaction_table_csv|stem|a39a80ea79fb7b5a|9befb646b96d0738|fd034b3e09423ab4|-1711481122|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/rarefaction.csv|t20460.0774112038s|s349b|349|file|local|vector|||0.129||
+event_spacing_plot|stem|2fe8b1a9e132d7b1|d7444f8fa520e696|7d0a0acabb39d7e8|-1609991907|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/event_spacing.png|t20460.0841618561s|s46508b|46508|file|local|vector|||1.085||
+report_html|stem|4767193e9ec0691f|0ad2ac06a4337d62|cf4f7f7fb16e45fd|-1074260523|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.html|t20460.0844585482s|s1901326b|1901326|file|local|vector|||7.873||
+report_pdf|stem|f9ed01a80d37405c|bce8cd61d65944be|cf4f7f7fb16e45fd|-794766957|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.pdf|t20460.0847224159s|s531279b|531279|file|local|vector|||11.747||
+.Random.seed|object|4094764c237eb0ca
+run_manifest|stem|a35899595915b727|d0658d528fac685b|8ec130bdec13c2d7|614872258|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/run_manifest.json|t20460.0849082044s|s3413b|3413|file|local|vector|||0.012||
 validate_effort|function|0b5052aeff150088
 filter_obs_by_effort|function|3f856e4f16872567
 input_schema_v0_1|function|089f956c4e609168
-.Random.seed|object|ec5ecad6a7368479
 write_disabled_file|function|31a9099698fbc3c8
 calc_diel|function|919e95b63b043a5c
 calc_rai|function|46b70dff9751bec3
@@ -81,16 +90,8 @@ validate_effort_censoring|function|7205c7773fb92b60
 compute_event_spacing|function|bb0bd7c29232543a
 calc_prop_days|function|7f48380dca60cec6
 get_schema_version|function|53f5d8ed2ba4929c
-plot_event_spacing|function|99304647f07b7fb3
+plot_event_spacing|function|0070723ddf37ac1e
 plot_rai_species|function|d3f897ff064cd2b1
 validate_input_contract|function|3b435d0b9342d345
 compute_event_threshold_sens|function|a6371d323f223b15
-effort_validation|stem|bfc7e9c51e23c8db|517c2be365d02d66|ba6a3b3e3a4f7774|1636523425||t20460.0773671525s|s48b|48|rds|local|vector|||0.053||
-key_check|stem|bfc7e9c51e23c8db|782fae9d143863b9|08893d15ea9101cf|1320036140||t20460.0773681942s|s48b|48|rds|local|vector|||0.006||
-input_contract_validation|stem|bfc7e9c51e23c8db|940b4f2f1719117f|72b53de7fca7f082|593307006||t20460.0773708215s|s48b|48|rds|local|vector|||0.128|Datetime parsing warning for table 'obs' (jc_obs.csv): some values are valid but fall in timezone gaps (e.g., DST). They will be handled by time diagnostics later.|
-effort_censoring_check|stem|bfc7e9c51e23c8db|e276486b5ce2abd6|30482d94a2fbfe2d|-1921144467||t20460.0773718285s|s48b|48|rds|local|vector|||0.024||
-event_threshold_sensitivity|stem|1f1dc3d03432e765|f243eb3e2f7bd5de|bdb85983799ddccf|1187042413||t20460.0774015509s|s248b|248|rds|local|vector|||2.518||
-event_invariants_check|stem|bfc7e9c51e23c8db|bff1570628c81e35|c034fae43bedf886|720832660||t20460.077403044s|s48b|48|rds|local|vector|||0.027||
-event_threshold_sensitivity_plot|stem|92a95424f404f1c5|ad1f7b24c3be684d|a990876558fce13c|756473892|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/event_threshold_sensitivity.png|t20460.0774093287s|s80805b|80805|file|local|vector|||0.528||
-rarefaction_table_csv|stem|a39a80ea79fb7b5a|9befb646b96d0738|fd034b3e09423ab4|-1711481122|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/rarefaction.csv|t20460.0774112038s|s349b|349|file|local|vector|||0.129||
-run_manifest|stem|7d38cb3cc46cdfc6|6358472f31b975f3|2afa20380da369ae|614872258|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/run_manifest.json|t20460.0774116899s|s3302b|3302|file|local|vector|||0.009||
+input_contract_validation|stem|bfc7e9c51e23c8db|940b4f2f1719117f|72b53de7fca7f082|593307006||t20460.0876518481s|s48b|48|rds|local|vector|||0.088|Datetime parsing warning for table 'obs' (jc_obs.csv): some values are valid but fall in timezone gaps (e.g., DST). They will be handled by time diagnostics later.|
