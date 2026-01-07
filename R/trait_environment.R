@@ -85,6 +85,7 @@ compute_trait_env_associations <- function(trait_site_props, site_raw, env_vars)
   assoc$rho <- vapply(assoc$stats, `[[`, numeric(1), "rho")
   assoc$p_value <- vapply(assoc$stats, `[[`, numeric(1), "p_value")
   assoc$stats <- NULL
+  assoc$p_adj <- stats::p.adjust(assoc$p_value, method = "BH")
 
   assoc
 }

@@ -8,36 +8,42 @@
 #' @export
 compute_functional_diversity <- function(community_abundance, traits_aligned) {
   import::from("dplyr", select, mutate, filter)
-  import::from("tidyr", drop_na)
   import::from("tibble", tibble)
   import::from("FD", dbFD)
+  import::from("stats", model.matrix)
 
   species_cols <- setdiff(names(community_abundance), "site")
   traits_filtered <- traits_aligned |>
     filter(species %in% species_cols)
 
-  traits_complete <- traits_filtered |>
-    drop_na()
-
-  dropped <- setdiff(species_cols, traits_complete$species)
-
-  if (nrow(traits_complete) == 0) {
+  if (nrow(traits_filtered) == 0) {
     metrics <- tibble(site = community_abundance$site, FRic = NA_real_, FDiv = NA_real_, FDis = NA_real_)
-    return(list(metrics = metrics, dropped_species = tibble(species = dropped)))
+    return(list(metrics = metrics, dropped_species = tibble(species = species_cols)))
   }
 
-  trait_matrix <- traits_complete |>
+  trait_matrix <- traits_filtered |>
     select(-species) |>
+    mutate(across(everything(), ~ ifelse(is.na(.x), "unknown", as.character(.x)))) |>
     mutate(across(everything(), ~ as.factor(.x)))
 
   trait_df <- as.data.frame(trait_matrix)
-  rownames(trait_df) <- traits_complete$species
+  rownames(trait_df) <- traits_filtered$species
 
-  comm_mat <- as.matrix(community_abundance[, traits_complete$species])
+  dummy_matrix <- model.matrix(~ . - 1, data = trait_df)
+  rownames(dummy_matrix) <- rownames(trait_df)
+
+  species_order <- sort(intersect(species_cols, rownames(dummy_matrix)))
+  if (length(species_order) == 0) {
+    metrics <- tibble(site = community_abundance$site, FRic = NA_real_, FDiv = NA_real_, FDis = NA_real_)
+    return(list(metrics = metrics, dropped_species = tibble(species = species_cols)))
+  }
+
+  dummy_matrix <- dummy_matrix[species_order, , drop = FALSE]
+  comm_mat <- as.matrix(community_abundance[, species_order])
   rownames(comm_mat) <- community_abundance$site
 
   fd <- dbFD(
-    x = trait_df,
+    x = dummy_matrix,
     a = comm_mat,
     calc.FRic = TRUE,
     calc.FDiv = TRUE,
@@ -67,6 +73,7 @@ compute_functional_diversity <- function(community_abundance, traits_aligned) {
     FDis = as.numeric(fdis_vals)
   )
 
+  dropped <- setdiff(species_cols, species_order)
   list(metrics = metrics, dropped_species = tibble(species = dropped))
 }
 

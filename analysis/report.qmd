@@ -216,7 +216,13 @@ if (!is.null(params$functional_diversity_path)) {
 ```{r}
 assoc <- inputs$trait_env_associations
 assoc <- assoc[order(abs(assoc$rho), decreasing = TRUE), ]
-knitr::kable(utils::head(assoc, 12))
+assoc_sig <- assoc[!is.na(assoc$p_adj) & assoc$p_adj <= 0.1, ]
+if (nrow(assoc_sig) > 0) {
+  knitr::kable(utils::head(assoc_sig, 12))
+} else {
+  cat("No trait–environment associations pass FDR (BH, 0.1). Showing strongest unadjusted correlations.\n\n")
+  knitr::kable(utils::head(assoc, 12))
+}
 ```
 
 ```{r}

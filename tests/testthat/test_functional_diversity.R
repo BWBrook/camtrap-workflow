@@ -18,7 +18,8 @@ test_that("compute_functional_diversity returns metrics per site", {
     activity = c("nocturnal", "diurnal", "cathemeral")
   )
 
-  fd <- compute_functional_diversity(community, traits)
+  fd <- suppressWarnings(compute_functional_diversity(community, traits))
   expect_equal(nrow(fd$metrics), 2)
   expect_true(all(c("FRic", "FDiv", "FDis") %in% names(fd$metrics)))
+  expect_true(all(is.na(fd$metrics$FDiv) | is.finite(fd$metrics$FDiv)))
 })

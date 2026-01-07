@@ -231,3 +231,29 @@ Rationale:
 Consequences / follow-ups:
 - Results are exploratory; interpret with caution.
 - RLQ/fourth-corner can be revisited once trait coverage expands and assumptions are reviewed.
+
+---
+
+## 2026-01-07 — Functional diversity uses dummy-encoded categorical traits
+Decision:
+- Compute functional diversity on a dummy-encoded trait matrix with missing values encoded as `unknown`.
+
+Rationale:
+- The exemplar trait data are categorical; `FD::dbFD` does not compute FDiv on purely categorical inputs.
+- Dummy encoding stabilises FDiv computation while retaining all species.
+
+Consequences / follow-ups:
+- FDiv is now available for the exemplar dataset (interpret cautiously).
+- If continuous traits become available, revisit the encoding strategy.
+
+---
+
+## 2026-01-07 — Trait–environment reporting uses BH-adjusted p-values
+Decision:
+- Add Benjamini–Hochberg adjusted p-values to trait–environment association outputs and use FDR filtering in the report.
+
+Rationale:
+- Multiple trait × environment tests inflate false positives; FDR adjustment provides a conservative screen.
+
+Consequences / follow-ups:
+- Report now highlights only associations passing FDR 0.1 (or falls back to strongest unadjusted correlations if none pass).

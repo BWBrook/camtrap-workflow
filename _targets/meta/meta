@@ -92,28 +92,28 @@ traits_aligned|stem|cd4167ed1540342f|610cfe5dd348212a|62c6d167fb898642|671343011
 beta_diversity_plot|stem|f39698ee6e765bf7|0e5d4684110df203|a07a78a348e9f5ef|-855077845|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/beta_diversity_distance_decay.png|t20460.1425736952s|s115858b|115858|file|local|vector|||0.405||
 beta_diversity_csv|stem|05dc1d20467f0d26|186dc0f97109e5d7|1ec4c4cad47b5494|1846601124|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/beta_diversity.csv|t20460.1425740424s|s4335b|4335|file|local|vector|||0.01||
 traits_missing_csv|stem|c4bf29a5506c919a|0a953fbaf5b583bc|af38dacaa38597a3|-1002100842|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/traits_missing.csv|t20460.1425743202s|s8b|8|file|local|vector|||0.002||
-functional_diversity|stem|e8ffd0a7008b447d|e2087e65c4e09389|89ccf337aa7b3b19|-1990402262||t20460.1432666408s|s503b|503|rds|local|vector|||0.176|Zero distance(s). Zero distance(s). Zero distance(s)|
 trait_site_proportions|stem|207dadc7fcc97278|ed02a247b7235bf1|c705cf7b687ad29f|-1340623434||t20460.1432673353s|s2415b|2415|rds|local|vector|||0.042||
 traits_aligned_csv|stem|97f9e7c039fbe370|41f0dda5952d4f25|9802d54f5f8539ed|-703516584|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/traits_aligned.csv|t20460.1432691177s|s1974b|1974|file|local|vector|||0.138||
-functional_diversity_table|stem|e3584f563a992aee|b20a53f762a440f3|60576042894eeb66|1919695555||t20460.1432693723s|s356b|356|rds|local|vector|||0||
-functional_diversity_dropped|stem|c49d85979231bedc|f86563257f8425c4|60576042894eeb66|-1614617219||t20460.1432695807s|s208b|208|rds|local|vector|||0||
 trait_site_proportions_csv|stem|5be837a649d8a0a8|b9f4bf3311f44637|660ec9f5c9389b4e|999266208|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/trait_site_proportions.csv|t20460.1432736548s|s11359b|11359|file|local|vector|||0.025||
-functional_diversity_csv|stem|30e7cbfa1d9acddb|6ce088e010f46da1|3d56af20e6f78ab6|-135841766|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/functional_diversity.csv|t20460.1432863979s|s413b|413|file|local|vector|||0.004||
-functional_diversity_dropped_csv|stem|63122b5a20bfa857|0b84c9042397ba58|d4f5fd585acec1ca|-2146977374|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/functional_diversity_dropped_species.csv|t20460.143286641s|s88b|88|file|local|vector|||0.005||
-trait_env_associations_csv|stem|510575805e05c5c8|21b34e224e0b9446|13b4cbd354ef80ca|-895795988|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/trait_env_associations.csv|t20460.1432869072s|s3718b|3718|file|local|vector|||0.008||
-report_inputs_rds|stem|2b943ed02256e9a7|ec1eb96632646266|554eaba0c80a4e01|-1986917168|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report_inputs.rds|t20460.1432888632s|s166848b|166848|file|local|vector|||0.05||
-trait_env_associations|stem|f83fa3755df5307f|b0fe263043fcecb6|af74eee1137d26ba|18749156||t20460.144029668s|s1226b|1226|rds|local|vector|||0.066||
-functional_diversity_plot|stem|f98397eda831440b|67299a76133e703b|8e3f41939d16383c|105869725|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/functional_diversity.png|t20460.1440410338s|s80578b|80578|file|local|vector|||0.966||
-.Random.seed|object|21cfc257785ce2b0
-key_check|stem|bfc7e9c51e23c8db|782fae9d143863b9|08893d15ea9101cf|1320036140||t20460.147835556s|s48b|48|rds|local|vector|||0.007||
-effort_validation|stem|bfc7e9c51e23c8db|517c2be365d02d66|ba6a3b3e3a4f7774|1636523425||t20460.1478392829s|s48b|48|rds|local|vector|||0.042||
-effort_censoring_check|stem|bfc7e9c51e23c8db|e276486b5ce2abd6|30482d94a2fbfe2d|-1921144467||t20460.1478405098s|s48b|48|rds|local|vector|||0.027||
-event_invariants_check|stem|bfc7e9c51e23c8db|bff1570628c81e35|c034fae43bedf886|720832660||t20460.1478426394s|s48b|48|rds|local|vector|||0.078||
-detection_history_alignment_check|stem|bfc7e9c51e23c8db|6c1f550141e7abce|174e98fdf6677790|1471216905||t20460.147843519s|s48b|48|rds|local|vector|||0.004||
-trait_env_plot|stem|dfc3eb209b8984ef|9af40caa481a972c|646e993907a781fd|-479553741|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/trait_env_associations.png|t20460.1478662507s|s150100b|150100|file|local|vector|||1.9||
-report_html|stem|db7c86362f0840ee|00ca3c2a9be08e25|c6caff6ddf33a7cb|-1074260523|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.html|t20460.1479717608s|s2589497b|2589497|file|local|vector|||9.168||
-report_pdf|stem|be9fd5c51c37893e|0611ea9c9b932a39|c6caff6ddf33a7cb|-794766957|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.pdf|t20460.1481575957s|s1033332b|1033332|file|local|vector|||16.076||
-run_manifest|stem|f02fef100751303b|ea99b127a472495f|3084eb43c48a243d|614872258|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/run_manifest.json|t20460.14815998s|s7025b|7025|file|local|vector|||0.017||
+.Random.seed|object|1137ef619e240a65
+key_check|stem|bfc7e9c51e23c8db|782fae9d143863b9|08893d15ea9101cf|1320036140||t20460.1721016877s|s48b|48|rds|local|vector|||0.006||
+effort_validation|stem|bfc7e9c51e23c8db|517c2be365d02d66|ba6a3b3e3a4f7774|1636523425||t20460.1721061784s|s48b|48|rds|local|vector|||0.054||
+effort_censoring_check|stem|bfc7e9c51e23c8db|e276486b5ce2abd6|30482d94a2fbfe2d|-1921144467||t20460.1721072433s|s48b|48|rds|local|vector|||0.024||
+event_invariants_check|stem|bfc7e9c51e23c8db|bff1570628c81e35|c034fae43bedf886|720832660||t20460.1721088521s|s48b|48|rds|local|vector|||0.042||
+detection_history_alignment_check|stem|bfc7e9c51e23c8db|6c1f550141e7abce|174e98fdf6677790|1471216905||t20460.1721098243s|s48b|48|rds|local|vector|||0.016||
+functional_diversity|stem|b828c0c499e03254|e2087e65c4e09389|0ce77bf51193bcfb|-1990402262||t20460.1721185975s|s615b|615|rds|local|vector|||0.707|Zero distance(s). Zero distance(s). Zero distance(s). Zero distance(s). Zero distance(s)|
+functional_diversity_table|stem|eee73f1441f4a93c|b20a53f762a440f3|9c553e64da43509d|1919695555||t20460.1721188174s|s550b|550|rds|local|vector|||0||
+functional_diversity_dropped|stem|991928ff81f0af5a|f86563257f8425c4|9c553e64da43509d|-1614617219||t20460.1721189911s|s124b|124|rds|local|vector|||0||
+trait_env_associations|stem|8711f6d580eea1d7|b0fe263043fcecb6|d6411224741b1b0d|18749156||t20460.1721197202s|s1353b|1353|rds|local|vector|||0.046||
+functional_diversity_plot|stem|9eac106de1c348f7|67299a76133e703b|34c8a490677abbc7|105869725|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/functional_diversity.png|t20460.172132475s|s132645b|132645|file|local|vector|||1.086||
+functional_diversity_csv|stem|65e8935b517ef721|6ce088e010f46da1|12156a619b450a79|-135841766|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/functional_diversity.csv|t20460.1721342342s|s856b|856|file|local|vector|||0.132||
+functional_diversity_dropped_csv|stem|c4bf29a5506c919a|0b84c9042397ba58|0bac367d8a53d00c|-2146977374|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/functional_diversity_dropped_species.csv|t20460.172134512s|s8b|8|file|local|vector|||0.003||
+trait_env_associations_csv|stem|ba07baf1e2a0d68f|21b34e224e0b9446|a7158668f9d7486a|-895795988|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/tables/trait_env_associations.csv|t20460.1721348477s|s4750b|4750|file|local|vector|||0.009||
+report_inputs_rds|stem|953fc1f2535b39b1|ec1eb96632646266|7f81bc4f559da089|-1986917168|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report_inputs.rds|t20460.1721371857s|s167175b|167175|file|local|vector|||0.051||
+trait_env_plot|stem|dfc3eb209b8984ef|9af40caa481a972c|8aecb311c61b5a1b|-479553741|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/figures/trait_env_associations.png|t20460.172149107s|s150100b|150100|file|local|vector|||1.012||
+report_html|stem|f0633fde2f8b5d09|00ca3c2a9be08e25|128c91571ebb9aa3|-1074260523|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.html|t20460.1722537954s|s2661182b|2661182|file|local|vector|||9.092||
+report_pdf|stem|f9fd18c9f98af879|0611ea9c9b932a39|128c91571ebb9aa3|-794766957|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/report/report.pdf|t20460.1724388317s|s1086956b|1086956|file|local|vector|||16.006||
+run_manifest|stem|199196b9a73f8703|ea99b127a472495f|192bfec1111a08f3|614872258|/home/bwbrook/git/camtrap-workflow/outputs/runs/latest/run_manifest.json|t20460.1724408919s|s7025b|7025|file|local|vector|||0.014||
 plot_functional_diversity|function|4fb280c9f7da31f7
 compute_event_spacing|function|bb0bd7c29232543a
 plot_effort_heatmap|function|4035f68abe8b83f0
@@ -128,14 +128,14 @@ build_detection_history|function|b31494a8a2e6113c
 validate_effort|function|0b5052aeff150088
 plot_time_qc_backwards|function|fbb1400c56fe82c5
 default_trait_columns|function|970f3e37c77f25cf
-compute_trait_env_associations|function|6155fbbffe8337e6
+compute_trait_env_associations|function|1517d715e46c53fe
 check_keys|function|2ccb37055d031fff
 select_occupancy_species|function|8bf9b3b2068322da
 summarise_effort|function|bd758b999b82db87
 summarise_diel_overall|function|73569dd55979131d
 read_jc_csv|function|74cfbaa1d38bad4b
 plot_rarefaction|function|e1dfc9f5293c5e90
-plot_trait_env_heatmap|function|6a950f52ee4597bf
+plot_trait_env_heatmap|function|4c1eedc575b937e9
 calc_diel|function|919e95b63b043a5c
 validate_det_hist_alignment|function|6ef54dd3d6d6f009
 plot_effort_histogram|function|daf984ef0e9cc87e
@@ -150,7 +150,7 @@ calc_trap_nights|function|2ae999c8d9d6647b
 write_run_manifest|function|01f634c76a90d257
 summarise_occupancy_model|function|12d2a4097dffa889
 filter_obs_by_effort|function|3f856e4f16872567
-compute_functional_diversity|function|4f914ebdf4d558c1
+compute_functional_diversity|function|8838a1aadecb4e12
 compute_beta_diversity|function|3419240b108dd581
 build_rarefaction|function|1d5118ecf79b1d91
 plot_occupancy_predictions|function|f5578c50d6cc5557
@@ -173,4 +173,4 @@ pivot_op_long|function|04610a793a4b72a0
 compute_event_threshold_sens|function|a6371d323f223b15
 compute_occasion_length_sens|function|cf5ccb3063497744
 validate_input_contract|function|3b435d0b9342d345
-input_contract_validation|stem|bfc7e9c51e23c8db|940b4f2f1719117f|ba84b08d977a561d|593307006||t20460.1509787303s|s48b|48|rds|local|vector|||0.685|Datetime parsing warning for table 'obs' (jc_obs.csv): some values are valid but fall in timezone gaps (e.g., DST). They will be handled by time diagnostics later.|
+input_contract_validation|stem|bfc7e9c51e23c8db|940b4f2f1719117f|ba84b08d977a561d|593307006||t20460.1738462393s|s48b|48|rds|local|vector|||0.074|Datetime parsing warning for table 'obs' (jc_obs.csv): some values are valid but fall in timezone gaps (e.g., DST). They will be handled by time diagnostics later.|

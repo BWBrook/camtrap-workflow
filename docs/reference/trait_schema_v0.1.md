@@ -25,6 +25,7 @@ Configured in `config.yml` under `traits.columns`. For the exemplar dataset:
 - Trait values are trimmed and converted to lowercase.
 - Placeholder values (`na`, `n/a`, `unknown`, `none`, empty) are converted to `NA`.
 - Duplicate `short` codes are not allowed.
+ - For functional diversity, missing trait values are encoded as `unknown` so species are retained.
 
 ## Alignment rules
 

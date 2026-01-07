@@ -40,7 +40,7 @@ Expected (current MVP):
 - `tables/functional_diversity.csv` — functional diversity metrics per site.
 - `tables/functional_diversity_dropped_species.csv` — species excluded from functional diversity (missing traits).
 - `tables/trait_site_proportions.csv` — abundance-weighted trait proportions by site.
-- `tables/trait_env_associations.csv` — trait–environment association results (Spearman rho, p-values).
+- `tables/trait_env_associations.csv` — trait–environment association results (Spearman rho, p-values, BH-adjusted p-values).
 - `tables/rai_site_species.csv` — RAI per site/species with Poisson CIs.
 - `tables/rai_species.csv` — pooled RAI per species with Poisson CIs.
 - `tables/diel_site.csv` — diel proportions per site/species.

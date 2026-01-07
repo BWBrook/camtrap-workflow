@@ -103,6 +103,7 @@ Notes:
 - [x] **WP-0.5.4** Trait table cleaning/alignment + trait reference + test coverage  
 - [x] **WP-0.5.5** Functional diversity indices outputs (e.g., FDis/FRic/etc.) + interpretation notes  
 - [x] **WP-0.5.6** Trait–environment association method (RLQ/fourth-corner or stable alternative) + artefacts  
+- [x] **WP-0.5.7** Stabilise functional diversity (dummy-encoded traits) + trait–environment FDR filter  
 
 ### Line 0.6.x — Interoperability & pedagogy
 

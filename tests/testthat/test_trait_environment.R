@@ -22,5 +22,6 @@ test_that("trait environment association returns correlation table", {
   props <- compute_trait_site_proportions(community, traits, traits_to_use = c("diet"))
   assoc <- compute_trait_env_associations(props, site_raw, env_vars = c("elevation_m"))
 
-  expect_true(all(c("rho", "p_value") %in% names(assoc)))
+  expect_true(all(c("rho", "p_value", "p_adj") %in% names(assoc)))
+  expect_true(all(is.na(assoc$p_adj) | (assoc$p_adj >= 0 & assoc$p_adj <= 1)))
 })

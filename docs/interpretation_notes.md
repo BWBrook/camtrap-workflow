@@ -190,7 +190,7 @@ Artefacts:
 Notes:
 - Functional richness (FRic) varies from 1–6 across sites; `jc_co2` and `jc_pm23` are highest (FRic = 6).
 - Functional dispersion (FDis) is low to moderate (0–0.37), indicating modest trait spread within sites.
-- FDiv is NA across sites for this dataset, likely due to limited variance in trait space; interpret FRic/FDis as the primary functional signals for now.
+- Functional divergence (FDiv) now ranges from ~0.51–0.76 after dummy-encoding categorical traits; interpret cautiously given categorical trait inputs.
 
 ---
 
@@ -202,5 +202,5 @@ Artefacts:
 - `outputs/runs/latest/figures/trait_env_associations.png`
 
 Notes:
-- The strongest correlations are moderate (|rho| ≈ 0.46) and not statistically significant at conventional thresholds; this is an exploratory screen rather than confirmatory inference.
+- BH-adjusted p-values are all > 0.1 in the exemplar dataset (no associations pass FDR), reinforcing that results are exploratory.
 - Heatmap patterns show some alignment between canopy/elevation and diet/activity categories, but no single covariate dominates across traits.
