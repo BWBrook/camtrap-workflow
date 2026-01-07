@@ -67,6 +67,12 @@ import::here(
   .from = "R/descriptive_outputs.R"
 )
 
+import::here(
+  compute_event_threshold_sens,
+  plot_event_threshold_sens,
+  .from = "R/sensitivity_outputs.R"
+)
+
 # Packages available to every target
 tar_option_set(
   packages = c(
@@ -263,6 +269,33 @@ list(
     ),
     format = "file"
   ),
+  tar_target(
+    event_threshold_sensitivity,
+    compute_event_threshold_sens(
+      obs_filtered,
+      trap_nights,
+      thresholds = config$sensitivity$event_threshold_minutes,
+      tz = config$timezone
+    )
+  ),
+  tar_target(
+    event_threshold_sensitivity_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "event_threshold_sensitivity.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(event_threshold_sensitivity, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    event_threshold_sensitivity_plot,
+    plot_event_threshold_sens(
+      event_threshold_sensitivity,
+      file.path(run_dir, "figures", "event_threshold_sensitivity.png")
+    ),
+    format = "file"
+  ),
   ## ── DESCRIPTIVE SUMMARIES ──────────────────────────────────────────────
   tar_target(
     rai_with_ci,
@@ -428,6 +461,7 @@ list(
           time_qc_flags = time_qc$flags,
           events_per_day = events_per_day,
           event_spacing = event_spacing,
+          event_threshold_sensitivity = event_threshold_sensitivity,
           rai_species = rai_species,
           diel_site = diel_site,
           diel_overall = diel_overall,
@@ -473,6 +507,8 @@ list(
             "-P",
             paste0("event_spacing_path:", event_spacing_plot),
             "-P",
+            paste0("event_threshold_sensitivity_path:", event_threshold_sensitivity_plot),
+            "-P",
             paste0("rai_species_path:", rai_species_plot),
             "-P",
             paste0("diel_overall_path:", diel_overall_plot),
@@ -499,6 +535,7 @@ list(
           time_qc_flags = time_qc_flags_csv,
           events_per_day = events_per_day_csv,
           event_spacing = event_spacing_csv,
+          event_threshold_sensitivity = event_threshold_sensitivity_csv,
           rai_site_species = rai_site_species_csv,
           rai_species = rai_species_csv,
           diel_site = diel_site_csv,
@@ -512,6 +549,7 @@ list(
           effort_heatmap = effort_heatmap_plot,
           time_qc_backward_jumps = time_qc_backwards_plot,
           event_spacing = event_spacing_plot,
+          event_threshold_sensitivity = event_threshold_sensitivity_plot,
           rai_species = rai_species_plot,
           diel_overall = diel_overall_plot
         ),

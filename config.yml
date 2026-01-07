@@ -17,3 +17,6 @@ analysis:
 
 time_qc:
   backward_jump_threshold_hours: 1
+
+sensitivity:
+  event_threshold_minutes: [5, 15, 30, 60]

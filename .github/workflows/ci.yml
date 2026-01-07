@@ -31,7 +31,7 @@ jobs:
         run: Rscript scripts/run_tests.R
 
       - name: Pipeline smoke test
-        run: Rscript -e 'targets::tar_make()'
+        run: Rscript -e 'targets::tar_make(callr_function = NULL)'
 
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
@@ -41,6 +41,7 @@ jobs:
             outputs/runs/latest/report/report.html
             outputs/runs/latest/figures/rarefaction.png
             outputs/runs/latest/figures/event_spacing.png
+            outputs/runs/latest/figures/event_threshold_sensitivity.png
             outputs/runs/latest/figures/rai_species.png
             outputs/runs/latest/figures/diel_overall.png
             outputs/runs/latest/session_info.txt

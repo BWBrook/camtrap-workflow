@@ -24,6 +24,7 @@ Expected (current MVP):
 - `tables/time_qc_flags.csv` — row-level flags for parse failures, DST gaps, and backward jumps.
 - `tables/events_per_day.csv` — independent event counts per site/species/day.
 - `tables/event_spacing.csv` — gap (hours) between successive independent events.
+- `tables/event_threshold_sensitivity.csv` — event totals per threshold and events per trap night.
 - `tables/rai_site_species.csv` — RAI per site/species with Poisson CIs.
 - `tables/rai_species.csv` — pooled RAI per species with Poisson CIs.
 - `tables/diel_site.csv` — diel proportions per site/species.
@@ -38,6 +39,7 @@ Expected (current MVP):
 - `figures/effort_heatmap.png` — site-by-date effort heatmap (active/inactive).
 - `figures/time_qc_backward_jumps.png` — per-site count of backward time jumps.
 - `figures/event_spacing.png` — distribution of time gaps between independent events.
+- `figures/event_threshold_sensitivity.png` — sensitivity of event rate to threshold choice.
 - `figures/rai_species.png` — pooled RAI by species with confidence intervals.
 - `figures/diel_overall.png` — overall day/night event proportions.
 

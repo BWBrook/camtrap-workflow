@@ -11,6 +11,7 @@ params:
   effort_heatmap_path: null
   time_qc_plot_path: null
   event_spacing_path: null
+  event_threshold_sensitivity_path: null
   rai_species_path: null
   diel_overall_path: null
   run_dir: null
@@ -100,6 +101,17 @@ data.frame(
 ```{r}
 stopifnot(!is.null(params$event_spacing_path))
 knitr::include_graphics(params$event_spacing_path)
+```
+
+## Event threshold sensitivity
+
+```{r}
+knitr::kable(inputs$event_threshold_sensitivity)
+```
+
+```{r}
+stopifnot(!is.null(params$event_threshold_sensitivity_path))
+knitr::include_graphics(params$event_threshold_sensitivity_path)
 ```
 
 ## Relative abundance index (pooled)

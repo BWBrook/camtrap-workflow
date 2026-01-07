@@ -148,3 +148,31 @@ Rationale:
 Consequences / follow-ups:
 - RAI outputs now include `rai_lower`/`rai_upper` bounds.
 - If later analyses require more complex uncertainty models, revisit with bootstrap or hierarchical methods.
+
+---
+
+## 2026-01-06 — Occupancy package choice for 0.4.x: `unmarked`
+Decision:
+- Use `unmarked` as the primary single-season occupancy package for WP-0.4.x.
+
+Rationale:
+- Mature, widely used in camera-trap workflows, and well-supported for single-season occupancy.
+- Allows clear separation between detection history construction and model fitting.
+
+Consequences / follow-ups:
+- Detection history outputs will be shaped to allow easy conversion to `unmarked` matrices.
+- Revisit if multi-species or spatial models become a requirement (WP-0.4.6).
+
+---
+
+## 2026-01-06 — Detection history canonical format: long table with effort
+Decision:
+- Canonical detection history output will be a long table with `site`, `species`, `occasion`, `detected`, `effort`, and occasion boundaries.
+
+Rationale:
+- Long format preserves metadata and is easily reshaped into wide matrices required by modeling packages.
+- Simplifies alignment checks between detection and effort.
+
+Consequences / follow-ups:
+- Documented in `docs/reference/detection_history_schema_v0.1.md`.
+- Alignment checks will enforce `detected == 1` only when `effort == 1`.

@@ -25,6 +25,9 @@ default_config <- function() {
     ),
     time_qc = list(
       backward_jump_threshold_hours = 1
+    ),
+    sensitivity = list(
+      event_threshold_minutes = c(5, 15, 30, 60)
     )
   )
 }
@@ -61,7 +64,8 @@ validate_config <- function(config) {
     "event_threshold_minutes",
     "paths",
     "analysis",
-    "time_qc"
+    "time_qc",
+    "sensitivity"
   )
 
   missing <- setdiff(required_paths, names(config))
@@ -104,6 +108,15 @@ validate_config <- function(config) {
   if (!is.numeric(config$time_qc$backward_jump_threshold_hours) ||
         length(config$time_qc$backward_jump_threshold_hours) != 1) {
     stop("config.yml time_qc.backward_jump_threshold_hours must be a single numeric value.")
+  }
+
+  if (!is.list(config$sensitivity) || is.null(config$sensitivity$event_threshold_minutes)) {
+    stop("config.yml sensitivity.event_threshold_minutes must be provided.")
+  }
+
+  if (!is.numeric(config$sensitivity$event_threshold_minutes) ||
+        length(config$sensitivity$event_threshold_minutes) < 1) {
+    stop("config.yml sensitivity.event_threshold_minutes must be a numeric vector.")
   }
 
   invisible(config)

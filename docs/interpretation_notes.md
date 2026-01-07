@@ -75,3 +75,16 @@ Notes:
 - Pooled RAI highlights a small set of dominant species (e.g., `pos`, `pad`, `wal`) with clear separation from rarer taxa; CI widths are tight for abundant species and wider for rare ones, as expected from Poisson uncertainty.
 - Overall diel proportions show a strong night bias (~76% night vs ~24% day), consistent with camera-trap detections of nocturnal species.
 - Rarefaction table confirms richness increases to ~28 species by 13 sites, with diminishing gains at higher site counts.
+
+---
+
+## 2026-01-06 — Event threshold sensitivity (WP-0.3.14)
+
+Artefacts:
+- `outputs/runs/latest/tables/event_threshold_sensitivity.csv` — events per trap night vs threshold.
+- `outputs/runs/latest/figures/event_threshold_sensitivity.png` — sensitivity curve.
+
+Notes:
+- Event rates decline as the threshold increases, as expected for more aggressive clustering.
+- The curve is smooth across 5–60 minutes, suggesting no abrupt threshold artifacts for this dataset.
+- Sensitivity output provides a baseline for choosing thresholds in later occupancy work.

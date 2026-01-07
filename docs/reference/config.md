@@ -35,6 +35,9 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `time_qc.backward_jump_threshold_hours`  
   Threshold (hours) for flagging backward time jumps as potential clock drift.
 
+- `sensitivity.event_threshold_minutes`  
+  Vector of event-threshold values (minutes) to use in sensitivity outputs.
+
 ## Notes
 
 - Changes to `config.yml` invalidate downstream targets.

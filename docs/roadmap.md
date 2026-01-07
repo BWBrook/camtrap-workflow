@@ -84,6 +84,7 @@ Notes:
 - [x] **WP-0.3.11** MVP report as a first-class artefact (rendered via pipeline) + methods + limitations  
 - [x] **WP-0.3.12** CI quality gates + artefact upload (restore, lint, tests, pipeline smoke)  
 - [x] **WP-0.3.13** “Bring your own data” guide + template dataset folder + contract checklist  
+- [x] **WP-0.3.14** Pre-occupancy prep: detection history contract + alignment checks + event-threshold sensitivity  
 
 ### Line 0.4.x — Beta: occupancy-ready data + single-species occupancy modelling
 
@@ -464,6 +465,31 @@ A user can adapt the workflow to new data by following a checklist and using tem
 
 **Stop condition**
 - A new user can prepare data and run the workflow without reading source code.
+
+---
+
+### WP-0.3.14 — Pre-occupancy prep: detection history contract + alignment checks + event-threshold sensitivity
+
+**Outcome**  
+The interface for detection histories is locked down before modeling begins, alignment checks are defined and tested, and a light sensitivity harness exists to understand event-threshold effects.
+
+**Scope**
+- In: detection history schema + alignment checks; decision on occupancy package; event-threshold sensitivity outputs.
+- Out: full detection history builder and occupancy modeling (WP-0.4.x).
+
+**Acceptance criteria**
+- A documented detection history schema (columns, types, definitions).
+- Alignment checks are implemented and unit-tested (no detections on inactive effort).
+- A sensitivity harness produces a table + plot for event threshold effects.
+- The occupancy package choice is recorded in `docs/decisions.md`.
+
+**Artefact evidence**
+- `docs/reference/detection_history_schema_v0.1.md`
+- `outputs/.../tables/event_threshold_sensitivity.csv`
+- `outputs/.../figures/event_threshold_sensitivity.png`
+
+**Stop condition**
+- Detection history interfaces are documented and enforced by tests; event-threshold sensitivity outputs are produced.
 
 ---
 
