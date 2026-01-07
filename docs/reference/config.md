@@ -56,6 +56,18 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `occupancy.covariates`  
   Vector of site covariate names to include in occupancy candidate models.
 
+- `traits.species_column`  
+  Column in the taxa table that identifies the species short code used by observations.
+
+- `traits.columns`  
+  Vector of trait columns to clean and retain for community/functional analyses.
+
+- `traits.association_traits`  
+  Subset of trait columns used for trait–environment associations.
+
+- `traits.environment_vars`  
+  Vector of site-level environmental covariates used in trait–environment associations.
+
 ## Notes
 
 - Changes to `config.yml` invalidate downstream targets.

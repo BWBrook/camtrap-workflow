@@ -2,7 +2,7 @@
 
 Reproducible camera-trap workflow for end-to-end analysis in R.
 
-This repository provides a **targets-based** pipeline that starts from labelled camera-trap detections plus site and effort metadata, performs validation and standardisation, constructs independent events, and produces core ecological analyses and a rendered report.
+This repository provides a **targets-based** pipeline that starts from labelled camera-trap detections plus site and effort metadata, performs validation and standardisation, constructs independent events, and produces core ecological analyses (including community diversity and trait summaries) and a rendered report.
 
 The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the exemplar case study.
 
@@ -62,6 +62,7 @@ Outputs are written to `outputs/` (gitignored). Look for:
   - HTML: `report.html`
   - PDF: `report.pdf`
 * `outputs/runs/<run_id>/figures/` for plots
+* `outputs/runs/<run_id>/tables/` for community matrices, diversity, and trait summaries
 * `outputs/runs/<run_id>/session_info.txt` for session provenance
 * `outputs/runs/<run_id>/run_manifest.json` for run provenance
 

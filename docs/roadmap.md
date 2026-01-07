@@ -97,12 +97,12 @@ Notes:
 
 ### Line 0.5.x — Community & traits: diversity + functional ecology
 
-- [ ] **WP-0.5.1** Community matrices (presence/abundance) derived from events + validated outputs  
-- [ ] **WP-0.5.2** Alpha diversity outputs + site summaries + report integration  
-- [ ] **WP-0.5.3** Beta diversity + distance–decay artefacts + sanity tests  
-- [ ] **WP-0.5.4** Trait table cleaning/alignment + trait reference + test coverage  
-- [ ] **WP-0.5.5** Functional diversity indices outputs (e.g., FDis/FRic/etc.) + interpretation notes  
-- [ ] **WP-0.5.6** Trait–environment association method (RLQ/fourth-corner or stable alternative) + artefacts  
+- [x] **WP-0.5.1** Community matrices (presence/abundance) derived from events + validated outputs  
+- [x] **WP-0.5.2** Alpha diversity outputs + site summaries + report integration  
+- [x] **WP-0.5.3** Beta diversity + distance–decay artefacts + sanity tests  
+- [x] **WP-0.5.4** Trait table cleaning/alignment + trait reference + test coverage  
+- [x] **WP-0.5.5** Functional diversity indices outputs (e.g., FDis/FRic/etc.) + interpretation notes  
+- [x] **WP-0.5.6** Trait–environment association method (RLQ/fourth-corner or stable alternative) + artefacts  
 
 ### Line 0.6.x — Interoperability & pedagogy
 

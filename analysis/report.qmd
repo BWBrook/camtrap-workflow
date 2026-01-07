@@ -16,6 +16,10 @@ params:
   event_threshold_sensitivity_path: null
   rai_species_path: null
   diel_overall_path: null
+  alpha_diversity_path: null
+  beta_diversity_path: null
+  functional_diversity_path: null
+  trait_env_path: null
   run_dir: null
 ---
 
@@ -152,6 +156,75 @@ if (!is.null(inputs$occupancy_species)) {
 }
 ```
 
+## Community matrices (presence/abundance)
+
+```{r}
+community_summary <- data.frame(
+  sites = nrow(inputs$community_abundance),
+  species = ncol(inputs$community_abundance) - 1
+)
+knitr::kable(community_summary)
+```
+
+## Alpha diversity (per site)
+
+```{r}
+knitr::kable(inputs$alpha_diversity)
+```
+
+```{r}
+if (!is.null(params$alpha_diversity_path)) {
+  knitr::include_graphics(params$alpha_diversity_path)
+}
+```
+
+## Beta diversity (distance–decay)
+
+```{r}
+knitr::kable(utils::head(inputs$beta_diversity, 12))
+```
+
+```{r}
+if (!is.null(params$beta_diversity_path)) {
+  knitr::include_graphics(params$beta_diversity_path)
+}
+```
+
+## Traits coverage & functional diversity
+
+```{r}
+traits_missing <- inputs$traits_missing
+if (nrow(traits_missing) > 0) {
+  knitr::kable(traits_missing)
+} else {
+  cat("All community species have trait records.")
+}
+```
+
+```{r}
+knitr::kable(inputs$functional_diversity)
+```
+
+```{r}
+if (!is.null(params$functional_diversity_path)) {
+  knitr::include_graphics(params$functional_diversity_path)
+}
+```
+
+## Trait–environment associations
+
+```{r}
+assoc <- inputs$trait_env_associations
+assoc <- assoc[order(abs(assoc$rho), decreasing = TRUE), ]
+knitr::kable(utils::head(assoc, 12))
+```
+
+```{r}
+if (!is.null(params$trait_env_path)) {
+  knitr::include_graphics(params$trait_env_path)
+}
+```
+
 ## Relative abundance index (pooled)
 
 RAI is defined as independent events per trap night, with Poisson confidence intervals.
@@ -190,6 +263,8 @@ knitr::include_graphics(params$rarefaction_path)
 - Diel proportions use `flash` as a day/night proxy and do not account for sunrise/sunset variation.
 - RAI reflects relative detection rates, not absolute abundance.
 - Occupancy models are single-season and illustrative; covariates are limited to site summaries and effort-days.
+- Trait analyses use cleaned taxa metadata; species with missing trait values are dropped from functional diversity.
+- Trait–environment associations are exploratory Spearman correlations on abundance-weighted trait proportions.
 
 ## Provenance
 

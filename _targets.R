@@ -97,9 +97,47 @@ import::here(
   .from = "R/occupancy_models.R"
 )
 
+import::here(
+  build_community_matrices,
+  .from = "R/community_matrices.R"
+)
+
+import::here(
+  compute_alpha_diversity,
+  plot_alpha_diversity,
+  .from = "R/alpha_diversity.R"
+)
+
+import::here(
+  compute_beta_diversity,
+  plot_distance_decay,
+  .from = "R/beta_diversity.R"
+)
+
+import::here(
+  default_trait_columns,
+  clean_traits_table,
+  align_traits_to_species,
+  .from = "R/traits.R"
+)
+
+import::here(
+  compute_functional_diversity,
+  plot_functional_diversity,
+  .from = "R/functional_diversity.R"
+)
+
+import::here(
+  compute_trait_site_proportions,
+  compute_trait_env_associations,
+  plot_trait_env_heatmap,
+  .from = "R/trait_environment.R"
+)
+
 # Packages available to every target
 tar_option_set(
   packages = c(
+    "FD",
     "dplyr",
     "fs",
     "ggplot2",
@@ -527,6 +565,252 @@ list(
   ),
   ## ── DESCRIPTIVE SUMMARIES ──────────────────────────────────────────────
   tar_target(
+    community_matrices,
+    build_community_matrices(events_per_day, sites = site_raw$site)
+  ),
+  tar_target(
+    community_abundance,
+    community_matrices$abundance
+  ),
+  tar_target(
+    community_presence,
+    community_matrices$presence
+  ),
+  tar_target(
+    community_abundance_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "community_abundance.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(community_abundance, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    community_presence_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "community_presence.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(community_presence, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    alpha_diversity,
+    compute_alpha_diversity(community_abundance)
+  ),
+  tar_target(
+    alpha_diversity_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "alpha_diversity.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(alpha_diversity, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    alpha_diversity_plot,
+    plot_alpha_diversity(
+      alpha_diversity,
+      file.path(run_dir, "figures", "alpha_diversity.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    beta_diversity,
+    compute_beta_diversity(community_abundance, site_raw)
+  ),
+  tar_target(
+    beta_diversity_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "beta_diversity.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(beta_diversity, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    beta_diversity_plot,
+    plot_distance_decay(
+      beta_diversity,
+      file.path(run_dir, "figures", "beta_diversity_distance_decay.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    trait_columns,
+    {
+      if (is.null(config$traits$columns)) {
+        default_trait_columns(taxa_raw)
+      } else {
+        config$traits$columns
+      }
+    }
+  ),
+  tar_target(
+    trait_species_column,
+    {
+      if (is.null(config$traits$species_column)) {
+        "short"
+      } else {
+        config$traits$species_column
+      }
+    }
+  ),
+  tar_target(
+    traits_clean,
+    clean_traits_table(taxa_raw, trait_columns, species_column = trait_species_column)
+  ),
+  tar_target(
+    traits_alignment,
+    align_traits_to_species(traits_clean, setdiff(names(community_abundance), "site"))
+  ),
+  tar_target(
+    traits_aligned,
+    traits_alignment$aligned
+  ),
+  tar_target(
+    traits_missing,
+    traits_alignment$missing
+  ),
+  tar_target(
+    traits_clean_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "traits_clean.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(traits_clean, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    traits_aligned_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "traits_aligned.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(traits_aligned, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    traits_missing_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "traits_missing.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(traits_missing, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    functional_diversity,
+    compute_functional_diversity(community_abundance, traits_aligned)
+  ),
+  tar_target(
+    functional_diversity_table,
+    functional_diversity$metrics
+  ),
+  tar_target(
+    functional_diversity_dropped,
+    functional_diversity$dropped_species
+  ),
+  tar_target(
+    functional_diversity_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "functional_diversity.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(functional_diversity_table, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    functional_diversity_dropped_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "functional_diversity_dropped_species.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(functional_diversity_dropped, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    functional_diversity_plot,
+    plot_functional_diversity(
+      functional_diversity_table,
+      file.path(run_dir, "figures", "functional_diversity.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
+    trait_association_traits,
+    {
+      if (is.null(config$traits$association_traits)) {
+        trait_columns
+      } else {
+        config$traits$association_traits
+      }
+    }
+  ),
+  tar_target(
+    trait_env_vars,
+    {
+      if (is.null(config$traits$environment_vars)) {
+        c("elevation_m", "canopy_h_m", "ndvi")
+      } else {
+        config$traits$environment_vars
+      }
+    }
+  ),
+  tar_target(
+    trait_site_proportions,
+    compute_trait_site_proportions(
+      community_abundance,
+      traits_aligned,
+      traits_to_use = trait_association_traits
+    )
+  ),
+  tar_target(
+    trait_env_associations,
+    compute_trait_env_associations(
+      trait_site_proportions,
+      site_raw,
+      env_vars = trait_env_vars
+    )
+  ),
+  tar_target(
+    trait_site_proportions_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "trait_site_proportions.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(trait_site_proportions, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    trait_env_associations_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "trait_env_associations.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(trait_env_associations, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    trait_env_plot,
+    plot_trait_env_heatmap(
+      trait_env_associations,
+      file.path(run_dir, "figures", "trait_env_associations.png")
+    ),
+    format = "file"
+  ),
+  tar_target(
     rai_with_ci,
     calc_rai_with_ci(events_per_day, trap_nights)
   ),
@@ -696,6 +980,13 @@ list(
           diel_site = diel_site,
           diel_overall = diel_overall,
           rarefaction_data = rarefaction_data,
+          community_abundance = community_abundance,
+          community_presence = community_presence,
+          alpha_diversity = alpha_diversity,
+          beta_diversity = beta_diversity,
+          traits_missing = traits_missing,
+          functional_diversity = functional_diversity_table,
+          trait_env_associations = trait_env_associations,
           occupancy_summary = occupancy_summary_table,
           occupancy_aic = occupancy_aic_tbl,
           occupancy_species = occupancy_species,
@@ -749,6 +1040,14 @@ list(
             "-P",
             paste0("diel_overall_path:", diel_overall_plot),
             "-P",
+            paste0("alpha_diversity_path:", alpha_diversity_plot),
+            "-P",
+            paste0("beta_diversity_path:", beta_diversity_plot),
+            "-P",
+            paste0("functional_diversity_path:", functional_diversity_plot),
+            "-P",
+            paste0("trait_env_path:", trait_env_plot),
+            "-P",
             paste0("run_dir:", run_dir)
           )
         )
@@ -797,6 +1096,14 @@ list(
             "-P",
             paste0("diel_overall_path:", diel_overall_plot),
             "-P",
+            paste0("alpha_diversity_path:", alpha_diversity_plot),
+            "-P",
+            paste0("beta_diversity_path:", beta_diversity_plot),
+            "-P",
+            paste0("functional_diversity_path:", functional_diversity_plot),
+            "-P",
+            paste0("trait_env_path:", trait_env_plot),
+            "-P",
             paste0("run_dir:", run_dir)
           )
         )
@@ -829,6 +1136,17 @@ list(
           occupancy_summary = occupancy_summary_csv,
           occupancy_aic = occupancy_aic_csv,
           occupancy_predictions = occupancy_predictions_csv,
+          community_abundance = community_abundance_csv,
+          community_presence = community_presence_csv,
+          alpha_diversity = alpha_diversity_csv,
+          beta_diversity = beta_diversity_csv,
+          traits_clean = traits_clean_csv,
+          traits_aligned = traits_aligned_csv,
+          traits_missing = traits_missing_csv,
+          functional_diversity = functional_diversity_csv,
+          functional_diversity_dropped = functional_diversity_dropped_csv,
+          trait_site_proportions = trait_site_proportions_csv,
+          trait_env_associations = trait_env_associations_csv,
           rai_site_species = rai_site_species_csv,
           rai_species = rai_species_csv,
           diel_site = diel_site_csv,
@@ -845,6 +1163,10 @@ list(
           event_threshold_sensitivity = event_threshold_sensitivity_plot,
           occasion_length_sensitivity = occasion_length_sensitivity_plot,
           occupancy_predictions = occupancy_prediction_plots,
+          alpha_diversity = alpha_diversity_plot,
+          beta_diversity = beta_diversity_plot,
+          functional_diversity = functional_diversity_plot,
+          trait_env_associations = trait_env_plot,
           rai_species = rai_species_plot,
           diel_overall = diel_overall_plot
         ),

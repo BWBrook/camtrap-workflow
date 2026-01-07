@@ -203,3 +203,31 @@ Rationale:
 
 Consequences / follow-ups:
 - Revisit in WP-0.4.6+ if spatial or multi-species models become necessary.
+
+---
+
+## 2026-01-07 — Traits sourced from taxa table with configurable columns
+Decision:
+- Use the taxa table (`jc_taxa.csv`) as the default trait source, keyed by `short` species codes, with configurable trait columns.
+
+Rationale:
+- The exemplar dataset already contains trait metadata aligned to species codes.
+- Avoids introducing a separate trait file requirement for MVP community analyses.
+
+Consequences / follow-ups:
+- Trait cleaning and alignment now operate on the taxa table.
+- Future datasets can override trait columns or supply a different species code column via config.
+
+---
+
+## 2026-01-07 — Trait–environment associations via abundance-weighted proportions + Spearman
+Decision:
+- Use abundance-weighted trait proportions per site and Spearman correlations against environmental covariates.
+
+Rationale:
+- Provides a stable, transparent alternative to RLQ/fourth-corner methods for MVP trait–environment signals.
+- Works with categorical traits in the exemplar without heavy modeling dependencies.
+
+Consequences / follow-ups:
+- Results are exploratory; interpret with caution.
+- RLQ/fourth-corner can be revisited once trait coverage expands and assumptions are reviewed.

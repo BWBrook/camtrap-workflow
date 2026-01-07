@@ -30,3 +30,9 @@ occupancy:
   species: null
   top_n: 3
   covariates: ["canopy_h_m", "ndvi"]
+
+traits:
+  species_column: "short"
+  columns: ["diet", "sec_diet", "activity", "habitat", "status", "body_size", "sociality", "mobility"]
+  association_traits: ["diet", "activity", "habitat", "body_size", "status"]
+  environment_vars: ["elevation_m", "canopy_h_m", "ndvi"]

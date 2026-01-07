@@ -128,3 +128,79 @@ Artefacts:
 Notes:
 - Naive occupancy remains stable across 3–30 day occasions for the top species, indicating robustness to occasion length in this dataset.
 - Detection rates increase modestly with longer occasions, as expected from aggregation.
+
+---
+
+## 2026-01-07 — Community matrices (WP-0.5.1)
+
+Artefacts:
+- `outputs/runs/latest/tables/community_abundance.csv`
+- `outputs/runs/latest/tables/community_presence.csv`
+
+Notes:
+- The exemplar community matrix has 13 sites × 28 species, with non-zero event totals at every site.
+- Total event counts per site are highly right-skewed (median ~561 vs max ~2901), indicating uneven activity among sites that should be considered in downstream diversity comparisons.
+
+---
+
+## 2026-01-07 — Alpha diversity (WP-0.5.2)
+
+Artefacts:
+- `outputs/runs/latest/tables/alpha_diversity.csv`
+- `outputs/runs/latest/figures/alpha_diversity.png`
+
+Notes:
+- Richness ranges from 4–19 species across sites; sites `jc_cen`, `jc_pm12`, `jc_pm14`, and `jc_pm23` are highest (richness = 19).
+- Lowest richness occurs at `jc_co1_s1` (4) and `jc_pm14_s1` (6), consistent with smaller or more isolated deployments.
+
+---
+
+## 2026-01-07 — Beta diversity (WP-0.5.3)
+
+Artefacts:
+- `outputs/runs/latest/tables/beta_diversity.csv`
+- `outputs/runs/latest/figures/beta_diversity_distance_decay.png`
+
+Notes:
+- Pairwise Bray–Curtis dissimilarity is generally high (median ~0.64, mean ~0.65), indicating substantial turnover between sites.
+- Geographic distances span ~0.03–0.79 km; the distance–decay trend is weakly positive with wide scatter, suggesting limited spatial structuring at this scale.
+
+---
+
+## 2026-01-07 — Trait alignment (WP-0.5.4)
+
+Artefacts:
+- `outputs/runs/latest/tables/traits_clean.csv`
+- `outputs/runs/latest/tables/traits_aligned.csv`
+- `outputs/runs/latest/tables/traits_missing.csv`
+
+Notes:
+- No community species are missing trait records in the exemplar dataset (`traits_missing.csv` is empty).
+- Trait categories are standardised to lowercase and cleaned of placeholder values before alignment.
+
+---
+
+## 2026-01-07 — Functional diversity (WP-0.5.5)
+
+Artefacts:
+- `outputs/runs/latest/tables/functional_diversity.csv`
+- `outputs/runs/latest/tables/functional_diversity_dropped_species.csv`
+- `outputs/runs/latest/figures/functional_diversity.png`
+
+Notes:
+- Functional richness (FRic) varies from 1–6 across sites; `jc_co2` and `jc_pm23` are highest (FRic = 6).
+- Functional dispersion (FDis) is low to moderate (0–0.37), indicating modest trait spread within sites.
+- FDiv is NA across sites for this dataset, likely due to limited variance in trait space; interpret FRic/FDis as the primary functional signals for now.
+
+---
+
+## 2026-01-07 — Trait–environment associations (WP-0.5.6)
+
+Artefacts:
+- `outputs/runs/latest/tables/trait_site_proportions.csv`
+- `outputs/runs/latest/tables/trait_env_associations.csv`
+- `outputs/runs/latest/figures/trait_env_associations.png`
+
+Notes:
+- The strongest correlations are moderate (|rho| ≈ 0.46) and not statistically significant at conventional thresholds; this is an exploratory screen rather than confirmatory inference.
+- Heatmap patterns show some alignment between canopy/elevation and diet/activity categories, but no single covariate dominates across traits.

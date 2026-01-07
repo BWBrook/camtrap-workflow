@@ -30,6 +30,17 @@ Expected (current MVP):
 - `tables/occupancy_summary.csv` — occupancy estimates (psi, p) for exemplar species.
 - `tables/occupancy_aic.csv` — AIC table for candidate occupancy models.
 - `tables/occupancy_predictions.csv` — site-level occupancy predictions for exemplar species.
+- `tables/community_abundance.csv` — site × species abundance matrix (events).
+- `tables/community_presence.csv` — site × species presence–absence matrix.
+- `tables/alpha_diversity.csv` — per-site richness, Shannon, Simpson indices.
+- `tables/beta_diversity.csv` — pairwise Bray-Curtis and geographic distances.
+- `tables/traits_clean.csv` — cleaned trait table (taxa metadata).
+- `tables/traits_aligned.csv` — traits aligned to community species.
+- `tables/traits_missing.csv` — species missing trait records.
+- `tables/functional_diversity.csv` — functional diversity metrics per site.
+- `tables/functional_diversity_dropped_species.csv` — species excluded from functional diversity (missing traits).
+- `tables/trait_site_proportions.csv` — abundance-weighted trait proportions by site.
+- `tables/trait_env_associations.csv` — trait–environment association results (Spearman rho, p-values).
 - `tables/rai_site_species.csv` — RAI per site/species with Poisson CIs.
 - `tables/rai_species.csv` — pooled RAI per species with Poisson CIs.
 - `tables/diel_site.csv` — diel proportions per site/species.
@@ -47,6 +58,10 @@ Expected (current MVP):
 - `figures/event_threshold_sensitivity.png` — sensitivity of event rate to threshold choice.
 - `figures/occasion_length_sensitivity.png` — sensitivity of naive occupancy to occasion length.
 - `figures/occupancy_pred_<species>.png` — site-level occupancy predictions for each modelled species.
+- `figures/alpha_diversity.png` — per-site richness plot.
+- `figures/beta_diversity_distance_decay.png` — distance–decay plot (Bray-Curtis vs distance).
+- `figures/functional_diversity.png` — functional diversity metrics by site.
+- `figures/trait_env_associations.png` — heatmap of trait–environment associations.
 - `figures/rai_species.png` — pooled RAI by species with confidence intervals.
 - `figures/diel_overall.png` — overall day/night event proportions.
 

@@ -38,6 +38,12 @@ default_config <- function() {
       species = NULL,
       top_n = 3,
       covariates = c("canopy_h_m", "ndvi")
+    ),
+    traits = list(
+      species_column = "short",
+      columns = c("diet", "sec_diet", "activity", "habitat", "status", "body_size", "sociality", "mobility"),
+      association_traits = c("diet", "activity", "habitat", "body_size", "status"),
+      environment_vars = c("elevation_m", "canopy_h_m", "ndvi")
     )
   )
 }
@@ -77,7 +83,8 @@ validate_config <- function(config) {
     "time_qc",
     "sensitivity",
     "detection_history",
-    "occupancy"
+    "occupancy",
+    "traits"
   )
 
   missing <- setdiff(required_paths, names(config))
@@ -167,6 +174,33 @@ validate_config <- function(config) {
         !is.character(config$occupancy$covariates) ||
         length(config$occupancy$covariates) < 1) {
     stop("config.yml occupancy.covariates must be a character vector.")
+  }
+
+  if (!is.list(config$traits)) {
+    stop("config.yml traits must be provided as a list.")
+  }
+
+  if (is.null(config$traits$species_column) ||
+        !is.character(config$traits$species_column) ||
+        length(config$traits$species_column) != 1) {
+    stop("config.yml traits.species_column must be a single character value.")
+  }
+
+  if (is.null(config$traits$columns) ||
+        !is.character(config$traits$columns) ||
+        length(config$traits$columns) < 1) {
+    stop("config.yml traits.columns must be a character vector.")
+  }
+
+  if (!is.null(config$traits$association_traits) &&
+        !is.character(config$traits$association_traits)) {
+    stop("config.yml traits.association_traits must be NULL or a character vector.")
+  }
+
+  if (is.null(config$traits$environment_vars) ||
+        !is.character(config$traits$environment_vars) ||
+        length(config$traits$environment_vars) < 1) {
+    stop("config.yml traits.environment_vars must be a character vector.")
   }
 
   invisible(config)
