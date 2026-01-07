@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+_targets
+outputs
+renv/library
+renv/staging
+.Rhistory
+.RData

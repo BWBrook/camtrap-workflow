@@ -71,6 +71,11 @@ Expected (current MVP):
 - `report/report.pdf` — rendered Quarto report (PDF).
 - `report/report_inputs.rds` — inputs passed to the report (for reproducibility).
 
+## Manuscript (skeleton)
+
+- `manuscript/methods.html` — methods manuscript skeleton (HTML).
+- `manuscript/methods.pdf` — methods manuscript skeleton (PDF).
+
 ## Models (Beta)
 
 - `models/occu_<species>_<model>.rds` — fitted occupancy models for exemplar species.
@@ -79,6 +84,14 @@ Expected (current MVP):
 
 - `run_manifest.json` — run parameters, schema version, outputs, timestamp.
 - `session_info.txt` — `sessionInfo()` output for the run.
+
+## Camtrap DP export (optional)
+
+- `camtrapdp_export/datapackage.json` — Camtrap Data Package export of the internal tables.
+- `camtrapdp_export/deployments.csv` — deployment metadata derived from site/effort.
+- `camtrapdp_export/media.csv` — media metadata (one row per observation by default).
+- `camtrapdp_export/observations.csv` — observation records with eventStart/eventEnd.
+- `camtrapdp_export/validation.txt` — validation log from `camtrapdp`/`frictionless`.
 
 ## Notes
 

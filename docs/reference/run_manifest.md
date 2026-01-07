@@ -29,6 +29,8 @@ It enables auditing and comparison of runs without reading code.
   - tables produced (paths)
   - figures produced (paths)
   - report paths (HTML + PDF)
+  - manuscript paths (methods HTML + PDF)
+  - exports (e.g., Camtrap DP datapackage path)
   - session info path
 - `session_info`: captured output of `sessionInfo()`
 - `warnings`: any warnings surfaced during the run (if captured)

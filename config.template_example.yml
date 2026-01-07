@@ -1,0 +1,50 @@
+schema_version_path: "schema_version.txt"
+run_id: "template_example"
+timezone: "Australia/Hobart"
+event_threshold_minutes: 15
+input_mode: "four_table"
+
+paths:
+  inputs:
+    site: "data/template_dataset/site.csv"
+    op: "data/template_dataset/op.csv"
+    obs: "data/template_dataset/obs.csv"
+    taxa: "data/template_dataset/taxa.csv"
+    camtrapdp: null
+  outputs: "outputs"
+
+analysis:
+  rarefaction: true
+  report: true
+
+time_qc:
+  backward_jump_threshold_hours: 1
+
+sensitivity:
+  event_threshold_minutes: [5, 15, 30, 60]
+  occasion_length_days: [3, 7, 14, 30]
+
+detection_history:
+  occasion_length_days: 7
+  start_date: null
+
+occupancy:
+  species: null
+  top_n: 3
+  covariates: ["canopy_h_m", "ndvi"]
+
+traits:
+  species_column: "short"
+  columns: ["diet", "sec_diet", "activity", "habitat", "status", "body_size", "sociality", "mobility"]
+  association_traits: ["diet", "activity", "habitat", "body_size", "status"]
+  environment_vars: ["elevation_m", "canopy_h_m", "ndvi"]
+
+camtrapdp_export:
+  enable: false
+  name: "camtrap-workflow-template-export"
+  title: "Template dataset export"
+  description: "Camtrap DP export of the template dataset."
+  version: "1.0.1"
+  license: "CC0-1.0"
+  id: null
+  created: null

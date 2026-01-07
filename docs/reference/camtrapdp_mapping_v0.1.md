@@ -25,3 +25,17 @@ Camtrap DP `datapackage.json` read via `camtrapdp::read_camtrapdp()`.
 ## Outputs
 
 Mapped tables are validated against the existing input schema (`input_schema_v0.1`) before entering the pipeline.
+
+---
+
+## Export mapping (internal → Camtrap DP)
+
+| Camtrap DP table | Internal source | Mapping notes |
+| --- | --- | --- |
+| `deployments` | `site` + `op` | `deploymentID` = `site`; `deploymentStart/End` from min/max effort dates; `latitude/longitude` from site; other fields set to `NA`. |
+| `media` | `obs` | One media row per observation; `mediaID` from `imageid`/`index`; `timestamp` from `obs$datetime`; `filePath` set to `media/<filename>`. |
+| `observations` | `obs` + `taxa` | `observationID` from `index`; `deploymentID` from `site`; `eventStart/End` from `obs$datetime`; `scientificName` from taxa (genus+species or short). |
+
+Notes:
+- Export requires valid `lat/lon` and non‑empty effort for each site.
+- Observations are exported at `observationLevel = "media"` with `observationType = "animal"` by default.

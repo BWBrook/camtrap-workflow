@@ -1,0 +1,85 @@
+import::from("testthat", test_that, expect_true, expect_equal)
+import::from("tibble", tibble)
+import::from("here", here)
+
+source(here("R", "camtrapdp_export.R"))
+source(here("R", "custom_funcs.R"))
+
+sample_site <- tibble(
+  site = c("A", "B"),
+  lat = c(-42.0, -42.1),
+  lon = c(147.3, 147.4),
+  type = NA_character_,
+  location = c("LocA", "LocB"),
+  cover = NA_character_,
+  vegclass = NA_character_,
+  elevation_m = NA_real_,
+  slope_d = NA_real_,
+  canopy_h_m = NA_real_,
+  ndvi = NA_real_,
+  nbr = NA_real_,
+  fire_flam = NA_character_,
+  fire_sens = NA_character_
+)
+
+sample_op <- tibble(
+  date = c("01/01/2020", "02/01/2020"),
+  A = c(1, 1),
+  B = c(0, 1)
+)
+
+sample_obs <- tibble(
+  index = 1:2,
+  site = c("A", "B"),
+  datetime = c("01/01/2020 10:00:00", "02/01/2020 12:00:00"),
+  flash = c(0, 0),
+  count = c(1, 2),
+  species = c("sp1", "sp2"),
+  filename = c("img1.jpg", "img2.jpg"),
+  age = c("adult", "juvenile"),
+  sex = c("female", "male"),
+  imageid = c(10, 11)
+)
+
+sample_taxa <- tibble(
+  class = NA_character_,
+  order = NA_character_,
+  family = NA_character_,
+  genus = c("GenusA", "GenusB"),
+  species = c("speciesa", "speciesb"),
+  common = c("CommonA", "CommonB"),
+  short = c("sp1", "sp2"),
+  diet = NA_character_,
+  sec_diet = NA_character_,
+  activity = NA_character_,
+  habitat = NA_character_,
+  status = NA_character_,
+  body_size = NA_character_,
+  sociality = NA_character_,
+  mobility = NA_character_,
+  reproductive = NA_character_,
+  litter = NA_character_
+)
+
+
+test_that("build_camtrapdp_deployments returns required columns", {
+  deployments <- build_camtrapdp_deployments(sample_site, sample_op, tz = "UTC")
+  required <- c("deploymentID", "latitude", "longitude", "deploymentStart", "deploymentEnd")
+  expect_true(all(required %in% names(deployments)))
+  expect_true(all(!is.na(deployments$deploymentStart)))
+  expect_true(all(!is.na(deployments$deploymentEnd)))
+})
+
+test_that("build_camtrapdp_media returns required columns", {
+  media_tbl <- build_camtrapdp_media(sample_obs, tz = "UTC")
+  required <- c("mediaID", "deploymentID", "timestamp", "filePath", "filePublic", "fileMediatype")
+  expect_true(all(required %in% names(media_tbl)))
+  expect_true(all(!is.na(media_tbl$timestamp)))
+})
+
+test_that("build_camtrapdp_observations returns required columns", {
+  obs_tbl <- build_camtrapdp_observations(sample_obs, sample_taxa, tz = "UTC")
+  required <- c("observationID", "deploymentID", "eventStart", "eventEnd", "observationLevel", "observationType")
+  expect_true(all(required %in% names(obs_tbl)))
+  expect_true(all(!is.na(obs_tbl$eventStart)))
+})

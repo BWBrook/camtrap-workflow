@@ -60,6 +60,31 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `occupancy.covariates`  
   Vector of site covariate names to include in occupancy candidate models. Covariates with all-NA values or zero variance are dropped automatically (models fall back to base/effort-only if none remain).
 
+## Camtrap DP export
+
+- `camtrapdp_export.enable`  
+  Set `true` to export the internal tables to a Camtrap Data Package under `outputs/runs/<run_id>/camtrapdp_export/`.
+
+- `camtrapdp_export.name`  
+  Data Package name (machine-friendly identifier).
+
+- `camtrapdp_export.title`  
+  Human-readable title for the export.
+
+- `camtrapdp_export.description`  
+  Description of the export (shown in `datapackage.json`).
+
+- `camtrapdp_export.version`  
+  Camtrap DP version string (default `1.0.1`).
+
+- `camtrapdp_export.license`  
+  License name for the exported data (default `CC0-1.0`).
+
+- `camtrapdp_export.id`  
+  Optional UUID for the export; if `null`, one is generated.
+
+- `camtrapdp_export.created`  
+  Optional ISO timestamp; if `null`, the export time is used.
 - `traits.species_column`  
   Column in the taxa table that identifies the species short code used by observations.
 

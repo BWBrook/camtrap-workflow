@@ -42,6 +42,11 @@ import::here(
 )
 
 import::here(
+  export_camtrapdp_package,
+  .from = "R/camtrapdp_export.R"
+)
+
+import::here(
   write_run_manifest,
   .from = "R/run_manifest.R"
 )
@@ -147,6 +152,7 @@ tar_option_set(
     "camtrapdp",
     "dplyr",
     "fs",
+    "frictionless",
     "ggplot2",
     "here",
     "janitor",
@@ -159,6 +165,7 @@ tar_option_set(
     "tibble",
     "tidyr",
     "unmarked",
+    "uuid",
     "vegan",
     "yaml"
   )
@@ -1161,6 +1168,90 @@ list(
     format = "file"
   ),
   tar_target(
+    methods_html,
+    {
+      out_dir <- file.path(run_dir, "manuscript")
+      out_path <- file.path(out_dir, "methods.html")
+      dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+      if (isTRUE(config$analysis$report)) {
+        system2(
+          "quarto",
+          c(
+            "render",
+            here("analysis", "methods.qmd"),
+            "--to",
+            "html",
+            "--output-dir",
+            out_dir,
+            "-P",
+            paste0("inputs_path:", report_inputs_rds),
+            "-P",
+            paste0("run_dir:", run_dir)
+          )
+        )
+      } else {
+        write_disabled_file(out_path, "Manuscript disabled by config.")
+      }
+
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    methods_pdf,
+    {
+      out_dir <- file.path(run_dir, "manuscript")
+      out_path <- file.path(out_dir, "methods.pdf")
+      dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+
+      if (isTRUE(config$analysis$report)) {
+        system2(
+          "quarto",
+          c(
+            "render",
+            here("analysis", "methods.qmd"),
+            "--to",
+            "pdf",
+            "--output-dir",
+            out_dir,
+            "-P",
+            paste0("inputs_path:", report_inputs_rds),
+            "-P",
+            paste0("run_dir:", run_dir)
+          )
+        )
+      } else {
+        write_disabled_file(out_path, "Manuscript disabled by config.")
+      }
+
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    camtrapdp_export,
+    {
+      if (isTRUE(config$camtrapdp_export$enable)) {
+        export_camtrapdp_package(
+          site_raw,
+          op_raw,
+          obs_raw,
+          taxa_raw,
+          export_config = config$camtrapdp_export,
+          run_dir = run_dir,
+          tz = config$timezone
+        )
+      } else {
+        write_disabled_file(
+          file.path(run_dir, "camtrapdp_export", "DISABLED.txt"),
+          "Camtrap DP export disabled by config."
+        )
+      }
+    },
+    format = "file"
+  ),
+  tar_target(
     run_manifest,
     {
       out_path <- file.path(run_dir, "run_manifest.json")
@@ -1213,6 +1304,8 @@ list(
         ),
         models = list(occupancy = occupancy_model_rds),
         report = list(html = report_html, pdf = report_pdf),
+        manuscript = list(methods_html = methods_html, methods_pdf = methods_pdf),
+        exports = list(camtrapdp = camtrapdp_export),
         session_info = session_info
       )
 

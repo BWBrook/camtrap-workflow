@@ -235,3 +235,27 @@ Notes:
 - The Camtrap DP example contains only 4 deployments and no site covariates, so occupancy models fall back to base/effort-only and yield constant psi estimates across sites.
 - The “unknown” taxon dominates detections in the example, leading to psi ≈ 1 with wide uncertainty; named taxa show lower psi (~0.25–0.52) and broad intervals given sparse detections.
 - Functional diversity metrics are not computed because traits are missing; the plot is a placeholder indicating no available metrics.
+
+---
+
+## 2026-01-07 — Camtrap DP export (WP-0.6.3)
+
+Artefacts:
+- `outputs/runs/camtrapdp_export_example/camtrapdp_export/datapackage.json`
+- `outputs/runs/camtrapdp_export_example/camtrapdp_export/validation.txt`
+
+Notes:
+- Export validates via `camtrapdp`/`frictionless` and produces deployments/media/observations tables.
+- One observation with an unparseable datetime was dropped from the export (warning recorded).
+
+---
+
+## 2026-01-07 — Template dataset dry run (WP-0.7.4)
+
+Artefacts:
+- `outputs/runs/template_example/report/report.html`
+- `outputs/runs/template_example/figures/rarefaction.png`
+
+Notes:
+- Template run completes end‑to‑end; rarefaction ribbon warns about sparse rows (expected with tiny datasets).
+- All core tables/figures are produced, confirming the template dataset is runnable.

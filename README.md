@@ -85,6 +85,7 @@ Start with the template dataset in `data/template_dataset/` and follow the step-
 `docs/bring_your_own_data.md`.
 
 Camtrap DP datasets are also supported via `camtrapdp` (see the Camtrap DP section in `docs/bring_your_own_data.md`).
+You can optionally export your cleaned data back to Camtrap DP by enabling `camtrapdp_export` in `config.yml`.
 
 See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
 Update `config.yml` to point to your input file paths and parameters (timezone, event threshold).
@@ -104,14 +105,21 @@ Rscript scripts/run_tests.R
 Rscript -e 'targets::tar_make()'
 ```
 
+Container users: see `docs/container.md` for build/run instructions.
+
 Before contributing changes, please read:
 
 * `docs/workflow.md`
 * `docs/roadmap.md`
 * `docs/decisions.md`
+* `docs/teaching_module.md` (guided exercises)
 
 ## License
 
 Code: MIT License (see `LICENSE`).
 
 Data: see dataset documentation and `data_dictionary.md` for licensing and citation guidance.
+
+## Citing
+
+See `CITATION.cff` for the recommended citation metadata.

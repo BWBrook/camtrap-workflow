@@ -109,17 +109,17 @@ Notes:
 
 - [x] **WP-0.6.1** WildObsR evaluation for this repo (matrix generation / Camtrap DP) + adopt/defer decision  
 - [x] **WP-0.6.2** Camtrap DP ingestion adapter (via WildObsR and/or frictionless) **(Large)**  
-- [ ] **WP-0.6.3** Optional: Camtrap DP export (publish-ready package) **(Large)**  
-- [ ] **WP-0.6.4** Teaching module: guided exercises + “change params → observe outputs” harness  
-- [ ] **WP-0.6.5** Reproducibility benchmark: cold-run protocol + runtime notes + CI strategy for heavy runs  
+- [x] **WP-0.6.3** Optional: Camtrap DP export (publish-ready package) **(Large)**  
+- [x] **WP-0.6.4** Teaching module: guided exercises + “change params → observe outputs” harness  
+- [x] **WP-0.6.5** Reproducibility benchmark: cold-run protocol + runtime notes + CI strategy for heavy runs  
 
 ### Line 0.7.x — Release + manuscript readiness
 
-- [ ] **WP-0.7.1** Release discipline: versioning, changelog, citation, release artefact bundle definition  
-- [ ] **WP-0.7.2** Container recipe (Docker or equivalent) **(Large)**  
-- [ ] **WP-0.7.3** Methods manuscript skeleton (Quarto) tied to pipeline artefacts + figures/tables mapping  
-- [ ] **WP-0.7.4** End-to-end “new dataset” dry run (template → run → report) with documented failure modes  
-- [ ] **WP-0.7.5** Tag v1.0 readiness gate: final QC, docs completeness, and evidence checklist  
+- [x] **WP-0.7.1** Release discipline: versioning, changelog, citation, release artefact bundle definition  
+- [x] **WP-0.7.2** Container recipe (Docker or equivalent) **(Large)**  
+- [x] **WP-0.7.3** Methods manuscript skeleton (Quarto) tied to pipeline artefacts + figures/tables mapping  
+- [x] **WP-0.7.4** End-to-end “new dataset” dry run (template → run → report) with documented failure modes  
+- [x] **WP-0.7.5** Tag v1.0 readiness gate: final QC, docs completeness, and evidence checklist  
 
 ---
 

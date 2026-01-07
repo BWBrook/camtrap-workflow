@@ -326,3 +326,53 @@ Rationale:
 Consequences / follow-ups:
 - CI will not run automatically; developers must run lint/tests/pipeline locally.
 - Re‑enable CI once system dependencies are installed or a container strategy is adopted.
+
+---
+
+## 2026-01-07 — Override roadmap review gates for Lines 0.6–0.7
+Decision:
+- Proceed through all WPs in Lines 0.6 and 0.7 without stopping at the usual review gates (Large WP and line-completion gates).
+
+Rationale:
+- PI explicitly requested uninterrupted progress through Lines 0.6 and 0.7.
+
+Consequences / follow-ups:
+- A single consolidated review package will be produced after WP‑0.7.5.
+
+---
+
+## 2026-01-07 — Camtrap DP export uses example dataset template
+Decision:
+- Build Camtrap DP exports by starting from `camtrapdp::example_dataset()` and replacing deployments/media/observations plus minimal metadata.
+
+Rationale:
+- Ensures schemas and profiles align with Camtrap DP 1.0.1 without hand‑crafting frictionless resources.
+- Leverages camtrapdp’s validation and write helpers.
+
+Consequences / follow-ups:
+- Export requires network access the first time the template dataset is fetched.
+- Metadata defaults should be overridden in `config.yml` for publication‑ready exports.
+
+---
+
+## 2026-01-07 — Adopt VERSION + CHANGELOG + CITATION for releases
+Decision:
+- Track release version in `VERSION`, maintain a human‑readable `CHANGELOG.md`, and provide citation metadata in `CITATION.cff`.
+
+Rationale:
+- Provides consistent versioning for release bundles and external citation.
+Consequences / follow-ups:
+- Update `VERSION` and `CHANGELOG.md` for each release tag.
+
+---
+
+## 2026-01-07 — Container base image and Quarto strategy
+Decision:
+- Use `rocker/r-ver:4.5.2` as the container base and install Quarto + TinyTeX during the build.
+
+Rationale:
+- Aligns with the project’s R version requirement and enables PDF report rendering inside the container.
+
+Consequences / follow-ups:
+- Container builds are larger due to TeX dependencies.
+- Update the Quarto version in `Dockerfile` if needed.

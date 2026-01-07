@@ -53,6 +53,10 @@ compute_functional_diversity <- function(community_abundance, traits_aligned) {
   comm_mat <- as.matrix(community_abundance[, species_order])
   rownames(comm_mat) <- community_abundance$site
 
+  old_wd <- getwd()
+  on.exit(setwd(old_wd), add = TRUE)
+  setwd(tempdir())
+
   fd <- dbFD(
     x = dummy_matrix,
     a = comm_mat,

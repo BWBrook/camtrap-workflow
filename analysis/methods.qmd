@@ -1,0 +1,78 @@
+---
+title: "camtrap-workflow: Methods skeleton"
+format:
+  html:
+    toc: true
+    embed-resources: true
+  pdf:
+    toc: true
+params:
+  inputs_path: null
+  run_dir: null
+---
+
+```{r}
+inputs <- readRDS(params$inputs_path)
+```
+
+# Overview
+
+This document provides a methods scaffold tied to pipeline artefacts. Fill in project‑specific details before submission.
+
+# Study design
+
+- **Sites**: `r inputs$n_sites` camera locations.
+- **Observation count**: `r inputs$n_obs_raw` raw detections; `r inputs$n_obs_filtered` after effort censoring.
+
+# Data preparation
+
+## Input validation
+
+Inputs are validated against `schema_version = r inputs$schema_version` before analysis.
+
+## Effort standardisation
+
+Effort is derived from the `op` table (camera on/off per day). See:
+
+- `r file.path(params$run_dir, "tables", "effort_summary.csv")`
+- `r file.path(params$run_dir, "figures", "effort_heatmap.png")`
+
+# Independent events
+
+Detections are clustered into independent events using a configurable gap threshold.
+
+- `r file.path(params$run_dir, "tables", "event_spacing.csv")`
+- `r file.path(params$run_dir, "figures", "event_spacing.png")`
+
+# Analyses
+
+## Relative abundance (RAI)
+
+Event counts are standardised by trap nights to compute RAI.
+
+- `r file.path(params$run_dir, "tables", "rai_species.csv")`
+
+## Diel activity
+
+Day/night proportions are computed using event timestamps.
+
+- `r file.path(params$run_dir, "tables", "diel_overall.csv")`
+
+## Occupancy modelling
+
+Single‑season occupancy models are fit to detection histories. Candidate models include base and effort terms plus optional site covariates.
+
+- `r file.path(params$run_dir, "tables", "occupancy_summary.csv")`
+- `r file.path(params$run_dir, "tables", "occupancy_aic.csv")`
+
+## Community and trait analyses
+
+Community matrices and trait summaries support alpha/beta and functional diversity calculations.
+
+- `r file.path(params$run_dir, "tables", "community_abundance.csv")`
+- `r file.path(params$run_dir, "tables", "functional_diversity.csv")`
+
+# Outputs and provenance
+
+- Report artefacts: `r file.path(params$run_dir, "report")`
+- Run manifest: `r file.path(params$run_dir, "run_manifest.json")`
