@@ -10,7 +10,7 @@ Line **0.7.1** is complete. This hardening pass resolves the PI‑flagged correc
 - Run manifests now portable (run‑relative paths + config hash) and documented.
 - Camtrap DP export now logs any dropped observations (e.g., unparseable datetimes) via an audit file when present.
 - Judbury runs use fixed‑offset timezone parsing (DST ignored) with configurable diel method (`flash`/`clock`).
-- Added a spatial site map with interpolated covariate surface, site labels, north arrow, and scale bar.
+- Added a spatial site map with interpolated covariate surface plus north arrow and scale bar (site labels optional).
 
 ## Where to find things
 

@@ -228,7 +228,7 @@ if (!is.null(params$site_map_path)) {
 ```
 
 Note: the map background is an interpolated surface from site covariates (default `ndvi`) and is intended for visual context only.
-Site labels, a north arrow, and a scale bar are added for orientation.
+North arrow and scale bar are added by default; site labels are optional via `spatial_map.label_sites`.
 
 ## Relative abundance index (pooled)
 

@@ -68,7 +68,7 @@ Artefacts:
 Notes:
 - The map displays site locations over an interpolated NDVI surface (fallback to other covariates if NDVI is missing); it provides spatial context rather than a measured continuous surface.
 - Site points align with the expected spatial clustering in the Judbury data; no outliers or coordinate anomalies were observed.
-- Site labels, a north arrow, and a 1 km scale bar are shown to aid orientation; the surface buffer extends beyond the site hull to keep points comfortably within the map extent.
+- The default map includes a north arrow and 1 km scale bar; site labels are optional via `spatial_map.label_sites`. The surface buffer extends beyond the site hull to keep points comfortably within the map extent.
 
 ---
 

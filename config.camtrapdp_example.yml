@@ -22,8 +22,8 @@ spatial_map:
   surface_var: "ndvi"
   resolution: 200
   buffer_deg: 0.03
-  label_sites: true
-  label_size: 3
+  label_sites: false
+  label_size: 2.5
   label_nudge_frac: 0.01
   show_north_arrow: true
   show_scale_bar: true

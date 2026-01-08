@@ -172,7 +172,8 @@ plot_site_map <- function(
       geom_raster(
         data = surface_tbl,
         aes(x = lon, y = lat, fill = value),
-        alpha = 0.85
+        alpha = 0.85,
+        interpolate = TRUE
       ) +
       ggplot2::scale_fill_viridis_c(option = "C", na.value = "transparent")
   }
@@ -182,9 +183,9 @@ plot_site_map <- function(
       data = site,
       aes(x = lon, y = lat),
       shape = 21,
-      size = 2.5,
-      stroke = 0.4,
-      fill = "white",
+      size = 2.2,
+      stroke = 0.6,
+      fill = alpha("white", 0.3),
       color = alpha("black", 0.8)
     ) +
     coord_equal() +
