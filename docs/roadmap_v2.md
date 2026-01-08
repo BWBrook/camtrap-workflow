@@ -46,9 +46,9 @@ A WP is done only when all of the following are true:
 
 ### Line 0.8.0 — v1.0 release candidate gate
 
-- [ ] **WP-0.8.0.1 — Fresh-clone reproducibility verification (clean machine or container)**
-- [ ] **WP-0.8.0.2 — Release-candidate artefacts regenerated from the RC commit**
-- [ ] **WP-0.8.0.3 — Update v1 readiness gate with evidence + close outstanding items**
+- [x] **WP-0.8.0.1 — Fresh-clone reproducibility verification (clean machine or container)**
+- [x] **WP-0.8.0.2 — Release-candidate artefacts regenerated from the RC commit**
+- [x] **WP-0.8.0.3 — Update v1 readiness gate with evidence + close outstanding items**
 
 ### Line 0.9.0 — Methods manuscript + “paper-ready” polish (optional but recommended)
 

@@ -120,7 +120,7 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   Camtrap DP version string (default `1.0.1`).
 
 - `camtrapdp_export.license`  
-  License name for the exported data (default `CC0-1.0`).
+  License name for the exported data (default `CC-BY-4.0`).
 
 - `camtrapdp_export.id`  
   Optional UUID for the export; if `null`, one is generated.

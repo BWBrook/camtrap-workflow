@@ -359,6 +359,30 @@ Consequences / follow-ups:
 Decision:
 - Track release version in `VERSION`, maintain a human‑readable `CHANGELOG.md`, and provide citation metadata in `CITATION.cff`.
 
+---
+
+## 2026-01-08 — Default Camtrap DP export license aligns with dataset CC-BY 4.0
+Decision:
+- Set the default `camtrapdp_export.license` to `CC-BY-4.0` for Judbury-derived exports.
+
+Rationale:
+- The exemplar dataset is CC‑BY 4.0; export metadata should reflect the dataset’s licensing.
+
+Consequences / follow-ups:
+- Users exporting other datasets should override the license in their config as needed.
+
+---
+
+## 2026-01-08 — Report section order is fixed for v1.0
+Decision:
+- Keep the report section ordering fixed (community → traits → spatial → occupancy) and defer configurable ordering.
+
+Rationale:
+- The current ordering matches the stated analysis priorities and avoids additional report‑templating complexity for v1.0.
+
+Consequences / follow-ups:
+- If users need custom ordering, add a `report.section_order` config option in a future release.
+
 Rationale:
 - Provides consistent versioning for release bundles and external citation.
 Consequences / follow-ups:

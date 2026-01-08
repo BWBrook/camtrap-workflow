@@ -318,3 +318,18 @@ Notes:
 
 Notes:
 - When unparseable datetimes occur (e.g., DST gaps without a fixed offset), an audit file `dropped_observations.csv` is written alongside `validation.txt`. With the fixed offset setting, the exemplar export reports zero dropped observations.
+
+---
+
+## 2026-01-08 — Release-candidate artefact sanity check (WP-0.8.0.2)
+
+Artefacts:
+- `outputs/runs/latest/report/report.html`
+- `outputs/runs/latest/report/report.pdf`
+- `outputs/runs/latest/figures/site_map.png`
+- `outputs/runs/latest/run_manifest.json`
+
+Notes:
+- Report HTML/PDF render successfully and include the updated spatial map and core tables/figures.
+- Site map uses a square, buffered extent so the site cluster occupies a meaningful share of the frame; north arrow and scale bar sit in the margins without overlapping points.
+- Run manifest remains portable (paths relative to the run directory).

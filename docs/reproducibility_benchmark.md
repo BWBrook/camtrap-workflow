@@ -27,6 +27,13 @@ This document defines the cold‑run protocol and records runtime/memory notes f
 - Platform: Ubuntu (GitHub Codespace / local)
 - R: 4.5.2
 
+- Date: 2026-01-08
+- Command: `renv::restore(prompt = FALSE)` + `targets::tar_destroy()` + `targets::tar_make(callr_function = NULL)`
+- Elapsed time: **91.2 seconds** (elapsed; user+system 204.8s; max RSS 826612 KB)
+- Platform: Linux 6.8.0-90-generic (clean clone on local host)
+- R: 4.5.2 (2025-10-31); cores: 64
+- Notes: `renv::restore()` initially failed due to a stale `00LOCK-renv` and succeeded after removal; restore warns that `libnode-dev` is missing (V8 builds may need it), but all packages linked from cache.
+
 ## CI strategy for heavy runs
 
 - **Fast checks (PR/local)**: lint + unit tests + minimal target subset (e.g., `input_contract_validation`, `event_spacing_plot`, `occupancy_predictions_csv`).
