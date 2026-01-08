@@ -425,3 +425,15 @@ Rationale:
 
 Consequences / follow-ups:
 - Clock-based diel classification uses fixed day/night hours (configurable) and does not model sunrise/sunset.
+
+---
+
+## 2026-01-08 — Add spatial site map with interpolated covariate surface
+Decision:
+- Implement a spatial site map using interpolation of existing site covariates (default `ndvi`, fallback to `elevation_m` or `canopy_h_m`) and insert a new WP before Line 0.8 to satisfy the PI request for spatial overlays.
+
+Rationale:
+- Provides a terrain/vegetation-style background without relying on external basemap services, keeping runs self-contained while still offering spatial context.
+
+Consequences / follow-ups:
+- Map represents an interpolated surface, not measured continuous data; interpretation notes and report text should emphasize this.

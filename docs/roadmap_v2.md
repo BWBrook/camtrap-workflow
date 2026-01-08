@@ -42,6 +42,7 @@ A WP is done only when all of the following are true:
 - [x] **WP-0.7.1.4 — Make run manifests portable + document real schema**
 - [x] **WP-0.7.1.5 — Camtrap DP export: DST-gap handling and auditable drop log**
 - [x] **WP-0.7.1.6 — Apply human data assumptions (fixed offset + diel method + report ordering)**
+- [x] **WP-0.7.1.7 — Spatial overlay map (interpolated terrain/veg context)**
 
 ### Line 0.8.0 — v1.0 release candidate gate
 
@@ -237,6 +238,34 @@ Judbury-specific data assumptions are encoded explicitly in config and docs, and
 
 **Stop condition**
 - Exemplar run completes with the fixed-offset parsing and diel method options, and the report order matches the stated priorities.
+
+---
+
+## WP-0.7.1.7 — Spatial overlay map (interpolated terrain/veg context)
+
+**Outcome**  
+Provide a spatial context map that overlays site locations on an interpolated covariate surface (terrain/vegetation proxy) without relying on external basemap services.
+
+**Scope**
+- In-scope:
+  - Generate a site map (`figures/site_map.png`) using site lat/lon and an interpolated surface (default NDVI, fallback to elevation).
+  - Report integration and interpretation notes describing the map and its limitations.
+  - Configurable map settings (surface variable, resolution, buffer).
+- Out-of-scope:
+  - True satellite basemap or land-cover rasters (defer to later, heavier dependencies).
+
+**Acceptance criteria**
+- Map is produced for the exemplar dataset and included in the report.
+- Config fields documented and validated.
+- Interpretation notes clarify that the surface is interpolated from site-level covariates.
+
+**Artefact evidence**
+- `outputs/runs/latest/figures/site_map.png`
+- `analysis/report.qmd` includes the map section.
+- `docs/interpretation_notes.md` updated.
+
+**Stop condition**
+- Spatial map is generated, documented, and reviewed for plausibility.
 
 ---
 

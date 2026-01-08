@@ -20,6 +20,7 @@ params:
   beta_diversity_path: null
   functional_diversity_path: null
   trait_env_path: null
+  site_map_path: null
   run_dir: null
 ---
 
@@ -218,6 +219,16 @@ if (!is.null(params$trait_env_path)) {
 }
 ```
 
+## Spatial overview (site map)
+
+```{r}
+if (!is.null(params$site_map_path)) {
+  knitr::include_graphics(params$site_map_path)
+}
+```
+
+Note: the map background is an interpolated surface from site covariates (default `ndvi`) and is intended for visual context only.
+
 ## Relative abundance index (pooled)
 
 RAI is defined as independent events per trap night, pooled over total survey effort across all included sites (Poisson confidence intervals).
@@ -272,6 +283,7 @@ if (!is.null(inputs$occupancy_species)) {
 - Occupancy models are single-season and illustrative; covariates are limited to site summaries and effort-days.
 - Trait analyses use cleaned taxa metadata; species with missing trait values are dropped from functional diversity.
 - Trait–environment associations are exploratory Spearman correlations on abundance-weighted trait proportions.
+- Spatial maps use interpolated site covariates (e.g., NDVI) for context and do not represent continuous measured surfaces.
 
 ## Provenance
 

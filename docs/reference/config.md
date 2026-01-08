@@ -39,6 +39,18 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `analysis.report`  
   Toggle report rendering (TRUE/FALSE). Requires `analysis.rarefaction = TRUE`.
 
+- `spatial_map.enable`  
+  Toggle the spatial site map (TRUE/FALSE). Requires `site` table lat/lon.
+
+- `spatial_map.surface_var`  
+  Preferred site covariate to interpolate for the background surface (e.g., `ndvi`, `elevation_m`). Falls back to the first available non-missing variable if absent.
+
+- `spatial_map.resolution`  
+  Grid resolution (number of steps per axis) used for interpolation.
+
+- `spatial_map.buffer_deg`  
+  Buffer in decimal degrees around site extent for the map canvas.
+
 - `time_qc.backward_jump_threshold_hours`  
   Threshold (hours) for flagging backward time jumps as potential clock drift.
 

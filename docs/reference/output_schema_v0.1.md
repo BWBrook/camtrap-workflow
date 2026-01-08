@@ -53,6 +53,7 @@ Expected (current MVP):
 - `figures/rarefaction.png` — species accumulation curve.
 - `figures/effort_histogram.png` — histogram of trap nights per site.
 - `figures/effort_heatmap.png` — site-by-date effort heatmap (active/inactive).
+- `figures/site_map.png` — spatial overview with an interpolated covariate surface and site locations.
 - `figures/time_qc_backward_jumps.png` — per-site count of backward time jumps.
 - `figures/event_spacing.png` — distribution of time gaps between independent events.
 - `figures/event_threshold_sensitivity.png` — sensitivity of event rate to threshold choice.

@@ -10,6 +10,7 @@ Line **0.7.1** is complete. This hardening pass resolves the PI‑flagged correc
 - Run manifests now portable (run‑relative paths + config hash) and documented.
 - Camtrap DP export now logs any dropped observations (e.g., unparseable datetimes) via an audit file when present.
 - Judbury runs use fixed‑offset timezone parsing (DST ignored) with configurable diel method (`flash`/`clock`).
+- Added a spatial site map with interpolated covariate surface for context.
 
 ## Where to find things
 
@@ -31,6 +32,7 @@ Line **0.7.1** is complete. This hardening pass resolves the PI‑flagged correc
 - Camtrap DP ingest example: `outputs/runs/camtrapdp_example/`
 - Camtrap DP export example: `outputs/runs/camtrapdp_export_example/`
 - Template dataset run: `outputs/runs/template_example/`
+- Spatial map: `outputs/runs/latest/figures/site_map.png`
 - Run manifest schema: `docs/reference/run_manifest.md`
 
 ### Camtrap DP export audit

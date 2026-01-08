@@ -54,6 +54,7 @@ Outputs will appear under `outputs/runs/<run_id>/` (see `config.yml`).
 - Datetimes are interpreted in the configured `timezone`. If your data ignore daylight savings (fixed local time), set `timezone_fixed_offset_hours` (e.g., `10` for UTC+10) to avoid DST gaps.
 - Effort (`op.csv`) is day-level only: `1` means the camera operated at some point that day; `0` means fully off. Partial-day downtime is not represented.
 - Sites represent fixed camera locations; repeated deployments at the same `site` are treated as the same site for analysis.
+- The spatial map uses site `lat`/`lon` and interpolates a site covariate (default `ndvi`) for background context; if covariates are missing, only site points are shown.
 
 ## Common validation errors and fixes
 

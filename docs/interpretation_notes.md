@@ -60,6 +60,17 @@ Notes:
 
 ---
 
+## 2026-01-08 — Spatial site map (interpolated surface)
+
+Artefacts:
+- `outputs/runs/latest/figures/site_map.png`
+
+Notes:
+- The map displays site locations over an interpolated NDVI surface (fallback to other covariates if NDVI is missing); it provides spatial context rather than a measured continuous surface.
+- Site points align with the expected spatial clustering in the Judbury data; no outliers or coordinate anomalies were observed.
+
+---
+
 ## 2026-01-06 — Event spacing diagnostics (WP-0.3.9)
 
 Artefacts:

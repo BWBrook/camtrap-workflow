@@ -18,6 +18,12 @@ analysis:
   rarefaction: true
   report: true
 
+spatial_map:
+  enable: true
+  surface_var: "ndvi"
+  resolution: 200
+  buffer_deg: 0.01
+
 time_qc:
   backward_jump_threshold_hours: 1
 

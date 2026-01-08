@@ -78,6 +78,12 @@ import::here(
 )
 
 import::here(
+  plot_site_map,
+  write_placeholder_plot,
+  .from = "R/spatial_outputs.R"
+)
+
+import::here(
   compute_event_threshold_sens,
   plot_event_threshold_sens,
   compute_occasion_length_sens,
@@ -331,6 +337,25 @@ list(
       op_long,
       file.path(run_dir, "figures", "effort_heatmap.png")
     ),
+    format = "file"
+  ),
+  tar_target(
+    site_map_plot,
+    {
+      out_path <- file.path(run_dir, "figures", "site_map.png")
+      if (isTRUE(config$spatial_map$enable)) {
+        plot_site_map(
+          site_raw,
+          out_path,
+          surface_var = config$spatial_map$surface_var,
+          resolution = config$spatial_map$resolution,
+          buffer_deg = config$spatial_map$buffer_deg
+        )
+      } else {
+        write_placeholder_plot(out_path, "Site map disabled by config.")
+      }
+      out_path
+    },
     format = "file"
   ),
   ## ── INDEPENDENT-EVENT FILTERING ───────────────────────────────────────────────
@@ -1126,6 +1151,8 @@ list(
             "-P",
             paste0("trait_env_path:", trait_env_plot),
             "-P",
+            paste0("site_map_path:", site_map_plot),
+            "-P",
             paste0("run_dir:", run_dir)
           )
         )
@@ -1181,6 +1208,8 @@ list(
             paste0("functional_diversity_path:", functional_diversity_plot),
             "-P",
             paste0("trait_env_path:", trait_env_plot),
+            "-P",
+            paste0("site_map_path:", site_map_plot),
             "-P",
             paste0("run_dir:", run_dir)
           )
@@ -1321,6 +1350,7 @@ list(
           rarefaction = rarefaction_plot,
           effort_histogram = effort_histogram_plot,
           effort_heatmap = effort_heatmap_plot,
+          site_map = site_map_plot,
           time_qc_backward_jumps = time_qc_backwards_plot,
           event_spacing = event_spacing_plot,
           event_threshold_sensitivity = event_threshold_sensitivity_plot,

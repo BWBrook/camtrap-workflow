@@ -26,6 +26,12 @@ default_config <- function() {
       rarefaction = TRUE,
       report = TRUE
     ),
+    spatial_map = list(
+      enable = TRUE,
+      surface_var = "ndvi",
+      resolution = 200,
+      buffer_deg = 0.01
+    ),
     time_qc = list(
       backward_jump_threshold_hours = 1
     ),
@@ -100,6 +106,7 @@ validate_config <- function(config) {
     "input_mode",
     "paths",
     "analysis",
+    "spatial_map",
     "time_qc",
     "diel",
     "sensitivity",
@@ -155,6 +162,31 @@ validate_config <- function(config) {
 
   if (isTRUE(config$analysis$report) && !isTRUE(config$analysis$rarefaction)) {
     stop("config.yml analysis.rarefaction must be TRUE when analysis.report is TRUE.")
+  }
+
+  if (!is.list(config$spatial_map) || is.null(config$spatial_map$enable)) {
+    stop("config.yml spatial_map.enable must be provided.")
+  }
+
+  if (!is.logical(config$spatial_map$enable) || length(config$spatial_map$enable) != 1) {
+    stop("config.yml spatial_map.enable must be TRUE/FALSE.")
+  }
+
+  if (!is.null(config$spatial_map$surface_var)) {
+    if (!is.character(config$spatial_map$surface_var) ||
+          length(config$spatial_map$surface_var) != 1) {
+      stop("config.yml spatial_map.surface_var must be NULL or a single character value.")
+    }
+  }
+
+  if (!is.numeric(config$spatial_map$resolution) ||
+        length(config$spatial_map$resolution) != 1) {
+    stop("config.yml spatial_map.resolution must be a single numeric value.")
+  }
+
+  if (!is.numeric(config$spatial_map$buffer_deg) ||
+        length(config$spatial_map$buffer_deg) != 1) {
+    stop("config.yml spatial_map.buffer_deg must be a single numeric value.")
   }
 
   if (!is.list(config$time_qc) || is.null(config$time_qc$backward_jump_threshold_hours)) {
