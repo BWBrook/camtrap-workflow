@@ -30,7 +30,13 @@ default_config <- function() {
       enable = TRUE,
       surface_var = "ndvi",
       resolution = 200,
-      buffer_deg = 0.01
+      buffer_deg = 0.03,
+      label_sites = TRUE,
+      label_size = 3,
+      label_nudge_frac = 0.01,
+      show_north_arrow = TRUE,
+      show_scale_bar = TRUE,
+      scale_bar_km = 1
     ),
     time_qc = list(
       backward_jump_threshold_hours = 1
@@ -187,6 +193,36 @@ validate_config <- function(config) {
   if (!is.numeric(config$spatial_map$buffer_deg) ||
         length(config$spatial_map$buffer_deg) != 1) {
     stop("config.yml spatial_map.buffer_deg must be a single numeric value.")
+  }
+
+  if (!is.logical(config$spatial_map$label_sites) ||
+        length(config$spatial_map$label_sites) != 1) {
+    stop("config.yml spatial_map.label_sites must be TRUE/FALSE.")
+  }
+
+  if (!is.numeric(config$spatial_map$label_size) ||
+        length(config$spatial_map$label_size) != 1) {
+    stop("config.yml spatial_map.label_size must be a single numeric value.")
+  }
+
+  if (!is.numeric(config$spatial_map$label_nudge_frac) ||
+        length(config$spatial_map$label_nudge_frac) != 1) {
+    stop("config.yml spatial_map.label_nudge_frac must be a single numeric value.")
+  }
+
+  if (!is.logical(config$spatial_map$show_north_arrow) ||
+        length(config$spatial_map$show_north_arrow) != 1) {
+    stop("config.yml spatial_map.show_north_arrow must be TRUE/FALSE.")
+  }
+
+  if (!is.logical(config$spatial_map$show_scale_bar) ||
+        length(config$spatial_map$show_scale_bar) != 1) {
+    stop("config.yml spatial_map.show_scale_bar must be TRUE/FALSE.")
+  }
+
+  if (!is.numeric(config$spatial_map$scale_bar_km) ||
+        length(config$spatial_map$scale_bar_km) != 1) {
+    stop("config.yml spatial_map.scale_bar_km must be a single numeric value.")
   }
 
   if (!is.list(config$time_qc) || is.null(config$time_qc$backward_jump_threshold_hours)) {

@@ -51,6 +51,24 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `spatial_map.buffer_deg`  
   Buffer in decimal degrees around site extent for the map canvas.
 
+- `spatial_map.label_sites`  
+  Toggle site name labels adjacent to points.
+
+- `spatial_map.label_size`  
+  Text size for site labels, north arrow, and scale bar.
+
+- `spatial_map.label_nudge_frac`  
+  Fraction of the map range used to offset labels from points.
+
+- `spatial_map.show_north_arrow`  
+  Toggle the north arrow annotation.
+
+- `spatial_map.show_scale_bar`  
+  Toggle the scale bar annotation.
+
+- `spatial_map.scale_bar_km`  
+  Scale bar length in kilometers.
+
 - `time_qc.backward_jump_threshold_hours`  
   Threshold (hours) for flagging backward time jumps as potential clock drift.
 

@@ -349,7 +349,13 @@ list(
           out_path,
           surface_var = config$spatial_map$surface_var,
           resolution = config$spatial_map$resolution,
-          buffer_deg = config$spatial_map$buffer_deg
+          buffer_deg = config$spatial_map$buffer_deg,
+          label_sites = config$spatial_map$label_sites,
+          label_size = config$spatial_map$label_size,
+          label_nudge_frac = config$spatial_map$label_nudge_frac,
+          show_north_arrow = config$spatial_map$show_north_arrow,
+          show_scale_bar = config$spatial_map$show_scale_bar,
+          scale_bar_km = config$spatial_map$scale_bar_km
         )
       } else {
         write_placeholder_plot(out_path, "Site map disabled by config.")
