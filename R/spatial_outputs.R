@@ -26,8 +26,17 @@ select_surface_var <- function(site, surface_var = NULL) {
 #' @param surface_var Variable name to interpolate.
 #' @param resolution Grid resolution (number of steps per axis).
 #' @param buffer_deg Buffer in degrees around site extent.
+#' @param xlim Optional x-axis limits for the interpolation grid.
+#' @param ylim Optional y-axis limits for the interpolation grid.
 #' @return Tibble with lon, lat, value columns.
-interpolate_site_surface <- function(site, surface_var, resolution = 200, buffer_deg = 0.01) {
+interpolate_site_surface <- function(
+  site,
+  surface_var,
+  resolution = 200,
+  buffer_deg = 0.01,
+  xlim = NULL,
+  ylim = NULL
+) {
   import::from("dplyr", filter)
   import::from("tibble", tibble)
 
@@ -41,12 +50,13 @@ interpolate_site_surface <- function(site, surface_var, resolution = 200, buffer
 
   resolution <- max(20, min(400, as.integer(resolution)))
 
-  lon_range <- range(site$lon, na.rm = TRUE)
-  lat_range <- range(site$lat, na.rm = TRUE)
+  lon_range <- if (is.null(xlim)) range(site$lon, na.rm = TRUE) else xlim
+  lat_range <- if (is.null(ylim)) range(site$lat, na.rm = TRUE) else ylim
 
+  buffer <- if (is.null(xlim) || is.null(ylim)) buffer_deg else 0
   grid <- expand.grid(
-    lon = seq(lon_range[1] - buffer_deg, lon_range[2] + buffer_deg, length.out = resolution),
-    lat = seq(lat_range[1] - buffer_deg, lat_range[2] + buffer_deg, length.out = resolution)
+    lon = seq(lon_range[1] - buffer, lon_range[2] + buffer, length.out = resolution),
+    lat = seq(lat_range[1] - buffer, lat_range[2] + buffer, length.out = resolution)
   )
 
   model <- tryCatch(
@@ -150,20 +160,32 @@ plot_site_map <- function(
   surface_tbl <- tibble::tibble()
   surface_label <- NULL
 
+  lon_range <- range(site$lon, na.rm = TRUE)
+  lat_range <- range(site$lat, na.rm = TRUE)
+  lon_span <- diff(lon_range)
+  lat_span <- diff(lat_range)
+  side <- max(lon_span, lat_span)
+  min_side <- max(buffer_deg * 2, 0.002)
+  if (!is.finite(side) || side < min_side) {
+    side <- min_side
+  }
+  side <- side + 2 * buffer_deg
+  center_lon <- mean(lon_range)
+  center_lat <- mean(lat_range)
+  xlim <- c(center_lon - side / 2, center_lon + side / 2)
+  ylim <- c(center_lat - side / 2, center_lat + side / 2)
+
   if (!is.null(surface_var)) {
     surface_tbl <- interpolate_site_surface(
       site,
       surface_var = surface_var,
       resolution = resolution,
-      buffer_deg = buffer_deg
+      buffer_deg = buffer_deg,
+      xlim = xlim,
+      ylim = ylim
     )
     surface_label <- gsub("_", " ", surface_var)
   }
-
-  lon_range <- range(site$lon, na.rm = TRUE)
-  lat_range <- range(site$lat, na.rm = TRUE)
-  lon_span <- diff(lon_range)
-  lat_span <- diff(lat_range)
 
   p <- ggplot()
 
@@ -188,7 +210,7 @@ plot_site_map <- function(
       fill = alpha("white", 0.3),
       color = alpha("black", 0.8)
     ) +
-    coord_equal() +
+    coord_equal(xlim = xlim, ylim = ylim, expand = FALSE, clip = "off") +
     theme_minimal() +
     labs(
       x = "Longitude",
@@ -197,9 +219,11 @@ plot_site_map <- function(
       title = "Site map with interpolated surface"
     )
 
+  map_span <- diff(xlim)
+
   if (isTRUE(label_sites)) {
-    nudge_x <- ifelse(lon_span == 0, 0.001, lon_span * label_nudge_frac)
-    nudge_y <- ifelse(lat_span == 0, 0.001, lat_span * label_nudge_frac)
+    nudge_x <- ifelse(map_span == 0, 0.001, map_span * label_nudge_frac)
+    nudge_y <- ifelse(map_span == 0, 0.001, map_span * label_nudge_frac)
 
     p <- p +
       geom_text(
@@ -213,11 +237,23 @@ plot_site_map <- function(
   }
 
   if (isTRUE(show_scale_bar) && !is.null(scale_bar_km) && scale_bar_km > 0) {
-    lat_ref <- lat_range[1] + lat_span * 0.05
-    lon_ref <- lon_range[1] + lon_span * 0.05
-    deg_per_km <- 1 / (111.32 * cos(mean(lat_range) * pi / 180))
+    pad <- map_span * 0.05
+    lat_ref <- ylim[1] + pad
+    lon_ref <- xlim[1] + pad
+    deg_per_km <- 1 / (111.32 * cos(mean(ylim) * pi / 180))
     bar_deg <- scale_bar_km * deg_per_km
+    bar_height <- map_span * 0.02
+
     p <- p +
+      annotate(
+        "rect",
+        xmin = lon_ref - pad * 0.3,
+        xmax = lon_ref + bar_deg + pad * 0.3,
+        ymin = lat_ref - pad * 0.3,
+        ymax = lat_ref + bar_height + pad * 0.3,
+        fill = alpha("white", 0.6),
+        color = NA
+      ) +
       annotate(
         "segment",
         x = lon_ref,
@@ -229,30 +265,41 @@ plot_site_map <- function(
       annotate(
         "text",
         x = lon_ref + bar_deg / 2,
-        y = lat_ref + lat_span * 0.02,
+        y = lat_ref + bar_height,
         label = paste0(scale_bar_km, " km"),
         size = label_size
       )
   }
 
   if (isTRUE(show_north_arrow)) {
-    arrow_x <- lon_range[1] + lon_span * 0.08
-    arrow_y <- lat_range[2] - lat_span * 0.08
-    arrow_len <- ifelse(lat_span == 0, 0.002, lat_span * 0.08)
+    pad <- map_span * 0.05
+    arrow_x <- xlim[1] + pad
+    arrow_y <- ylim[2] - pad
+    arrow_len <- ifelse(map_span == 0, 0.002, map_span * 0.08)
+
     p <- p +
+      annotate(
+        "rect",
+        xmin = arrow_x - pad * 0.5,
+        xmax = arrow_x + pad * 1.5,
+        ymin = arrow_y - arrow_len - pad * 0.6,
+        ymax = arrow_y + pad * 0.6,
+        fill = alpha("white", 0.6),
+        color = NA
+      ) +
       annotate(
         "segment",
         x = arrow_x,
         xend = arrow_x,
-        y = arrow_y,
-        yend = arrow_y + arrow_len,
+        y = arrow_y - arrow_len,
+        yend = arrow_y,
         linewidth = 0.6,
         arrow = grid::arrow(length = grid::unit(0.15, "inches"))
       ) +
       annotate(
         "text",
         x = arrow_x,
-        y = arrow_y + arrow_len + lat_span * 0.02,
+        y = arrow_y + pad * 0.4,
         label = "N",
         size = label_size
       )
