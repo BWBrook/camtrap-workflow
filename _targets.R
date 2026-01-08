@@ -350,6 +350,7 @@ list(
           surface_var = config$spatial_map$surface_var,
           resolution = config$spatial_map$resolution,
           buffer_deg = config$spatial_map$buffer_deg,
+          buffer_frac = config$spatial_map$buffer_frac,
           label_sites = config$spatial_map$label_sites,
           label_size = config$spatial_map$label_size,
           label_nudge_frac = config$spatial_map$label_nudge_frac,

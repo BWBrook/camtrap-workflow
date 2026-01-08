@@ -120,7 +120,8 @@ write_placeholder_plot <- function(out_path, message) {
 #' @param out_path Output PNG path.
 #' @param surface_var Optional preferred surface variable (e.g., "ndvi").
 #' @param resolution Grid resolution for interpolation.
-#' @param buffer_deg Buffer in degrees around site extent.
+#' @param buffer_deg Minimum buffer in degrees around site extent.
+#' @param buffer_frac Buffer as a fraction of the site extent (square bounding box).
 #' @param label_sites Logical; if TRUE, label sites by name.
 #' @param label_size Text size for site labels.
 #' @param label_nudge_frac Fraction of the map range used to offset labels.
@@ -134,7 +135,8 @@ plot_site_map <- function(
   out_path,
   surface_var = NULL,
   resolution = 200,
-  buffer_deg = 0.01,
+  buffer_deg = 0.002,
+  buffer_frac = 0.1,
   label_sites = TRUE,
   label_size = 3,
   label_nudge_frac = 0.01,
@@ -156,31 +158,31 @@ plot_site_map <- function(
     return(write_placeholder_plot(out_path, "No site coordinates available"))
   }
 
-  surface_var <- select_surface_var(site, surface_var)
-  surface_tbl <- tibble::tibble()
-  surface_label <- NULL
-
   lon_range <- range(site$lon, na.rm = TRUE)
   lat_range <- range(site$lat, na.rm = TRUE)
   lon_span <- diff(lon_range)
   lat_span <- diff(lat_range)
-  side <- max(lon_span, lat_span)
-  min_side <- max(buffer_deg * 2, 0.002)
-  if (!is.finite(side) || side < min_side) {
-    side <- min_side
+  base_span <- max(lon_span, lat_span)
+  if (!is.finite(base_span)) {
+    base_span <- 0
   }
-  side <- side + 2 * buffer_deg
+  buffer <- max(base_span * buffer_frac, buffer_deg)
+  side <- max(base_span + 2 * buffer, 2 * buffer)
   center_lon <- mean(lon_range)
   center_lat <- mean(lat_range)
   xlim <- c(center_lon - side / 2, center_lon + side / 2)
   ylim <- c(center_lat - side / 2, center_lat + side / 2)
+
+  surface_var <- select_surface_var(site, surface_var)
+  surface_tbl <- tibble::tibble()
+  surface_label <- NULL
 
   if (!is.null(surface_var)) {
     surface_tbl <- interpolate_site_surface(
       site,
       surface_var = surface_var,
       resolution = resolution,
-      buffer_deg = buffer_deg,
+      buffer_deg = buffer,
       xlim = xlim,
       ylim = ylim
     )

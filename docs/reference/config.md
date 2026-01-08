@@ -49,7 +49,10 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   Grid resolution (number of steps per axis) used for interpolation.
 
 - `spatial_map.buffer_deg`  
-  Buffer in decimal degrees around site extent for the map canvas.
+  Minimum buffer in decimal degrees around the site extent.
+
+- `spatial_map.buffer_frac`  
+  Buffer as a fraction of the site extent (used to build a square bounding box around sites).
 
 - `spatial_map.label_sites`  
   Toggle site name labels adjacent to points.

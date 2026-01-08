@@ -69,7 +69,7 @@ Notes:
 - The map displays site locations over an interpolated NDVI surface (fallback to other covariates if NDVI is missing); it provides spatial context rather than a measured continuous surface.
 - Site points align with the expected spatial clustering in the Judbury data; no outliers or coordinate anomalies were observed.
 - The default map includes a north arrow and 1 km scale bar; site labels are optional via `spatial_map.label_sites`. The surface buffer extends beyond the site hull to keep points comfortably within the map extent.
-- The map extent is computed as a square bounding box around sites with a small buffer so the region of interest fills most of the canvas.
+- The map extent is computed as a square bounding box around sites with a small fractional buffer so the region of interest fills most of the canvas.
 
 ---
 

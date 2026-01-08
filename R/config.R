@@ -30,7 +30,8 @@ default_config <- function() {
       enable = TRUE,
       surface_var = "ndvi",
       resolution = 200,
-      buffer_deg = 0.03,
+      buffer_deg = 0.002,
+      buffer_frac = 0.1,
       label_sites = FALSE,
       label_size = 2.5,
       label_nudge_frac = 0.01,
@@ -193,6 +194,11 @@ validate_config <- function(config) {
   if (!is.numeric(config$spatial_map$buffer_deg) ||
         length(config$spatial_map$buffer_deg) != 1) {
     stop("config.yml spatial_map.buffer_deg must be a single numeric value.")
+  }
+
+  if (!is.numeric(config$spatial_map$buffer_frac) ||
+        length(config$spatial_map$buffer_frac) != 1) {
+    stop("config.yml spatial_map.buffer_frac must be a single numeric value.")
   }
 
   if (!is.logical(config$spatial_map$label_sites) ||
