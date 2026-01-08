@@ -1090,3 +1090,4 @@ See `docs/roadmap_v2.md` for full WP specs. Status mirrored here for completion 
 - [x] WP-0.7.1.3 — Fix occupancy summary p missingness + define semantics
 - [x] WP-0.7.1.4 — Make run manifests portable + document real schema
 - [x] WP-0.7.1.5 — Camtrap DP export: DST-gap handling and auditable drop log
+- [x] WP-0.7.1.6 — Apply human data assumptions (fixed offset + diel method + report ordering)

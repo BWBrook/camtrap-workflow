@@ -401,3 +401,27 @@ Rationale:
 
 Consequences / follow-ups:
 - Tests enforce that manifests contain no absolute paths.
+
+---
+
+## 2026-01-08 — Fixed-offset timezone for Judbury timestamps
+Decision:
+- Use `timezone_fixed_offset_hours = 10` for Judbury data to treat timestamps as fixed UTC+10 and ignore DST gaps.
+
+Rationale:
+- Camera clocks were recorded in local time without DST adjustments; fixed-offset parsing avoids false DST-gap flags.
+
+Consequences / follow-ups:
+- Time QC still flags backward jumps, but DST-gap counts should be zero for Judbury runs.
+
+---
+
+## 2026-01-08 — Diel classification defaults to flash
+Decision:
+- Keep `diel.method = "flash"` as the default for Judbury, with an optional `clock` method for users who prefer time-based classification.
+
+Rationale:
+- Flash metadata is more reliable than clock time for Judbury due to clock drift; clock-based classification remains approximate.
+
+Consequences / follow-ups:
+- Clock-based diel classification uses fixed day/night hours (configurable) and does not model sunrise/sunset.

@@ -88,7 +88,7 @@ Camtrap DP datasets are also supported via `camtrapdp` (see the Camtrap DP secti
 You can optionally export your cleaned data back to Camtrap DP by enabling `camtrapdp_export` in `config.yml`.
 
 See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
-Update `config.yml` to point to your input file paths and parameters (timezone, event threshold).
+Update `config.yml` to point to your input file paths and parameters (timezone, fixed offset if DST is ignored, event threshold).
 
 ## Development workflow
 
@@ -118,7 +118,7 @@ Before contributing changes, please read:
 
 Code: MIT License (see `LICENSE`).
 
-Data: see dataset documentation and `data_dictionary.md` for licensing and citation guidance.
+Data (exemplar): CC-BY 4.0 (see `data_dictionary.md` for citation guidance).
 
 ## Citing
 

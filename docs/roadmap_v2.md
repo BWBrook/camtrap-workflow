@@ -41,6 +41,7 @@ A WP is done only when all of the following are true:
 - [x] **WP-0.7.1.3 — Fix occupancy summary `p` missingness + define semantics**
 - [x] **WP-0.7.1.4 — Make run manifests portable + document real schema**
 - [x] **WP-0.7.1.5 — Camtrap DP export: DST-gap handling and auditable drop log**
+- [x] **WP-0.7.1.6 — Apply human data assumptions (fixed offset + diel method + report ordering)**
 
 ### Line 0.8.0 — v1.0 release candidate gate
 
@@ -205,6 +206,37 @@ Camtrap DP export is auditable when timestamps cannot be represented in local ti
 
 **Stop condition**
 - Export is auditable and behaviour is documented; no silent dropping.
+
+---
+
+## WP-0.7.1.6 — Apply human data assumptions (fixed offset + diel method + report ordering)
+
+**Outcome**  
+Judbury-specific data assumptions are encoded explicitly in config and docs, and the exemplar report reflects the PI’s stated output priorities.
+
+**Scope**
+- In-scope:
+  - Fixed-offset timezone support (ignore DST) with Judbury defaults.
+  - Diel classification option (`flash` vs `clock`) with configurable day/night hours.
+  - Report section ordering updated to prioritize community/traits before occupancy.
+  - Docs updated for time/effort/site semantics and diel method.
+- Out-of-scope:
+  - Sunrise/sunset-based diel classification (later enhancement).
+  - New spatial overlay analyses (candidate for later WPs).
+
+**Acceptance criteria**
+- `timezone_fixed_offset_hours` is supported, validated, and used in time parsing/QC; Judbury configs set it to `10`.
+- Diel outputs respect `diel.method` and `diel.day_start_hour`/`diel.day_end_hour`.
+- Report section order reflects priority (community/traits before occupancy).
+- Docs updated: config reference + interpretation notes + BYO-data guidance.
+
+**Artefact evidence**
+- Updated `config.yml` and exemplar configs.
+- Updated report artefacts under `outputs/runs/latest/report/`.
+- Updated `docs/interpretation_notes.md` entries reflecting the new assumptions.
+
+**Stop condition**
+- Exemplar run completes with the fixed-offset parsing and diel method options, and the report order matches the stated priorities.
 
 ---
 

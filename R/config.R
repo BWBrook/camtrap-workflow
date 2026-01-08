@@ -9,6 +9,7 @@ default_config <- function() {
     schema_version_path = "schema_version.txt",
     run_id = "latest",
     timezone = "Australia/Hobart",
+    timezone_fixed_offset_hours = NULL,
     event_threshold_minutes = 15,
     input_mode = "four_table",
     paths = list(
@@ -27,6 +28,11 @@ default_config <- function() {
     ),
     time_qc = list(
       backward_jump_threshold_hours = 1
+    ),
+    diel = list(
+      method = "flash",
+      day_start_hour = 6,
+      day_end_hour = 18
     ),
     sensitivity = list(
       event_threshold_minutes = c(5, 15, 30, 60),
@@ -89,11 +95,13 @@ validate_config <- function(config) {
     "schema_version_path",
     "run_id",
     "timezone",
+    "timezone_fixed_offset_hours",
     "event_threshold_minutes",
     "input_mode",
     "paths",
     "analysis",
     "time_qc",
+    "diel",
     "sensitivity",
     "detection_history",
     "occupancy",
@@ -112,6 +120,13 @@ validate_config <- function(config) {
 
   if (!is.character(config$timezone) || length(config$timezone) != 1) {
     stop("config.yml field timezone must be a single character value.")
+  }
+
+  if (!is.null(config$timezone_fixed_offset_hours)) {
+    if (!is.numeric(config$timezone_fixed_offset_hours) ||
+          length(config$timezone_fixed_offset_hours) != 1) {
+      stop("config.yml field timezone_fixed_offset_hours must be NULL or a single numeric value.")
+    }
   }
 
   if (!is.character(config$run_id) || length(config$run_id) != 1) {
@@ -149,6 +164,29 @@ validate_config <- function(config) {
   if (!is.numeric(config$time_qc$backward_jump_threshold_hours) ||
         length(config$time_qc$backward_jump_threshold_hours) != 1) {
     stop("config.yml time_qc.backward_jump_threshold_hours must be a single numeric value.")
+  }
+
+  if (!is.list(config$diel) || is.null(config$diel$method)) {
+    stop("config.yml diel.method must be provided.")
+  }
+
+  if (!config$diel$method %in% c("flash", "clock")) {
+    stop("config.yml diel.method must be 'flash' or 'clock'.")
+  }
+
+  if (is.null(config$diel$day_start_hour) || is.null(config$diel$day_end_hour)) {
+    stop("config.yml diel.day_start_hour and diel.day_end_hour must be provided.")
+  }
+
+  if (!is.numeric(config$diel$day_start_hour) || !is.numeric(config$diel$day_end_hour) ||
+        length(config$diel$day_start_hour) != 1 || length(config$diel$day_end_hour) != 1) {
+    stop("config.yml diel.day_start_hour and diel.day_end_hour must be single numeric values.")
+  }
+
+  if (config$diel$day_start_hour < 0 || config$diel$day_start_hour > 23 ||
+        config$diel$day_end_hour < 0 || config$diel$day_end_hour > 23 ||
+        config$diel$day_end_hour <= config$diel$day_start_hour) {
+    stop("config.yml diel.day_start_hour/day_end_hour must be within 0-23 and end > start.")
   }
 
   if (!is.list(config$sensitivity) || is.null(config$sensitivity$event_threshold_minutes)) {

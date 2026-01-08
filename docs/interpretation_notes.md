@@ -41,9 +41,22 @@ Artefacts:
 - `outputs/runs/latest/figures/time_qc_backward_jumps.png` — backward-jump counts by site.
 
 Notes:
-- The summary shows 1 DST-gap flag (site `jc_pm12`) and no unparseable datetime strings, consistent with the known 2021 spring DST jump in Tasmania.
+- With `timezone_fixed_offset_hours` set, DST gaps are not expected; the summary shows zero DST-gap flags and no unparseable datetime strings.
 - Backward time jumps are present at most sites (typically 1–7 per site) with large negative deltas; this likely reflects camera clock resets or image sequence resets between deployments rather than single-file errors.
 - Because the backward jumps are flagged (not corrected), downstream analyses remain transparent; any site with many resets should be reviewed if temporal patterns are critical.
+
+---
+
+## 2026-01-08 — Fixed-offset timezone + diel method options
+
+Artefacts:
+- `outputs/runs/latest/tables/time_qc_summary.csv`
+- `outputs/runs/latest/tables/diel_overall.csv`
+- `outputs/runs/latest/figures/diel_overall.png`
+
+Notes:
+- Judbury runs now parse datetimes using a fixed UTC+10 offset; DST-gap counts remain at zero while backward-jump flags still surface clock resets.
+- Diel classification defaults to `flash` (camera metadata) for Judbury, with an optional `clock` method using fixed day/night hours for other studies.
 
 ---
 
@@ -246,7 +259,7 @@ Artefacts:
 
 Notes:
 - Export validates via `camtrapdp`/`frictionless` and produces deployments/media/observations tables.
-- One observation with an unparseable datetime was dropped from the export (warning recorded).
+- With the fixed-offset timezone setting, no unparseable datetimes were dropped in the exemplar export; if drops occur in other datasets, they are recorded in the audit file.
 
 ---
 
@@ -288,8 +301,7 @@ Notes:
 
 ## 2026-01-07 — Camtrap DP export audit log (WP-0.7.1.5)
 
-- `outputs/runs/camtrapdp_export_example/camtrapdp_export/dropped_observations.csv`
 - `outputs/runs/camtrapdp_export_example/camtrapdp_export/validation.txt`
 
 Notes:
-- One observation in the Judbury exemplar falls in a timezone gap and is excluded from the export; the dropped row is recorded in the audit file and counted in `validation.txt`.
+- When unparseable datetimes occur (e.g., DST gaps without a fixed offset), an audit file `dropped_observations.csv` is written alongside `validation.txt`. With the fixed offset setting, the exemplar export reports zero dropped observations.

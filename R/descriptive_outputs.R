@@ -83,14 +83,35 @@ plot_rai_species <- function(rai_species, out_path, top_n = 15) {
 
 #' Summarise diel activity across all events
 #'
-#' @param obs_events Observations with `flash` values.
+#' @param obs_events Observations with `flash` values and event datetimes.
+#' @param method Diel classification method: `flash` or `clock`.
+#' @param day_start_hour Hour (0-23) marking start of day for `clock` method.
+#' @param day_end_hour Hour (0-23) marking end of day for `clock` method.
 #' @return Tibble with period, n, prop.
 #' @export
-summarise_diel_overall <- function(obs_events) {
+summarise_diel_overall <- function(
+  obs_events,
+  method = "flash",
+  day_start_hour = 6,
+  day_end_hour = 18
+) {
   import::from("dplyr", mutate, count)
+  import::from("lubridate", hour)
+
+  if (!method %in% c("flash", "clock")) {
+    stop("summarise_diel_overall method must be 'flash' or 'clock'.")
+  }
 
   obs_events |>
-    mutate(period = ifelse(flash == 1, "night", "day")) |>
+    mutate(period = if (method == "flash") {
+      ifelse(flash == 1, "night", "day")
+    } else {
+      ifelse(
+        hour(dt) >= day_start_hour & hour(dt) < day_end_hour,
+        "day",
+        "night"
+      )
+    }) |>
     count(period, name = "n") |>
     mutate(prop = n / sum(n))
 }

@@ -13,6 +13,9 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `timezone`  
   Olson timezone string used for datetime parsing (e.g., `Australia/Hobart`).
 
+- `timezone_fixed_offset_hours`  
+  Optional fixed offset in hours (e.g., `10` for UTC+10). When provided, datetimes are parsed using a fixed offset (`Etc/GMT±H`) and DST gaps are ignored.
+
 - `event_threshold_minutes`  
   Gap threshold (minutes) for independent-event clustering.
 
@@ -38,6 +41,12 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 
 - `time_qc.backward_jump_threshold_hours`  
   Threshold (hours) for flagging backward time jumps as potential clock drift.
+
+- `diel.method`  
+  Diel classification method: `flash` (default) uses `flash == 1` as night; `clock` uses event time and fixed day/night hours.
+
+- `diel.day_start_hour` / `diel.day_end_hour`  
+  Daytime window for `clock` method (hours, 0–23). Events outside this window are classified as night.
 
 - `sensitivity.event_threshold_minutes`  
   Vector of event-threshold values (minutes) to use in sensitivity outputs.

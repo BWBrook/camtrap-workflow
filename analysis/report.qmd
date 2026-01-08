@@ -66,10 +66,11 @@ knitr::include_graphics(params$effort_heatmap_path)
 ## Time handling & limitations
 
 Timezone configured: `r inputs$params$timezone`  
+Fixed offset hours (ignore DST): `r ifelse(is.null(inputs$params$timezone_fixed_offset_hours), "none", inputs$params$timezone_fixed_offset_hours)`  
 Backward-jump threshold (hours): `r inputs$params$time_qc$backward_jump_threshold_hours`
 
-Datetime strings are parsed in the configured timezone. Values that fall into daylight saving gaps
-or indicate backward jumps are flagged for review rather than automatically corrected.
+Datetime strings are parsed in the configured timezone. If a fixed offset is set, DST gaps are ignored.
+Backward jumps are flagged for review rather than automatically corrected.
 
 ```{r}
 knitr::kable(inputs$time_qc_summary)
@@ -135,27 +136,6 @@ if (file.exists(occ_plot)) {
 }
 ```
 
-## Occupancy (single-season)
-
-```{r}
-knitr::kable(inputs$occupancy_summary)
-```
-
-```{r}
-knitr::kable(utils::head(inputs$occupancy_aic, 12))
-```
-
-```{r}
-if (!is.null(inputs$occupancy_species)) {
-  for (sp in inputs$occupancy_species) {
-    fig_path <- file.path(params$run_dir, "figures", paste0("occupancy_pred_", sp, ".png"))
-    if (file.exists(fig_path)) {
-      knitr::include_graphics(fig_path)
-    }
-  }
-}
-```
-
 ## Community matrices (presence/abundance)
 
 ```{r}
@@ -178,7 +158,7 @@ if (!is.null(params$alpha_diversity_path)) {
 }
 ```
 
-## Beta diversity (distance–decay)
+## Beta diversity (spatial distance–decay)
 
 ```{r}
 knitr::kable(utils::head(inputs$beta_diversity, 12))
@@ -188,6 +168,13 @@ knitr::kable(utils::head(inputs$beta_diversity, 12))
 if (!is.null(params$beta_diversity_path)) {
   knitr::include_graphics(params$beta_diversity_path)
 }
+```
+
+## Rarefaction
+
+```{r}
+stopifnot(!is.null(params$rarefaction_path))
+knitr::include_graphics(params$rarefaction_path)
 ```
 
 ## Traits coverage & functional diversity
@@ -255,18 +242,32 @@ stopifnot(!is.null(params$diel_overall_path))
 knitr::include_graphics(params$diel_overall_path)
 ```
 
-## Rarefaction
+## Occupancy (single-season)
 
 ```{r}
-stopifnot(!is.null(params$rarefaction_path))
-knitr::include_graphics(params$rarefaction_path)
+knitr::kable(inputs$occupancy_summary)
+```
+
+```{r}
+knitr::kable(utils::head(inputs$occupancy_aic, 12))
+```
+
+```{r}
+if (!is.null(inputs$occupancy_species)) {
+  for (sp in inputs$occupancy_species) {
+    fig_path <- file.path(params$run_dir, "figures", paste0("occupancy_pred_", sp, ".png"))
+    if (file.exists(fig_path)) {
+      knitr::include_graphics(fig_path)
+    }
+  }
+}
 ```
 
 ## Limitations & assumptions
 
-- Datetimes are interpreted in the configured timezone; DST gaps and clock resets are flagged, not corrected.
+- Datetimes are interpreted in the configured timezone; DST gaps are flagged unless a fixed offset is specified.
 - Independent events depend on the gap threshold; sensitivity analysis is planned for later work.
-- Diel proportions use `flash` as a day/night proxy and do not account for sunrise/sunset variation.
+- Diel proportions use the configured method (`flash` or `clock`) and do not account for sunrise/sunset variation.
 - RAI reflects relative detection rates, not absolute abundance.
 - Occupancy models are single-season and illustrative; covariates are limited to site summaries and effort-days.
 - Trait analyses use cleaned taxa metadata; species with missing trait values are dropped from functional diversity.

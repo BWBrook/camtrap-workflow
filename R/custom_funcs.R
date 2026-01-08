@@ -1,6 +1,8 @@
 # custom_funcs.R
 # Helper functions for the Judbury camera-trap workflow
 
+source(here::here("R", "time_utils.R"), local = TRUE)
+
 #' Read a JC CSV and return a clean tibble
 #' @param path Relative file path (character)
 #' @return tibble with snake-case names
@@ -101,13 +103,12 @@ filter_obs_by_effort <- function(obs, op_long) {
 #' @param threshold  gap (minutes) that separates events
 #' @return obs with new columns: dt (POSIXct) and event_id (character)
 #' @export
-define_events <- function(obs, threshold = 15, tz = "Australia/Hobart") {  # 15-min gap
+define_events <- function(obs, threshold = 15, tz = "Australia/Hobart", fixed_offset_hours = NULL) {  # 15-min gap
   import::from("dplyr", arrange, group_by, mutate, lag, ungroup, filter, if_else, select)
-  import::from("lubridate", dmy_hms)
 
   obs |>
     mutate(
-      dt = dmy_hms(datetime, tz = tz, quiet = TRUE)
+      dt = parse_datetime_local(datetime, tz = tz, fixed_offset_hours = fixed_offset_hours, quiet = TRUE)
     ) |>
     filter(!is.na(dt)) |>
     arrange(site, species, dt) |>
@@ -218,18 +219,39 @@ calc_prop_days <- function(events_per_day, trap_nights) {
 #'   `site`, `species`, `flash`, `dt` (POSIXct).
 #' @param by_season  Logical. If `TRUE` results are split by season; if
 #'   `FALSE` proportions are computed over the whole year.
+#' @param method Diel classification method: `flash` or `clock`.
+#' @param day_start_hour Hour (0-23) marking start of day for `clock` method.
+#' @param day_end_hour Hour (0-23) marking end of day for `clock` method.
 #'
 #' @return Tibble with grouping columns (`site`, `species`, and optionally
 #'   `season`, `period`) plus `n` (count) and `prop` (proportion).
 #'
 #' @export
-calc_diel <- function(obs_events, by_season = FALSE) {
+calc_diel <- function(
+  obs_events,
+  by_season = FALSE,
+  method = "flash",
+  day_start_hour = 6,
+  day_end_hour = 18
+) {
   import::from("dplyr", mutate, group_by, summarise, ungroup, across, case_when, n)
-  import::from("lubridate", month)
+  import::from("lubridate", month, hour)
+
+  if (!method %in% c("flash", "clock")) {
+    stop("calc_diel method must be 'flash' or 'clock'.")
+  }
 
   df <- obs_events |>
     mutate(
-      period = ifelse(flash == 1, "night", "day"),
+      period = if (method == "flash") {
+        ifelse(flash == 1, "night", "day")
+      } else {
+        ifelse(
+          hour(dt) >= day_start_hour & hour(dt) < day_end_hour,
+          "day",
+          "night"
+        )
+      },
       season = case_when(
         month(dt) %in% c(12, 1, 2)  ~ "DJF",
         month(dt) %in% c(3, 4, 5)   ~ "MAM",

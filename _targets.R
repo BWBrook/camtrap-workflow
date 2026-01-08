@@ -238,7 +238,14 @@ list(
   ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
   tar_target(
     input_contract_validation,
-    validate_input_contract(site_raw, op_raw, obs_raw, taxa_raw, tz = config$timezone),
+    validate_input_contract(
+      site_raw,
+      op_raw,
+      obs_raw,
+      taxa_raw,
+      tz = config$timezone,
+      fixed_offset_hours = config$timezone_fixed_offset_hours
+    ),
     cue = tar_cue(mode = "always")
   ),
   tar_target(key_check,
@@ -255,6 +262,7 @@ list(
     compute_time_qc(
       obs_raw,
       tz = config$timezone,
+      fixed_offset_hours = config$timezone_fixed_offset_hours,
       backward_threshold_hours = config$time_qc$backward_jump_threshold_hours
     )
   ),
@@ -328,7 +336,12 @@ list(
   ## ── INDEPENDENT-EVENT FILTERING ───────────────────────────────────────────────
   tar_target(
     obs_events,
-    define_events(obs_filtered, threshold = config$event_threshold_minutes, tz = config$timezone)
+    define_events(
+      obs_filtered,
+      threshold = config$event_threshold_minutes,
+      tz = config$timezone,
+      fixed_offset_hours = config$timezone_fixed_offset_hours
+    )
   ),
   tar_target(
     event_invariants_check,
@@ -880,15 +893,32 @@ list(
   ),
   tar_target(
     diel_site,
-    calc_diel(obs_events, by_season = FALSE)
+    calc_diel(
+      obs_events,
+      by_season = FALSE,
+      method = config$diel$method,
+      day_start_hour = config$diel$day_start_hour,
+      day_end_hour = config$diel$day_end_hour
+    )
   ),
   tar_target(
     diel_site_season,
-    calc_diel(obs_events, by_season = TRUE)
+    calc_diel(
+      obs_events,
+      by_season = TRUE,
+      method = config$diel$method,
+      day_start_hour = config$diel$day_start_hour,
+      day_end_hour = config$diel$day_end_hour
+    )
   ),
   tar_target(
     diel_overall,
-    summarise_diel_overall(obs_events)
+    summarise_diel_overall(
+      obs_events,
+      method = config$diel$method,
+      day_start_hour = config$diel$day_start_hour,
+      day_end_hour = config$diel$day_end_hour
+    )
   ),
   tar_target(
     rai_site_species_csv,
@@ -1240,7 +1270,8 @@ list(
           taxa_raw,
           export_config = config$camtrapdp_export,
           run_dir = run_dir,
-          tz = config$timezone
+          tz = config$timezone,
+          fixed_offset_hours = config$timezone_fixed_offset_hours
         )
       } else {
         write_disabled_file(

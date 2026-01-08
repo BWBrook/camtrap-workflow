@@ -33,3 +33,16 @@ Please answer only what you can quickly; the workflow will proceed with defaults
 
 8) WildObsR integration:
 - Do you want Camtrap DP / WildObsR ingestion in-scope for 1.0, or as a later extension?
+
+---
+
+Answers from human:
+
+1. Local, with daylight savings ignored (i.e., +10 GMT at all dates)
+2. The level of resolution is a day, not finer. So 1 is "it operated on that day" (at least for some period of time). No partial-day downtime is represented.
+3. Site is synonymous for "camera site" i.e., a single camera point. Swaps with the same site should be treated as the same site (we're not tracking equipment)
+4. 15 min should be default, with option for shorter or longer thresholds. We have to pick something! Events by (site, species), correct. We can later expand to include an optional individual ID, but it's not commonly used for most species so default assume there is no ID.
+5. flash == 1 is reasonably reliable, and more reliable than clock time because of drift when the cameras are servived only every 3-6 months. This decision will depend on the study. It is valid for Judbury but not necessarily for others. So it might be good to give the user the option of tracking clock time and indexing day/night by date-location?
+6. Order of priority: community diversity, trait/functional diversity, maps/spatial overlays and then occupancy: but ideally the user could select the order?
+7. MIT code, CC-BY 4.0 for data, yes.
+8. We've now used Camtrap DP but WildObsR will be important. Maybe as an addendum we can add this on next, accepting that it's a GitHub/devtools option only right now (not CRAN).

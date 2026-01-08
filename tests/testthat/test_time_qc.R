@@ -36,3 +36,24 @@ test_that("time_qc flags DST gaps and parse failures", {
   expect_true(any(qc$flags$dst_gap))
   expect_true(any(qc$flags$parse_fail))
 })
+
+test_that("time_qc ignores DST gaps when fixed offset is set", {
+  obs <- tibble(
+    site = c("B", "B"),
+    datetime = c(
+      "03/10/2021 02:30:00",
+      "03/10/2021 03:30:00"
+    ),
+    imageid = c(1, 2)
+  )
+
+  qc <- compute_time_qc(
+    obs,
+    tz = "Australia/Hobart",
+    fixed_offset_hours = 10,
+    backward_threshold_hours = 1
+  )
+
+  expect_true(all(qc$summary$dst_gap == 0))
+  expect_true(all(!qc$flags$dst_gap))
+})

@@ -1,16 +1,18 @@
 # camtrapdp_export.R
 
+source(here::here("R", "time_utils.R"), local = TRUE)
+
 #' Parse observation datetimes for Camtrap DP export and audit drops
 #'
 #' @param obs Internal observations table.
 #' @param tz Timezone.
+#' @param fixed_offset_hours Optional fixed offset in hours.
 #' @return List with parsed observations and dropped-row audit.
-parse_camtrapdp_datetimes <- function(obs, tz = "UTC") {
+parse_camtrapdp_datetimes <- function(obs, tz = "UTC", fixed_offset_hours = NULL) {
   import::from("dplyr", mutate, filter)
-  import::from("lubridate", dmy_hms)
 
   parsed <- obs |>
-    mutate(event_time = dmy_hms(datetime, tz = tz, quiet = TRUE))
+    mutate(event_time = parse_datetime_local(datetime, tz = tz, fixed_offset_hours = fixed_offset_hours, quiet = TRUE))
 
   dropped <- parsed |>
     filter(is.na(event_time)) |>
@@ -27,11 +29,11 @@ parse_camtrapdp_datetimes <- function(obs, tz = "UTC") {
 #' @param site Internal site table.
 #' @param op Internal effort table (wide).
 #' @param tz Timezone.
+#' @param fixed_offset_hours Optional fixed offset in hours.
 #' @return Tibble matching Camtrap DP deployments schema.
 #' @export
-build_camtrapdp_deployments <- function(site, op, tz = "UTC") {
+build_camtrapdp_deployments <- function(site, op, tz = "UTC", fixed_offset_hours = NULL) {
   import::from("dplyr", mutate, select, left_join, summarise, group_by)
-  import::from("lubridate", as_datetime)
   op_long <- pivot_op_long(op)
 
   effort_bounds <- op_long |>
@@ -62,8 +64,8 @@ build_camtrapdp_deployments <- function(site, op, tz = "UTC") {
     stop("Camtrap DP export requires effort dates for all sites.")
   }
 
-  deployment_start <- as_datetime(site_export$start_date, tz = tz)
-  deployment_end <- as_datetime(site_export$end_date, tz = tz) + 86399
+  deployment_start <- parse_date_local(site_export$start_date, tz = tz, fixed_offset_hours = fixed_offset_hours)
+  deployment_end <- parse_date_local(site_export$end_date, tz = tz, fixed_offset_hours = fixed_offset_hours) + 86399
 
   deployments <- dplyr::tibble(
     deploymentID = site_export$site,
@@ -99,11 +101,11 @@ build_camtrapdp_deployments <- function(site, op, tz = "UTC") {
 #'
 #' @param obs Internal observations table.
 #' @param tz Timezone.
+#' @param fixed_offset_hours Optional fixed offset in hours.
 #' @return Tibble matching Camtrap DP media schema.
 #' @export
-build_camtrapdp_media <- function(obs, tz = "UTC") {
+build_camtrapdp_media <- function(obs, tz = "UTC", fixed_offset_hours = NULL) {
   import::from("dplyr", mutate, select, distinct)
-  import::from("lubridate", dmy_hms)
   import::from("stringr", str_replace_all)
 
   has_event_time <- "event_time" %in% names(obs)
@@ -112,7 +114,12 @@ build_camtrapdp_media <- function(obs, tz = "UTC") {
       mediaID = as.character(ifelse(!is.na(imageid), imageid, index)),
       deploymentID = site,
       eventID = NA_character_,
-      timestamp = if (has_event_time) event_time else dmy_hms(datetime, tz = tz, quiet = TRUE),
+      timestamp = if (has_event_time) event_time else parse_datetime_local(
+        datetime,
+        tz = tz,
+        fixed_offset_hours = fixed_offset_hours,
+        quiet = TRUE
+      ),
       fileName = ifelse(!is.na(filename) & filename != "", basename(filename), paste0(mediaID, ".jpg")),
       fileName = str_replace_all(fileName, "\\s+", "_"),
       filePath = paste0("media/", fileName),
@@ -147,11 +154,11 @@ build_camtrapdp_media <- function(obs, tz = "UTC") {
 #' @param obs Internal observations table.
 #' @param taxa Internal taxa table.
 #' @param tz Timezone.
+#' @param fixed_offset_hours Optional fixed offset in hours.
 #' @return Tibble matching Camtrap DP observations schema.
 #' @export
-build_camtrapdp_observations <- function(obs, taxa, tz = "UTC") {
+build_camtrapdp_observations <- function(obs, taxa, tz = "UTC", fixed_offset_hours = NULL) {
   import::from("dplyr", mutate, left_join, select)
-  import::from("lubridate", dmy_hms)
   import::from("stringr", str_to_lower)
 
   has_event_time <- "event_time" %in% names(obs)
@@ -171,7 +178,12 @@ build_camtrapdp_observations <- function(obs, taxa, tz = "UTC") {
       deploymentID = site,
       mediaID = as.character(ifelse(!is.na(imageid), imageid, index)),
       eventID = NA_character_,
-      eventStart = if (has_event_time) event_time else dmy_hms(datetime, tz = tz, quiet = TRUE),
+      eventStart = if (has_event_time) event_time else parse_datetime_local(
+        datetime,
+        tz = tz,
+        fixed_offset_hours = fixed_offset_hours,
+        quiet = TRUE
+      ),
       eventEnd = eventStart,
       observationLevel = "media",
       observationType = dplyr::if_else(
@@ -284,9 +296,19 @@ build_camtrapdp_taxonomic <- function(taxa) {
 #' @param export_config Config list for export metadata.
 #' @param run_dir Output run directory.
 #' @param tz Timezone.
+#' @param fixed_offset_hours Optional fixed offset in hours.
 #' @return Path to the exported `datapackage.json`.
 #' @export
-export_camtrapdp_package <- function(site, op, obs, taxa, export_config, run_dir, tz = "UTC") {
+export_camtrapdp_package <- function(
+  site,
+  op,
+  obs,
+  taxa,
+  export_config,
+  run_dir,
+  tz = "UTC",
+  fixed_offset_hours = NULL
+) {
   import::from("camtrapdp", example_dataset, deployments, media, observations, check_camtrapdp, write_camtrapdp)
   import::from("frictionless", read_package, check_package)
   import::from("uuid", UUIDgenerate)
@@ -294,23 +316,25 @@ export_camtrapdp_package <- function(site, op, obs, taxa, export_config, run_dir
   out_dir <- file.path(run_dir, "camtrapdp_export")
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-  parse_result <- parse_camtrapdp_datetimes(obs, tz = tz)
+  parse_result <- parse_camtrapdp_datetimes(obs, tz = tz, fixed_offset_hours = fixed_offset_hours)
   obs_parsed <- parse_result$parsed
   dropped_obs <- parse_result$dropped
   dropped_count <- nrow(dropped_obs)
+  audit_path <- file.path(out_dir, "dropped_observations.csv")
   if (dropped_count > 0) {
     warning("Dropping ", dropped_count, " observations with unparseable datetime for Camtrap DP export.")
-    audit_path <- file.path(out_dir, "dropped_observations.csv")
     readr::write_csv(
       dropped_obs |>
         dplyr::select(index, site, datetime, species, imageid, reason, timezone),
       audit_path
     )
+  } else if (file.exists(audit_path)) {
+    file.remove(audit_path)
   }
 
-  deployments_tbl <- build_camtrapdp_deployments(site, op, tz = tz)
-  media_tbl <- build_camtrapdp_media(obs_parsed, tz = tz)
-  observations_tbl <- build_camtrapdp_observations(obs_parsed, taxa, tz = tz)
+  deployments_tbl <- build_camtrapdp_deployments(site, op, tz = tz, fixed_offset_hours = fixed_offset_hours)
+  media_tbl <- build_camtrapdp_media(obs_parsed, tz = tz, fixed_offset_hours = fixed_offset_hours)
+  observations_tbl <- build_camtrapdp_observations(obs_parsed, taxa, tz = tz, fixed_offset_hours = fixed_offset_hours)
 
   dp <- example_dataset()
   dp$resources <- purrr::keep(dp$resources, ~ .x$name %in% c("deployments", "media", "observations"))

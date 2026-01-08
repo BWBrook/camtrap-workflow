@@ -30,6 +30,10 @@ This document provides a methods scaffold tied to pipeline artefacts. Fill in pr
 
 Inputs are validated against `schema_version = r inputs$schema_version` before analysis.
 
+## Time handling
+
+Datetimes are parsed in the configured timezone, with an optional fixed-offset mode to ignore DST gaps when camera clocks are recorded in fixed local time.
+
 ## Effort standardisation
 
 Effort is derived from the `op` table (camera on/off per day). See:
@@ -54,7 +58,7 @@ Event counts are standardised by trap nights to compute RAI.
 
 ## Diel activity
 
-Day/night proportions are computed using event timestamps.
+Day/night proportions are computed using event timestamps, with the method controlled by `diel.method` (default `flash`; optional `clock` with fixed day/night hours).
 
 - `r file.path(params$run_dir, "tables", "diel_overall.csv")`
 

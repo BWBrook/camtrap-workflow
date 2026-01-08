@@ -8,7 +8,8 @@ Line **0.7.1** is complete. This hardening pass resolves the PI‑flagged correc
 - Pooled RAI denominator fixed to use total survey effort.
 - Occupancy summary `p` values restored (non‑missing) with explicit semantics.
 - Run manifests now portable (run‑relative paths + config hash) and documented.
-- Camtrap DP export now logs DST‑gap drops via an audit file.
+- Camtrap DP export now logs any dropped observations (e.g., unparseable datetimes) via an audit file when present.
+- Judbury runs use fixed‑offset timezone parsing (DST ignored) with configurable diel method (`flash`/`clock`).
 
 ## Where to find things
 
@@ -34,7 +35,7 @@ Line **0.7.1** is complete. This hardening pass resolves the PI‑flagged correc
 
 ### Camtrap DP export audit
 
-- Audit file: `outputs/runs/camtrapdp_export_example/camtrapdp_export/dropped_observations.csv`
+- Audit file (if any): `outputs/runs/camtrapdp_export_example/camtrapdp_export/dropped_observations.csv`
 - Validation: `outputs/runs/camtrapdp_export_example/camtrapdp_export/validation.txt`
 
 ## How to run / validate
@@ -73,7 +74,7 @@ CAMTRAP_CONFIG=config.template_example.yml Rscript -e 'targets::tar_make(callr_f
 ## Known limitations / notes
 
 - Rarefaction ribbons can be sparse for tiny datasets (see template run warning).
-- DST gap datetimes are logged and excluded from Camtrap DP exports (audit file included).
+- Unparseable datetimes in the configured timezone are logged and excluded from Camtrap DP exports (audit file included when drops occur).
 
 ## Artefacts for review
 

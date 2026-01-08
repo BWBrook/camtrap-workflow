@@ -81,7 +81,7 @@ Rules:
 - `flash` must be 0/1.
 
 Notes:
-- `datetime` values are interpreted in the configured timezone and may be flagged if they fall in DST gaps.
+- `datetime` values are interpreted in the configured timezone and may be flagged if they fall in DST gaps (unless `timezone_fixed_offset_hours` is set).
 - Unparseable datetimes fail validation immediately.
 - Camtrap DP ingestion uses a mapping adapter before validation (see `docs/reference/camtrapdp_mapping_v0.1.md`).
 

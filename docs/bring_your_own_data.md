@@ -49,6 +49,12 @@ Outputs will appear under `outputs/runs/<run_id>/` (see `config.yml`).
 - [ ] All `obs.csv$species` values exist in `taxa.csv$short`.
 - [ ] `flash` values are 0/1; `count` and `imageid` are integers.
 
+## Time and effort semantics
+
+- Datetimes are interpreted in the configured `timezone`. If your data ignore daylight savings (fixed local time), set `timezone_fixed_offset_hours` (e.g., `10` for UTC+10) to avoid DST gaps.
+- Effort (`op.csv`) is day-level only: `1` means the camera operated at some point that day; `0` means fully off. Partial-day downtime is not represented.
+- Sites represent fixed camera locations; repeated deployments at the same `site` are treated as the same site for analysis.
+
 ## Common validation errors and fixes
 
 - **Missing required columns**

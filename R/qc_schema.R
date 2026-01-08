@@ -1,5 +1,7 @@
 # qc_schema.R
 
+source(here::here("R", "time_utils.R"), local = TRUE)
+
 #' Return the input schema definition (v0.1)
 #'
 #' @return A list describing required columns, types, and rules per table.
@@ -179,10 +181,13 @@ validate_type_date <- function(x, table, file, col) {
   invisible(TRUE)
 }
 
-validate_type_dttm <- function(x, table, file, col, tz) {
+validate_type_dttm <- function(x, table, file, col, tz, fixed_offset_hours = NULL) {
   import::from("lubridate", dmy_hms)
 
-  parsed_local <- suppressWarnings(dmy_hms(x, tz = tz))
+  use_dst_flag <- is.null(fixed_offset_hours) || is.na(fixed_offset_hours)
+  parsed_local <- suppressWarnings(
+    parse_datetime_local(x, tz = tz, fixed_offset_hours = fixed_offset_hours)
+  )
   bad_local <- is.na(parsed_local) & !is.na(x)
 
   if (any(bad_local)) {
@@ -198,18 +203,20 @@ validate_type_dttm <- function(x, table, file, col, tz) {
       )
     }
 
-    warning(
-      "Datetime parsing warning for table '", table, "' (", file, "): ",
-      "some values are valid but fall in timezone gaps (e.g., DST). ",
-      "They will be handled by time diagnostics later.",
-      call. = FALSE
-    )
+    if (use_dst_flag) {
+      warning(
+        "Datetime parsing warning for table '", table, "' (", file, "): ",
+        "some values are valid but fall in timezone gaps (e.g., DST). ",
+        "They will be handled by time diagnostics later.",
+        call. = FALSE
+      )
+    }
   }
 
   invisible(TRUE)
 }
 
-validate_column_types <- function(df, types, table, file, tz) {
+validate_column_types <- function(df, types, table, file, tz, fixed_offset_hours = NULL) {
   for (col in names(types)) {
     type <- types[[col]]
     if (!col %in% names(df)) {
@@ -224,7 +231,7 @@ validate_column_types <- function(df, types, table, file, tz) {
     } else if (type == "date") {
       validate_type_date(df[[col]], table, file, col)
     } else if (type == "dttm") {
-      validate_type_dttm(df[[col]], table, file, col, tz)
+      validate_type_dttm(df[[col]], table, file, col, tz, fixed_offset_hours = fixed_offset_hours)
     } else {
       fail_validation(
         table,
@@ -322,9 +329,10 @@ validate_flash_values <- function(obs, table, file) {
 #' @param obs Observations table.
 #' @param taxa Taxa table.
 #' @param tz Timezone for datetime parsing.
+#' @param fixed_offset_hours Optional fixed offset in hours (e.g., 10 for UTC+10).
 #' @return TRUE invisibly if all checks pass.
 #' @export
-validate_input_contract <- function(site, op, obs, taxa, tz = "Australia/Hobart") {
+validate_input_contract <- function(site, op, obs, taxa, tz = "Australia/Hobart", fixed_offset_hours = NULL) {
   schema <- input_schema_v0_1()
 
   validate_required_columns(site, schema$site$required, "site", schema$site$file)
@@ -332,10 +340,10 @@ validate_input_contract <- function(site, op, obs, taxa, tz = "Australia/Hobart"
   validate_required_columns(op, schema$op$required, "op", schema$op$file)
   validate_required_columns(obs, schema$obs$required, "obs", schema$obs$file)
 
-  validate_column_types(site, schema$site$types, "site", schema$site$file, tz)
-  validate_column_types(taxa, schema$taxa$types, "taxa", schema$taxa$file, tz)
-  validate_column_types(op, schema$op$types, "op", schema$op$file, tz)
-  validate_column_types(obs, schema$obs$types, "obs", schema$obs$file, tz)
+  validate_column_types(site, schema$site$types, "site", schema$site$file, tz, fixed_offset_hours = fixed_offset_hours)
+  validate_column_types(taxa, schema$taxa$types, "taxa", schema$taxa$file, tz, fixed_offset_hours = fixed_offset_hours)
+  validate_column_types(op, schema$op$types, "op", schema$op$file, tz, fixed_offset_hours = fixed_offset_hours)
+  validate_column_types(obs, schema$obs$types, "obs", schema$obs$file, tz, fixed_offset_hours = fixed_offset_hours)
 
   validate_non_na(site, schema$site$non_na, "site", schema$site$file)
   validate_non_na(taxa, schema$taxa$non_na, "taxa", schema$taxa$file)

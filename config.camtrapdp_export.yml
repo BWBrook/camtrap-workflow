@@ -1,6 +1,7 @@
 schema_version_path: "schema_version.txt"
 run_id: "camtrapdp_export_example"
 timezone: "Australia/Hobart"
+timezone_fixed_offset_hours: 10
 event_threshold_minutes: 15
 input_mode: "four_table"
 
@@ -19,6 +20,11 @@ analysis:
 
 time_qc:
   backward_jump_threshold_hours: 1
+
+diel:
+  method: "flash"
+  day_start_hour: 6
+  day_end_hour: 18
 
 sensitivity:
   event_threshold_minutes: [5, 15, 30, 60]
@@ -45,6 +51,6 @@ camtrapdp_export:
   title: "Judbury camera-trap export (camtrap-workflow)"
   description: "Camtrap DP export of the Judbury exemplar dataset produced by camtrap-workflow."
   version: "1.0.1"
-  license: "CC0-1.0"
+  license: "CC-BY-4.0"
   id: null
   created: null

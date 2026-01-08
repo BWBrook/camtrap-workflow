@@ -1,25 +1,29 @@
 # time_qc.R
 
+source(here::here("R", "time_utils.R"), local = TRUE)
+
 #' Compute time handling diagnostics
 #'
 #' @param obs Observations table with at least `site` and `datetime` columns.
 #' @param tz Timezone string for parsing.
+#' @param fixed_offset_hours Optional fixed offset in hours (e.g., 10 for UTC+10).
 #' @param backward_threshold_hours Threshold for flagging backward jumps (hours).
 #' @return List with `summary` and `flags` tibbles.
 #' @export
-compute_time_qc <- function(obs, tz = "Australia/Hobart", backward_threshold_hours = 1) {
+compute_time_qc <- function(obs, tz = "Australia/Hobart", fixed_offset_hours = NULL, backward_threshold_hours = 1) {
   import::from("dplyr", mutate, group_by, arrange, lag, summarise, n, ungroup, filter, across, select)
   import::from("lubridate", dmy_hms)
 
   has_imageid <- "imageid" %in% names(obs)
   order_cols <- if (has_imageid) c("site", "imageid") else c("site", "datetime")
+  use_dst_flag <- is.null(fixed_offset_hours) || is.na(fixed_offset_hours)
 
   parsed <- obs |>
     mutate(
-      dt_local = dmy_hms(datetime, tz = tz, quiet = TRUE),
+      dt_local = parse_datetime_local(datetime, tz = tz, fixed_offset_hours = fixed_offset_hours, quiet = TRUE),
       dt_utc = dmy_hms(datetime, tz = "UTC", quiet = TRUE),
       parse_fail = is.na(dt_utc) & !is.na(datetime),
-      dst_gap = is.na(dt_local) & !is.na(dt_utc)
+      dst_gap = if (use_dst_flag) is.na(dt_local) & !is.na(dt_utc) else FALSE
     ) |>
     arrange(across(all_of(order_cols))) |>
     group_by(site) |>
