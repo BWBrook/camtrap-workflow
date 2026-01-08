@@ -53,6 +53,7 @@ import::here(
 
 import::here(
   write_disabled_file,
+  check_rendered_paths,
   .from = "R/output_helpers.R"
 )
 
@@ -109,6 +110,7 @@ import::here(
   build_unmarked_frame,
   fit_occupancy_models,
   summarise_occupancy_model,
+  compute_naive_occupancy,
   occupancy_aic_df,
   plot_occupancy_predictions,
   .from = "R/occupancy_models.R"
@@ -550,6 +552,7 @@ list(
       best_name <- aic_tbl$model[which.min(aic_tbl$AIC)][1]
       best_model <- item$models[[best_name]]
       estimates <- summarise_occupancy_model(best_model)
+      diagnostics <- compute_naive_occupancy(detection_history, item$species)
 
       data.frame(
         species = item$species,
@@ -557,9 +560,16 @@ list(
         psi = estimates$psi["est"],
         psi_lower = estimates$psi["lower"],
         psi_upper = estimates$psi["upper"],
+        psi_ci_method = estimates$psi_ci_method,
         p = estimates$p["est"],
         p_lower = estimates$p["lower"],
-        p_upper = estimates$p["upper"]
+        p_upper = estimates$p["upper"],
+        n_sites = diagnostics$n_sites,
+        n_sites_detected = diagnostics$n_sites_detected,
+        n_sites_all_zero = diagnostics$n_sites_all_zero,
+        naive_occupancy = diagnostics$naive_occupancy,
+        naive_occupancy_lower = diagnostics$naive_occupancy_lower,
+        naive_occupancy_upper = diagnostics$naive_occupancy_upper
       )
     })
   ),
@@ -584,8 +594,8 @@ list(
         site = pred_sites,
         species = item$species,
         psi = preds$Predicted,
-        psi_lower = ifelse(is.na(preds$lower), preds$Predicted, preds$lower),
-        psi_upper = ifelse(is.na(preds$upper), preds$Predicted, preds$upper)
+        psi_lower = NA_real_,
+        psi_upper = NA_real_
       )
     })
   ),
@@ -1294,6 +1304,16 @@ list(
       out_path
     },
     format = "file"
+  ),
+  tar_target(
+    rendered_path_check,
+    {
+      if (isTRUE(config$analysis$report)) {
+        check_rendered_paths(c(report_html, methods_html))
+      } else {
+        TRUE
+      }
+    }
   ),
   tar_target(
     camtrapdp_export,

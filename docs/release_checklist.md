@@ -5,16 +5,16 @@ This checklist defines what must be true before tagging a release (e.g., v0.1.0,
 ## 1) Reproducibility & build
 
 - [x] `renv.lock` is present, non-empty, and matches the current codebase.
-- [ ] A fresh clone + `renv::restore()` succeeds on at least one clean machine/environment.
+- [x] A fresh clone + `renv::restore()` succeeds on at least one clean machine/environment.
 - [x] `targets::tar_make()` runs end-to-end on the exemplar dataset.
-- [x] A rendered report exists under `outputs/report/` from the release build.
-- [x] `outputs/session_info.txt` (or equivalent) is produced.
+- [x] A rendered report exists under `outputs/runs/<run_id>/report/` from the release build.
+- [x] `outputs/runs/<run_id>/session_info.txt` (or equivalent) is produced.
 
 ## 2) Quality gates
 
 - [x] Tests pass (`testthat`).
 - [x] Lint passes (`lintr`) or exceptions are documented and minimal.
-- [ ] Pipeline smoke test runs in CI (or documented reason why not).
+- [x] Pipeline smoke test runs in CI (or documented reason why not).
 - [ ] No new warnings/errors introduced (or documented as known limitations).
 
 ## 3) Scientific sanity
@@ -38,11 +38,11 @@ This checklist defines what must be true before tagging a release (e.g., v0.1.0,
   - how to adapt to new data.
 - [x] `docs/product_brief.md`, `docs/architecture.md`, and `docs/roadmap.md` are consistent.
 - [x] `docs/decisions.md` is up to date.
-- [ ] `docs/questions_for_human.md` has no stale blockers (resolved or explicitly deferred).
+- [x] `docs/questions_for_human.md` has no stale blockers (resolved or explicitly deferred).
 
 ## 5) Versioning & release artefacts
 
-- [x] Version number updated (semver).
+- [ ] Version number updated (semver).
 - [x] CHANGELOG updated with user-facing changes and known limitations.
 - [ ] Tag created and pushed.
 - [ ] Release bundle (see `docs/release_bundle.md`) includes or references:

@@ -27,9 +27,9 @@ Expected (current MVP):
 - `tables/event_threshold_sensitivity.csv` — event totals per threshold and events per trap night.
 - `tables/occasion_length_sensitivity.csv` — naive occupancy and detection rates by occasion length.
 - `tables/detection_history.csv` — detection histories in long format (site × species × occasion).
-- `tables/occupancy_summary.csv` — occupancy estimates (psi, p) for exemplar species; `p` is the mean predicted detection probability across observed occasions with effort > 0.
+- `tables/occupancy_summary.csv` — occupancy estimates (psi at mean covariate values, profile-likelihood CI when available), detection probability summaries, and naive occupancy diagnostics (n_sites, n_sites_detected, exact binomial CI). Includes `psi_ci_method` to indicate how psi intervals were computed.
 - `tables/occupancy_aic.csv` — AIC table for candidate occupancy models.
-- `tables/occupancy_predictions.csv` — site-level occupancy predictions for exemplar species.
+- `tables/occupancy_predictions.csv` — site-level occupancy predictions for exemplar species (point estimates; CIs may be NA if disabled).
 - `tables/community_abundance.csv` — site × species abundance matrix (events).
 - `tables/community_presence.csv` — site × species presence–absence matrix.
 - `tables/alpha_diversity.csv` — per-site richness, Shannon, Simpson indices.

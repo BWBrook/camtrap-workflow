@@ -110,7 +110,6 @@ build_occupancy_model_specs <- function(covariate_names) {
 #' @export
 build_unmarked_frame <- function(detection_history, site_covs, species) {
   import::from("dplyr", filter, select, arrange, mutate)
-  import::from("unmarked", unmarkedFrameOccu)
   import::from("stats", xtabs)
 
   det <- detection_history |>
@@ -148,7 +147,7 @@ build_unmarked_frame <- function(detection_history, site_covs, species) {
     rownames(cov_df) <- covs$site
   }
 
-  unmarkedFrameOccu(
+  unmarked::unmarkedFrameOccu(
     y = y,
     siteCovs = cov_df,
     obsCovs = list(effort_days = effort_mat)
@@ -180,20 +179,40 @@ fit_occupancy_models <- function(umf, model_specs) {
 #' Summarise occupancy model estimates (psi, p) with confidence intervals
 #'
 #' @param model Fitted unmarked occupancy model.
-#' @return List with psi and p estimates.
+#' @param psi_ci_method Character, either \"profile\" or \"none\".
+#' @return List with psi and p estimates plus CI method for psi.
 #' @export
-summarise_occupancy_model <- function(model) {
-  psi_pred <- unmarked::predict(model, type = "state")
+summarise_occupancy_model <- function(model, psi_ci_method = c("profile", "none")) {
+  import::from("stats", plogis)
+
+  psi_ci_method <- match.arg(psi_ci_method)
+
+  state_coef <- tryCatch(unmarked::coef(model, type = "state"), error = function(e) numeric())
+  state_intercept <- if (length(state_coef) > 0) state_coef[[1]] else NA_real_
+  psi_est <- ifelse(is.na(state_intercept), NA_real_, plogis(state_intercept))
+
+  psi_lower <- NA_real_
+  psi_upper <- NA_real_
+  psi_ci_label <- "none"
+
+  if (psi_ci_method == "profile") {
+    psi_ci <- tryCatch(
+      unmarked::confint(model, type = "state", method = "profile"),
+      error = function(e) NULL
+    )
+
+    if (!is.null(psi_ci)) {
+      intercept_name <- if ("(Intercept)" %in% rownames(psi_ci)) "(Intercept)" else rownames(psi_ci)[1]
+      psi_lower <- plogis(psi_ci[intercept_name, 1])
+      psi_upper <- plogis(psi_ci[intercept_name, 2])
+      psi_ci_label <- "profile_intercept"
+    }
+  }
+
+  psi_lower <- ifelse(is.na(psi_lower), NA_real_, max(min(psi_lower, 1), 0))
+  psi_upper <- ifelse(is.na(psi_upper), NA_real_, max(min(psi_upper, 1), 0))
+
   p_pred <- unmarked::predict(model, type = "det")
-
-  psi_est <- mean(psi_pred$Predicted, na.rm = TRUE)
-  psi_lower <- mean(psi_pred$lower, na.rm = TRUE)
-  psi_upper <- mean(psi_pred$upper, na.rm = TRUE)
-
-  if (is.nan(psi_est) || is.na(psi_est)) psi_est <- NA_real_
-  if (is.nan(psi_lower) || is.na(psi_lower)) psi_lower <- psi_est
-  if (is.nan(psi_upper) || is.na(psi_upper)) psi_upper <- psi_est
-
   p_est <- mean(p_pred$Predicted, na.rm = TRUE)
   p_lower <- mean(p_pred$lower, na.rm = TRUE)
   p_upper <- mean(p_pred$upper, na.rm = TRUE)
@@ -204,7 +223,43 @@ summarise_occupancy_model <- function(model) {
 
   list(
     psi = c(est = psi_est, lower = psi_lower, upper = psi_upper),
+    psi_ci_method = psi_ci_label,
     p = c(est = p_est, lower = p_lower, upper = p_upper)
+  )
+}
+
+#' Compute naive occupancy diagnostics per species
+#'
+#' @param detection_history Long detection history table.
+#' @param species Species code to summarise.
+#' @return Named list with site counts and exact binomial CI.
+#' @export
+compute_naive_occupancy <- function(detection_history, species) {
+  import::from("dplyr", filter, group_by, summarise)
+
+  site_summary <- detection_history |>
+    filter(.data$species == .env$species) |>
+    group_by(site) |>
+    summarise(detected_any = any(detected > 0, na.rm = TRUE), .groups = "drop")
+
+  n_sites <- nrow(site_summary)
+  n_sites_detected <- sum(site_summary$detected_any)
+  n_sites_all_zero <- n_sites - n_sites_detected
+
+  naive_occ <- ifelse(n_sites > 0, n_sites_detected / n_sites, NA_real_)
+  ci <- if (n_sites > 0) {
+    stats::binom.test(n_sites_detected, n_sites)$conf.int
+  } else {
+    c(NA_real_, NA_real_)
+  }
+
+  list(
+    n_sites = n_sites,
+    n_sites_detected = n_sites_detected,
+    n_sites_all_zero = n_sites_all_zero,
+    naive_occupancy = naive_occ,
+    naive_occupancy_lower = ci[1],
+    naive_occupancy_upper = ci[2]
   )
 }
 
@@ -248,10 +303,14 @@ plot_occupancy_predictions <- function(predictions, species, out_path) {
 
   p <- ggplot(plot_data, aes(x = reorder(site, psi), y = psi)) +
     geom_point(size = 2, color = "#2c7fb8") +
-    geom_errorbar(aes(ymin = psi_lower, ymax = psi_upper), width = 0.2) +
     coord_flip() +
     theme_minimal() +
     labs(x = "Site", y = "Occupancy probability (psi)")
+
+  has_ci <- any(is.finite(plot_data$psi_lower) & is.finite(plot_data$psi_upper))
+  if (has_ci) {
+    p <- p + geom_errorbar(aes(ymin = psi_lower, ymax = psi_upper), width = 0.2)
+  }
 
   ggsave(out_path, p, width = 6, height = 4, dpi = 300)
   out_path

@@ -71,9 +71,28 @@ test_that("summarise_occupancy_model returns non-missing p estimates", {
 
   umf <- build_unmarked_frame(detection_history, site_covs, "sp1")
   model <- suppressWarnings(unmarked::occu(~effort_days ~1, data = umf))
-  summary <- summarise_occupancy_model(model)
+  summary <- summarise_occupancy_model(model, psi_ci_method = "none")
 
   expect_true(!is.na(summary$p["est"]))
   expect_true(summary$p["est"] >= 0)
   expect_true(summary$p["est"] <= 1)
+})
+
+test_that("compute_naive_occupancy returns expected counts", {
+  detection_history <- tibble(
+    site = rep(c("A", "B", "C"), each = 2),
+    species = "sp1",
+    occasion = rep(1:2, times = 3),
+    effort_days = 1,
+    effort = 1,
+    detected = c(1, 0, 0, 0, 0, 0)
+  )
+
+  diag <- compute_naive_occupancy(detection_history, "sp1")
+  expect_equal(diag$n_sites, 3)
+  expect_equal(diag$n_sites_detected, 1)
+  expect_equal(diag$n_sites_all_zero, 2)
+  expect_equal(diag$naive_occupancy, 1 / 3)
+  expect_true(diag$naive_occupancy_lower <= diag$naive_occupancy)
+  expect_true(diag$naive_occupancy_upper >= diag$naive_occupancy)
 })

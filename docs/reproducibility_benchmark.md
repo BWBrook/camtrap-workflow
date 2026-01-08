@@ -36,6 +36,5 @@ This document defines the cold‑run protocol and records runtime/memory notes f
 
 ## CI strategy for heavy runs
 
-- **Fast checks (PR/local)**: lint + unit tests + minimal target subset (e.g., `input_contract_validation`, `event_spacing_plot`, `occupancy_predictions_csv`).
-- **Full runs (manual/nightly)**: full `tar_make()` for the exemplar and any Camtrap DP example.
-- Until CI is re‑enabled, developers should run local checks and attach key artefacts for review.
+- **Fast checks (PR/local)**: lint + unit tests + minimal target subset (e.g., `input_contract_validation`).
+- **Full runs (manual/nightly)**: full `tar_make()` for the exemplar and any Camtrap DP example when validating releases.

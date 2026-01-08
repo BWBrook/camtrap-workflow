@@ -359,6 +359,12 @@ Consequences / follow-ups:
 Decision:
 - Track release version in `VERSION`, maintain a human‑readable `CHANGELOG.md`, and provide citation metadata in `CITATION.cff`.
 
+Rationale:
+- Provides consistent versioning for release bundles and external citation.
+
+Consequences / follow-ups:
+- Update `VERSION` and `CHANGELOG.md` for each release tag.
+
 ---
 
 ## 2026-01-08 — Default Camtrap DP export license aligns with dataset CC-BY 4.0
@@ -395,10 +401,19 @@ Rationale:
 Consequences / follow-ups:
 - The example is illustrative rather than ecological truth; users should replace it with real study data for inference.
 
+---
+
+## 2026-01-08 — Occupancy summaries use naive diagnostics and profile CIs
+Decision:
+- Add naive occupancy diagnostics (site counts and exact binomial CI) to occupancy summaries.
+- Report `psi` at mean covariate values with profile-likelihood CI on the state intercept when available; suppress site-level psi CIs in plots.
+
 Rationale:
-- Provides consistent versioning for release bundles and external citation.
+- With small numbers of sites and boundary estimates, Wald intervals can be misleading; naive occupancy makes sampling information explicit.
+
 Consequences / follow-ups:
-- Update `VERSION` and `CHANGELOG.md` for each release tag.
+- Occupancy tables include additional diagnostics and a `psi_ci_method` indicator.
+- Report text clarifies interpretability and design limitations.
 
 ---
 

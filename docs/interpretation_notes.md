@@ -121,7 +121,7 @@ Notes:
 ## 2026-01-07 — Detection history output (WP-0.4.1)
 
 Artefacts:
-- `outputs/runs/latest/tables/detection_history.csv` — site × species × occasion detections with effort.
+- `outputs/runs/latest/tables/detection_history.csv` — site x species x occasion detections with effort.
 
 Notes:
 - Detection histories show no detections during zero-effort occasions (alignment check passed).
@@ -370,5 +370,19 @@ Artefacts:
 
 Notes:
 - Synthetic dataset spans 6 sites and 309 trap nights (2021-03-01 to 2021-04-30) with balanced effort across sites.
-- Community matrix includes 6 species with detections across all sites; diversity and occupancy outputs render as expected.
+- Community matrix includes 6 species; occupancy diagnostics show detections at 6/6 sites for `roo`, 4/6 for `pos`/`fox`/`ban`, and 2/6 for `cat`, yielding non-degenerate naive occupancy intervals.
 - The interpolated site map raised loess stability warnings due to the small number of sites; the output is still produced and should be interpreted as a coarse visual context only.
+
+---
+
+## 2026-01-08 — Occupancy diagnostics and CI semantics (WP-0.9.1.1/0.9.1.2)
+
+Artefacts:
+- `outputs/runs/latest/tables/occupancy_summary.csv`
+- `outputs/runs/latest/figures/occupancy_pred_*.png`
+
+Notes:
+- Occupancy summaries now include naive occupancy diagnostics (n_sites, n_sites_detected, exact binomial CI) to make design constraints explicit.
+- `psi` is reported at mean covariate values with a profile-likelihood CI on the state intercept when available; site-level plots show point estimates only.
+- Judbury example: naive occupancy lower bounds are ~0.75 for 13/13 detections (pad/wal), ~0.64 for 12/13 (pos), and ~0.46 for 10/13 (cat/sbb), while profile `psi` lower bounds now sit in the ~0.66-0.92 range instead of near zero.
+- Profile CIs still hit the upper boundary (1.0) for common species; warnings are expected and documented, but lower bounds are now informative.

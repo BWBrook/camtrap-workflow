@@ -1098,3 +1098,8 @@ See `docs/roadmap_v2.md` for full WP specs. Status mirrored here for completion 
 - [x] WP-0.9.0.1 — Methods manuscript: fill critical methodological sections and citations
 - [x] WP-0.9.0.2 — Report interpretation: add what to conclude / what not to conclude panels
 - [x] WP-0.9.0.3 — BYO-data robustness: add one additional non-Judbury example dataset
+- [x] WP-0.9.1.1 — Occupancy diagnostics surfaced
+- [x] WP-0.9.1.2 — Replace psi CI method + fix summary semantics
+- [x] WP-0.9.1.3 — Forest example updated to non-degenerate occupancy
+- [x] WP-0.9.1.4 — Report/manuscript provenance path sanitization
+- [x] WP-0.9.1.5 — Release docs sync

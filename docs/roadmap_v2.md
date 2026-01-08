@@ -56,6 +56,14 @@ A WP is done only when all of the following are true:
 - [x] **WP-0.9.0.2 — Report interpretation: add what to conclude / what not to conclude panels**
 - [x] **WP-0.9.0.3 — BYO-data robustness: add one additional non-Judbury example dataset** *(large)*
 
+### Line 0.9.1 — Occupancy credibility + artefact sanitization
+
+- [x] **WP-0.9.1.1 — Occupancy diagnostics surfaced**
+- [x] **WP-0.9.1.2 — Replace psi CI method + fix summary semantics**
+- [x] **WP-0.9.1.3 — Forest example updated to non-degenerate occupancy**
+- [x] **WP-0.9.1.4 — Report/manuscript provenance path sanitization**
+- [x] **WP-0.9.1.5 — Release docs sync**
+
 ## 4) Detailed Work Package specs
 
 ---
@@ -421,3 +429,126 @@ The workflow demonstrates portability: at least one additional dataset runs end-
 
 **Stop condition**
 - A second dataset proves portability and surfaces generalizable failure modes.
+
+---
+
+## WP-0.9.1.1 — Occupancy diagnostics surfaced
+
+**Outcome**  
+Occupancy outputs make sampling information explicit via site counts and naive occupancy diagnostics.
+
+**Scope**
+- In-scope:
+  - Add occupancy diagnostics to `occupancy_summary.csv` (n_sites, n_sites_detected, n_sites_all_zero).
+  - Add naive occupancy and exact binomial CI.
+  - Add tests for new columns and invariants.
+- Out-of-scope:
+  - New occupancy model classes.
+
+**Acceptance criteria**
+- Occupancy summary includes the diagnostics and naive CI for all modelled species.
+- Tests assert basic invariants (counts, ranges, CI bounds).
+
+**Artefact evidence**
+- Updated `outputs/runs/latest/tables/occupancy_summary.csv`.
+- Updated report occupancy section with diagnostics table.
+
+**Stop condition**
+- Occupancy summaries surface sampling information clearly.
+
+---
+
+## WP-0.9.1.2 — Replace psi CI method + fix summary semantics
+
+**Outcome**  
+Psi uncertainty is reported in a stable, interpretable way; misleading summary aggregation is removed.
+
+**Scope**
+- In-scope:
+  - Replace psi CI reporting with a profile-likelihood CI on the state intercept (or explicitly disable psi CIs).
+  - Remove “mean of lower bounds” aggregation.
+  - Update report language to explain CI semantics and limits.
+- Out-of-scope:
+  - Full bootstrap of site-level predictions.
+
+**Acceptance criteria**
+- Psi CI is no longer degenerate to [0, 1] across all sites due to summary aggregation.
+- Report text clarifies that psi uncertainty is constrained by n_sites and all-zero sites.
+
+**Artefact evidence**
+- Updated `outputs/runs/latest/tables/occupancy_summary.csv`.
+- Updated `outputs/runs/latest/figures/occupancy_pred_*.png`.
+
+**Stop condition**
+- Occupancy uncertainty is interpretable and documented.
+
+---
+
+## WP-0.9.1.3 — Forest example updated to non-degenerate occupancy
+
+**Outcome**  
+The synthetic example includes species with partial occupancy and varied detection rates to demonstrate non-degenerate psi plots.
+
+**Scope**
+- In-scope:
+  - Update `data/forest_example/` to include at least one species with unoccupied sites.
+  - Regenerate the forest example run.
+- Out-of-scope:
+  - Large, realistic external datasets.
+
+**Acceptance criteria**
+- Forest example occupancy plots show non-trivial psi variation.
+- Run artefacts regenerate under `outputs/runs/forest_example/`.
+
+**Artefact evidence**
+- Updated `data/forest_example/` and `config.forest_example.yml`.
+- Updated `outputs/runs/forest_example/` artefacts.
+
+**Stop condition**
+- Example run demonstrates non-degenerate occupancy outputs.
+
+---
+
+## WP-0.9.1.4 — Report/manuscript provenance path sanitization
+
+**Outcome**  
+Rendered artefacts show repo-relative paths (no machine-specific absolute paths).
+
+**Scope**
+- In-scope:
+  - Replace absolute run paths with repo-relative paths in report and methods outputs.
+  - Add a grep check to ensure rendered artefacts do not contain `/home/`-style paths.
+- Out-of-scope:
+  - Changing output file locations on disk.
+
+**Acceptance criteria**
+- Report and methods HTML/PDF contain no absolute local paths.
+
+**Artefact evidence**
+- Updated `outputs/runs/latest/report/report.html` and `outputs/runs/latest/manuscript/methods.html`.
+
+**Stop condition**
+- Artefacts are portable and review-friendly.
+
+---
+
+## WP-0.9.1.5 — Release docs sync
+
+**Outcome**  
+Release-related docs reflect current CI status, outputs, and readiness.
+
+**Scope**
+- In-scope:
+  - Align `docs/release_checklist.md`, `docs/reproducibility_benchmark.md`, and report limitations with actual behaviour.
+  - Remove stale CI-disabled phrasing.
+- Out-of-scope:
+  - Tagging a release.
+
+**Acceptance criteria**
+- Release docs contain no stale statements and reflect current checks.
+
+**Artefact evidence**
+- Updated release docs.
+
+**Stop condition**
+- Release docs are accurate and consistent.

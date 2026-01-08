@@ -27,6 +27,11 @@ params:
 ```{r}
 stopifnot(!is.null(params$inputs_path))
 inputs <- readRDS(params$inputs_path)
+repo_root <- here::here()
+run_dir_display <- tryCatch(
+  fs::path_rel(params$run_dir, start = repo_root),
+  error = function(e) params$run_dir
+)
 ```
 
 ## Snapshot
@@ -281,7 +286,7 @@ knitr::include_graphics(params$rai_species_path)
 **Interpretation (what to conclude):** RAI compares relative detection rates across species within this survey.  
 **Caution (what not to conclude):** RAI is not an estimate of density and should not be compared across surveys without matched effort and detectability.
 
-## Diel activity (site × period)
+## Diel activity (site x period)
 
 ```{r}
 knitr::kable(utils::head(inputs$diel_site, 20))
@@ -298,7 +303,30 @@ knitr::include_graphics(params$diel_overall_path)
 ## Occupancy (single-season)
 
 ```{r}
-knitr::kable(inputs$occupancy_summary)
+occ_diag <- inputs$occupancy_summary[, c(
+  "species",
+  "n_sites",
+  "n_sites_detected",
+  "n_sites_all_zero",
+  "naive_occupancy",
+  "naive_occupancy_lower",
+  "naive_occupancy_upper"
+)]
+knitr::kable(occ_diag)
+```
+
+```{r}
+occ_summary <- inputs$occupancy_summary[, c(
+  "species",
+  "psi",
+  "psi_lower",
+  "psi_upper",
+  "psi_ci_method",
+  "p",
+  "p_lower",
+  "p_upper"
+)]
+knitr::kable(occ_summary)
 ```
 
 ```{r}
@@ -316,22 +344,24 @@ if (!is.null(inputs$occupancy_species)) {
 }
 ```
 
+Note: `psi` in the summary table is the occupancy estimate at mean covariate values (state intercept). `psi` confidence intervals use a profile-likelihood method when available; naive occupancy provides an exact binomial interval based on the number of sites with any detections.
+
 **Interpretation (what to conclude):** Occupancy estimates reflect the probability a site is occupied given imperfect detection.  
-**Caution (what not to conclude):** Single‑season models assume closure and do not model population change; wide intervals indicate limited detection data.
+**Caution (what not to conclude):** Single-season models assume closure and do not model population change; wide intervals can reflect limited site counts or all-zero sites as much as low detectability.
 
 ## Limitations & assumptions
 
 - Datetimes are interpreted in the configured timezone; DST gaps are flagged unless a fixed offset is specified.
-- Independent events depend on the gap threshold; sensitivity analysis is planned for later work.
+- Independent events depend on the gap threshold; sensitivity analysis is provided above to assess robustness.
 - Diel proportions use the configured method (`flash` or `clock`) and do not account for sunrise/sunset variation.
 - RAI reflects relative detection rates, not absolute abundance.
-- Occupancy models are single-season and illustrative; covariates are limited to site summaries and effort-days.
+- Occupancy models are single-season and illustrative; uncertainty is constrained by the number of sites and the presence of all-zero sites.
 - Trait analyses use cleaned taxa metadata; species with missing trait values are dropped from functional diversity.
 - Trait–environment associations are exploratory Spearman correlations on abundance-weighted trait proportions.
 - Spatial maps use interpolated site covariates (e.g., NDVI) for context and do not represent continuous measured surfaces.
 
 ## Provenance
 
-Run outputs are stored under: `r params$run_dir`  
-Run manifest: `r file.path(params$run_dir, "run_manifest.json")`  
-Session info: `r file.path(params$run_dir, "session_info.txt")`
+Run outputs are stored under: `r run_dir_display`  
+Run manifest: `r file.path(run_dir_display, "run_manifest.json")`  
+Session info: `r file.path(run_dir_display, "session_info.txt")`

@@ -46,3 +46,13 @@ Answers from human:
 6. Order of priority: community diversity, trait/functional diversity, maps/spatial overlays and then occupancy: but ideally the user could select the order?
 7. MIT code, CC-BY 4.0 for data, yes.
 8. We've now used Camtrap DP but WildObsR will be important. Maybe as an addendum we can add this on next, accepting that it's a GitHub/devtools option only right now (not CRAN).
+
+Status (2026-01-08): applied in defaults/docs.
+- Time handling uses fixed UTC+10 parsing via `timezone_fixed_offset_hours = 10`.
+- Effort (`op.csv`) is day-level 0/1 only; validation enforces 0/1 with no NA.
+- Sites are treated as fixed locations; repeat deployments stay under the same `site`.
+- Event threshold default is 15 minutes; events cluster by site and species.
+- Diel classification defaults to `flash` with optional `clock` method and fixed hours.
+- Report order prioritises community, traits, spatial context, then occupancy.
+- Data license is CC-BY 4.0 for exemplar data; documented in README and decisions.
+- WildObsR integration deferred; Camtrap DP handled via `camtrapdp`.
