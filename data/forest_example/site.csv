@@ -1,0 +1,7 @@
+site,lat,lon,type,location,cover,vegclass,elevation_m,slope_d,canopy_h_m,ndvi,nbr,fire_flam,fire_sens
+fr01,-35.1,148.95,woodland,creek,open,dry_sclerophyll,520,6,18,0.62,0.14,low,low
+fr02,-35.12,148.97,woodland,mid,open,dry_sclerophyll,540,8,20,0.6,0.12,low,low
+fr03,-35.08,148.92,riparian,gully,dense,riparian,480,4,22,0.68,0.18,low,low
+fr04,-35.15,149.0,ridge,upper,mixed,dry_sclerophyll,610,12,14,0.55,0.1,moderate,moderate
+fr05,-35.18,148.9,ridge,upper,mixed,heath,640,14,12,0.52,0.09,moderate,moderate
+fr06,-35.05,149.03,riparian,creek,dense,riparian,500,5,24,0.7,0.2,low,low

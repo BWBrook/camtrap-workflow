@@ -1092,3 +1092,9 @@ See `docs/roadmap_v2.md` for full WP specs. Status mirrored here for completion 
 - [x] WP-0.7.1.5 — Camtrap DP export: DST-gap handling and auditable drop log
 - [x] WP-0.7.1.6 — Apply human data assumptions (fixed offset + diel method + report ordering)
 - [x] WP-0.7.1.7 — Spatial overlay map (interpolated terrain/veg context)
+- [x] WP-0.8.0.1 — Fresh-clone reproducibility verification (clean machine or container)
+- [x] WP-0.8.0.2 — Release-candidate artefacts regenerated from the RC commit
+- [x] WP-0.8.0.3 — Update v1 readiness gate with evidence + close outstanding items
+- [x] WP-0.9.0.1 — Methods manuscript: fill critical methodological sections and citations
+- [x] WP-0.9.0.2 — Report interpretation: add what to conclude / what not to conclude panels
+- [x] WP-0.9.0.3 — BYO-data robustness: add one additional non-Judbury example dataset

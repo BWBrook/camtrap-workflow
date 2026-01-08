@@ -31,7 +31,7 @@ From the project root, run:
 
 ```r
 renv::restore(prompt = FALSE)
-````
+```
 
 If you do not have `renv` installed yet:
 
@@ -89,6 +89,18 @@ You can optionally export your cleaned data back to Camtrap DP by enabling `camt
 
 See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
 Update `config.yml` to point to your input file paths and parameters (timezone, fixed offset if DST is ignored, event threshold).
+
+## Example datasets
+
+- **Judbury exemplar** (default): `data/jc_*` with `config.yml` (run_id `latest`).
+- **Template dataset**: `data/template_dataset/` with `config.template_example.yml`.
+- **Forest example (synthetic)**: `data/forest_example/` with `config.forest_example.yml`.
+
+Run an example dataset by setting the config:
+
+```sh
+CAMTRAP_CONFIG=config.forest_example.yml Rscript -e 'targets::tar_make()'
+```
 
 ## Development workflow
 

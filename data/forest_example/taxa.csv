@@ -1,0 +1,7 @@
+class,order,family,genus,species,common,short,diet,sec_diet,activity,habitat,status,body_size,sociality,mobility,reproductive,litter
+Mammalia,Carnivora,Canidae,Vulpes,vulpes,Red fox,fox,carnivore,scavenger,nocturnal,terrestrial,introduced,medium,solitary,mobile,monogamous,multiple
+Mammalia,Carnivora,Felidae,Felis,catus,Feral cat,cat,carnivore,na,nocturnal,terrestrial,introduced,small,solitary,mobile,polygnous,multiple
+Mammalia,Diprotodontia,Macropodidae,Macropus,giganteus,Eastern grey kangaroo,roo,grazer,browser,cathemeral,terrestrial,native,large,social,mobile,monogamous,single
+Mammalia,Diprotodontia,Phalangeridae,Trichosurus,vulpecula,Brushtail possum,pos,omnivore,browser,nocturnal,arboreal,native,medium,solitary,mobile,polygnous,single
+Mammalia,Peramelemorphia,Peramelidae,Isoodon,obesulus,Southern brown bandicoot,ban,insectivore,omnivore,nocturnal,terrestrial,native,small,solitary,mobile,monogamous,multiple
+Aves,Casuariiformes,Dromaiidae,Dromaius,novaehollandiae,Emu,emu,omnivore,granivore,diurnal,terrestrial,native,large,social,mobile,monogamous,multiple

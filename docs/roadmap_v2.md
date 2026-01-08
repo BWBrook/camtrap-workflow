@@ -52,9 +52,9 @@ A WP is done only when all of the following are true:
 
 ### Line 0.9.0 — Methods manuscript + “paper-ready” polish (optional but recommended)
 
-- [ ] **WP-0.9.0.1 — Methods manuscript: fill critical methodological sections and citations** *(large)*
-- [ ] **WP-0.9.0.2 — Report interpretation: add “what to conclude / what not to conclude” panels**
-- [ ] **WP-0.9.0.3 — BYO-data robustness: add one additional non-Judbury example dataset** *(large)*
+- [x] **WP-0.9.0.1 — Methods manuscript: fill critical methodological sections and citations** *(large)*
+- [x] **WP-0.9.0.2 — Report interpretation: add what to conclude / what not to conclude panels**
+- [x] **WP-0.9.0.3 — BYO-data robustness: add one additional non-Judbury example dataset** *(large)*
 
 ## 4) Detailed Work Package specs
 

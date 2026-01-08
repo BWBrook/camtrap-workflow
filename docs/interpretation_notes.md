@@ -333,3 +333,42 @@ Notes:
 - Report HTML/PDF render successfully and include the updated spatial map and core tables/figures.
 - Site map uses a square, buffered extent so the site cluster occupies a meaningful share of the frame; north arrow and scale bar sit in the margins without overlapping points.
 - Run manifest remains portable (paths relative to the run directory).
+
+---
+
+## 2026-01-08 — Methods manuscript expansion (WP-0.9.0.1)
+
+Artefacts:
+- `outputs/runs/latest/manuscript/methods.html`
+- `outputs/runs/latest/manuscript/methods.pdf`
+
+Notes:
+- Methods text now documents data contract, effort standardisation, event definition, occupancy, diversity, and trait analyses with citations.
+- The manuscript references artefact paths for direct traceability to run outputs.
+
+---
+
+## 2026-01-08 — Interpretation panels in report (WP-0.9.0.2)
+
+Artefacts:
+- `outputs/runs/latest/report/report.html`
+- `outputs/runs/latest/report/report.pdf`
+
+Notes:
+- Each major analysis section now includes brief “what to conclude / what not to conclude” guidance.
+- Additional cautions were added for effort heterogeneity, DST/clock issues, event threshold sensitivity, and interpretability limits of RAI and occupancy.
+
+---
+
+## 2026-01-08 — Forest example dataset run (WP-0.9.0.3)
+
+Artefacts:
+- `outputs/runs/forest_example/report/report.html`
+- `outputs/runs/forest_example/report/report.pdf`
+- `outputs/runs/forest_example/figures/site_map.png`
+- `outputs/runs/forest_example/tables/effort_summary.csv`
+
+Notes:
+- Synthetic dataset spans 6 sites and 309 trap nights (2021-03-01 to 2021-04-30) with balanced effort across sites.
+- Community matrix includes 6 species with detections across all sites; diversity and occupancy outputs render as expected.
+- The interpolated site map raised loess stability warnings due to the small number of sites; the output is still produced and should be interpreted as a coarse visual context only.

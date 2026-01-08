@@ -383,6 +383,18 @@ Rationale:
 Consequences / follow-ups:
 - If users need custom ordering, add a `report.section_order` config option in a future release.
 
+---
+
+## 2026-01-08 — Add a synthetic non-Judbury example dataset for portability checks
+Decision:
+- Provide a small synthetic dataset (`data/forest_example/`) with realistic camera-trap structure to test portability beyond the Judbury exemplar.
+
+Rationale:
+- A lightweight, non-Judbury dataset surfaces schema and analysis edge cases without introducing data-licensing hurdles.
+
+Consequences / follow-ups:
+- The example is illustrative rather than ecological truth; users should replace it with real study data for inference.
+
 Rationale:
 - Provides consistent versioning for release bundles and external citation.
 Consequences / follow-ups:

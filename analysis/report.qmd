@@ -1,5 +1,5 @@
 ---
-title: "camtrap-workflow: Judbury exemplar report"
+title: "camtrap-workflow report"
 format:
   html:
     toc: true
@@ -35,6 +35,8 @@ inputs <- readRDS(params$inputs_path)
 - Observations (raw rows): `r inputs$n_obs_raw`
 - Observations (filtered to active effort days): `r inputs$n_obs_filtered`
 - Input schema version: `r inputs$schema_version`
+- Run ID: `r inputs$params$run_id`
+- Input mode: `r inputs$params$input_mode`
 
 ## QC summary
 
@@ -64,6 +66,9 @@ stopifnot(!is.null(params$effort_heatmap_path))
 knitr::include_graphics(params$effort_heatmap_path)
 ```
 
+**Interpretation (what to conclude):** Effort varies across sites; comparisons of detections or indices should account for differences in trap nights.  
+**Caution (what not to conclude):** Low detections at low‑effort sites are not evidence of low abundance.
+
 ## Time handling & limitations
 
 Timezone configured: `r inputs$params$timezone`  
@@ -91,6 +96,9 @@ if (flagged_rows > 0) {
 }
 ```
 
+**Interpretation (what to conclude):** Time‑QC tables identify potential clock issues (parse failures, DST gaps, backward jumps) for review.  
+**Caution (what not to conclude):** Flagged rows are not automatically corrected; interpret downstream timing outputs with these issues in mind.
+
 ## Event definition & spacing diagnostics
 
 Independent events are defined by clustering detections of the same species at the same site
@@ -113,6 +121,9 @@ knitr::include_graphics(params$event_spacing_path)
 
 Note: the event spacing plot uses a log10 x-axis to resolve short-interval spikes.
 
+**Interpretation (what to conclude):** Short‑interval spikes indicate repeated detections that are collapsed by the chosen event gap.  
+**Caution (what not to conclude):** Event counts are sensitive to the chosen gap; compare sensitivity outputs before drawing conclusions.
+
 ## Event threshold sensitivity
 
 ```{r}
@@ -123,6 +134,9 @@ knitr::kable(inputs$event_threshold_sensitivity)
 stopifnot(!is.null(params$event_threshold_sensitivity_path))
 knitr::include_graphics(params$event_threshold_sensitivity_path)
 ```
+
+**Interpretation (what to conclude):** If event totals are stable across thresholds, results are robust to the gap choice.  
+**Caution (what not to conclude):** Large changes across thresholds imply that event‑based metrics should be interpreted with extra caution.
 
 ## Occasion length sensitivity
 
@@ -147,6 +161,9 @@ community_summary <- data.frame(
 knitr::kable(community_summary)
 ```
 
+**Interpretation (what to conclude):** Community matrices summarise detections as presence/absence and event counts by site.  
+**Caution (what not to conclude):** These matrices reflect detections, not true abundances; rare or cryptic taxa may be under‑represented.
+
 ## Alpha diversity (per site)
 
 ```{r}
@@ -158,6 +175,9 @@ if (!is.null(params$alpha_diversity_path)) {
   knitr::include_graphics(params$alpha_diversity_path)
 }
 ```
+
+**Interpretation (what to conclude):** Richness differences highlight sites with more detected species.  
+**Caution (what not to conclude):** Richness is detection‑limited; lower richness can reflect lower effort or detectability.
 
 ## Beta diversity (spatial distance–decay)
 
@@ -171,12 +191,18 @@ if (!is.null(params$beta_diversity_path)) {
 }
 ```
 
+**Interpretation (what to conclude):** The distance–decay plot summarises how community dissimilarity changes with site distance.  
+**Caution (what not to conclude):** Spatial patterns can be confounded by habitat covariates not modelled explicitly.
+
 ## Rarefaction
 
 ```{r}
 stopifnot(!is.null(params$rarefaction_path))
 knitr::include_graphics(params$rarefaction_path)
 ```
+
+**Interpretation (what to conclude):** A curve that approaches a plateau suggests sampling completeness.  
+**Caution (what not to conclude):** Rarefaction compares sites within this survey; it should not be used for cross‑study comparisons without standardised effort.
 
 ## Traits coverage & functional diversity
 
@@ -199,6 +225,9 @@ if (!is.null(params$functional_diversity_path)) {
 }
 ```
 
+**Interpretation (what to conclude):** Functional diversity metrics reflect trait breadth among detected species per site.  
+**Caution (what not to conclude):** Missing or “unknown” traits can suppress FD metrics; interpret low values alongside `traits_missing`.
+
 ## Trait–environment associations
 
 ```{r}
@@ -219,6 +248,9 @@ if (!is.null(params$trait_env_path)) {
 }
 ```
 
+**Interpretation (what to conclude):** Trait–environment correlations identify candidate associations to investigate.  
+**Caution (what not to conclude):** Correlations are exploratory and do not imply causation; multiple testing is controlled via FDR.
+
 ## Spatial overview (site map)
 
 ```{r}
@@ -229,6 +261,9 @@ if (!is.null(params$site_map_path)) {
 
 Note: the map background is an interpolated surface from site covariates (default `ndvi`) and is intended for visual context only.
 North arrow and scale bar are added by default; site labels are optional via `spatial_map.label_sites`.
+
+**Interpretation (what to conclude):** The map provides spatial context for the sites and covariate gradients.  
+**Caution (what not to conclude):** The surface is interpolated from points and should not be treated as a measured raster.
 
 ## Relative abundance index (pooled)
 
@@ -243,6 +278,9 @@ stopifnot(!is.null(params$rai_species_path))
 knitr::include_graphics(params$rai_species_path)
 ```
 
+**Interpretation (what to conclude):** RAI compares relative detection rates across species within this survey.  
+**Caution (what not to conclude):** RAI is not an estimate of density and should not be compared across surveys without matched effort and detectability.
+
 ## Diel activity (site × period)
 
 ```{r}
@@ -253,6 +291,9 @@ knitr::kable(utils::head(inputs$diel_site, 20))
 stopifnot(!is.null(params$diel_overall_path))
 knitr::include_graphics(params$diel_overall_path)
 ```
+
+**Interpretation (what to conclude):** Diel proportions summarise event timing under the configured day/night method.  
+**Caution (what not to conclude):** Flash‑based diel classification can diverge from true solar time if camera settings differ.
 
 ## Occupancy (single-season)
 
@@ -274,6 +315,9 @@ if (!is.null(inputs$occupancy_species)) {
   }
 }
 ```
+
+**Interpretation (what to conclude):** Occupancy estimates reflect the probability a site is occupied given imperfect detection.  
+**Caution (what not to conclude):** Single‑season models assume closure and do not model population change; wide intervals indicate limited detection data.
 
 ## Limitations & assumptions
 
