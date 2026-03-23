@@ -1103,3 +1103,4 @@ See `docs/roadmap_v2.md` for full WP specs. Status mirrored here for completion 
 - [x] WP-0.9.1.3 — Forest example updated to non-degenerate occupancy
 - [x] WP-0.9.1.4 — Report/manuscript provenance path sanitization
 - [x] WP-0.9.1.5 — Release docs sync
+- [x] WP-0.9.1.6 — Exploratory summaries from legacy Camelot ideas

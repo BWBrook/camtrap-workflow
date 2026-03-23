@@ -300,6 +300,35 @@ knitr::include_graphics(params$diel_overall_path)
 **Interpretation (what to conclude):** Diel proportions summarise event timing under the configured day/night method.  
 **Caution (what not to conclude):** Flash‑based diel classification can diverge from true solar time if camera settings differ.
 
+## Exploratory summaries
+
+These legacy-inspired convenience outputs are derived from the same standardised workflow tables used elsewhere in this run. They are included as descriptive summaries rather than as separate Camelot-compatibility outputs.
+
+### Species summary
+
+```{r}
+knitr::kable(utils::head(inputs$species_summary, 12))
+```
+
+### First detection wait time
+
+```{r}
+knitr::kable(inputs$first_detection_wait_time_species)
+```
+
+### Multi-species images
+
+```{r}
+if (nrow(inputs$multi_species_images) > 0) {
+  knitr::kable(utils::head(inputs$multi_species_images, 12))
+} else {
+  cat("No multi-species images were detected in this run.")
+}
+```
+
+**Interpretation (what to conclude):** These summaries provide compact views of detection breadth, time-to-first-detection, and images containing multiple taxa.  
+**Caution (what not to conclude):** They are exploratory descriptive outputs and should not be interpreted as direct evidence of interaction strength, absolute abundance, or survey comparability outside the current standardised workflow.
+
 ## Occupancy (single-season)
 
 ```{r}

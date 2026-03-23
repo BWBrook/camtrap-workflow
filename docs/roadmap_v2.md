@@ -63,6 +63,7 @@ A WP is done only when all of the following are true:
 - [x] **WP-0.9.1.3 — Forest example updated to non-degenerate occupancy**
 - [x] **WP-0.9.1.4 — Report/manuscript provenance path sanitization**
 - [x] **WP-0.9.1.5 — Release docs sync**
+- [x] **WP-0.9.1.6 — Exploratory summaries from legacy Camelot ideas**
 
 ## 4) Detailed Work Package specs
 
@@ -552,3 +553,37 @@ Release-related docs reflect current CI status, outputs, and readiness.
 
 **Stop condition**
 - Release docs are accurate and consistent.
+
+---
+
+## WP-0.9.1.6 — Exploratory summaries from legacy Camelot ideas
+
+**Outcome**  
+A small set of useful descriptive ideas from the legacy Camelot scripts is retained as standardised outputs inside the current `targets` workflow, without importing legacy implementation baggage.
+
+**Scope**
+- In-scope:
+  - Consolidated species summary derived from current event/effort tables.
+  - Operating-days-to-first-detection summaries.
+  - Multi-species same-image summaries and pair counts.
+  - Report/methods/manifest/docs/test integration for these outputs.
+- Out-of-scope:
+  - Direct Camelot script porting.
+  - Camelot CSV compatibility mode.
+  - Coordinate-based site clustering, dense array outputs, or legacy geometric-mean summaries.
+
+**Acceptance criteria**
+- The pipeline writes stable tables for the three new summary families.
+- Report and methods artefacts surface the summaries and frame them as exploratory outputs derived from the current workflow.
+- Unit tests cover species summary, wait-time logic, and multi-species image associations.
+- Smoke coverage includes building one of the new outputs plus the report.
+
+**Artefact evidence**
+- `outputs/runs/<run_id>/tables/species_summary.csv`
+- `outputs/runs/<run_id>/tables/first_detection_wait_time.csv`
+- `outputs/runs/<run_id>/tables/first_detection_wait_time_species.csv`
+- `outputs/runs/<run_id>/tables/multi_species_images.csv`
+- `outputs/runs/<run_id>/tables/multi_species_pairs.csv`
+
+**Stop condition**
+- The new descriptive tables build reproducibly, are documented, and appear in the rendered artefacts without introducing parallel legacy semantics.

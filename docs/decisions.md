@@ -220,6 +220,24 @@ Consequences / follow-ups:
 
 ---
 
+## 2026-03-23 — Legacy Camelot ideas are incorporated only as standardised exploratory summaries
+Decision:
+- Do not port the legacy Camelot analysis scripts directly into the workflow.
+- Retain only three descriptive ideas from that code as first-class outputs derived from the current internal schema: a consolidated species summary, operating-days-to-first-detection summaries, and multi-species same-image summaries.
+- Use current workflow semantics for these outputs rather than attempting legacy parity.
+
+Rationale:
+- The legacy scripts are tightly coupled to Windows paths, Camelot-export assumptions, and hand-edited operational matrices that do not fit the current `targets` pipeline.
+- The current workflow already supersedes most of the old analytical surface, so only a few missing convenience summaries add value.
+- Preserving current semantics keeps the outputs consistent with the rest of the pipeline and easier to test and explain.
+
+Consequences / follow-ups:
+- New exploratory tables are documented and rendered in the report/methods artefacts as descriptive outputs, not as Camelot-compatibility mode.
+- This pass intentionally does not add Camelot CSV ingestion, coordinate-based site clustering, 3D array outputs, or legacy geometric-mean summaries.
+- Any future legacy-inspired additions should start from the validated internal tables rather than from the old scripts themselves.
+
+---
+
 ## 2026-01-07 — Trait–environment associations via abundance-weighted proportions + Spearman
 Decision:
 - Use abundance-weighted trait proportions per site and Spearman correlations against environmental covariates.

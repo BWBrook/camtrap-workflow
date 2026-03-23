@@ -79,6 +79,15 @@ import::here(
 )
 
 import::here(
+  compute_species_summary,
+  compute_first_detection_wait,
+  summarise_first_detection_wait,
+  compute_multi_species_images,
+  compute_multi_species_pairs,
+  .from = "R/exploratory_outputs.R"
+)
+
+import::here(
   plot_site_map,
   write_placeholder_plot,
   .from = "R/spatial_outputs.R"
@@ -1029,6 +1038,85 @@ list(
     format = "file"
   ),
   tar_target(
+    species_summary,
+    compute_species_summary(
+      obs_filtered,
+      obs_events,
+      events_per_day,
+      trap_nights,
+      total_sites = nrow(site_raw),
+      method = config$diel$method,
+      day_start_hour = config$diel$day_start_hour,
+      day_end_hour = config$diel$day_end_hour
+    )
+  ),
+  tar_target(
+    species_summary_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "species_summary.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(species_summary, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    first_detection_wait_time,
+    compute_first_detection_wait(op_long, events_per_day)
+  ),
+  tar_target(
+    first_detection_wait_time_species,
+    summarise_first_detection_wait(first_detection_wait_time)
+  ),
+  tar_target(
+    first_detection_wait_time_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "first_detection_wait_time.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(first_detection_wait_time, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    first_detection_wait_time_species_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "first_detection_wait_time_species.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(first_detection_wait_time_species, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    multi_species_images,
+    compute_multi_species_images(obs_filtered)
+  ),
+  tar_target(
+    multi_species_pairs,
+    compute_multi_species_pairs(multi_species_images)
+  ),
+  tar_target(
+    multi_species_images_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "multi_species_images.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(multi_species_images, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
+    multi_species_pairs_csv,
+    {
+      out_path <- file.path(run_dir, "tables", "multi_species_pairs.csv")
+      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
+      readr::write_csv(multi_species_pairs, out_path)
+      out_path
+    },
+    format = "file"
+  ),
+  tar_target(
     rarefaction_data,
     {
       if (isTRUE(config$analysis$rarefaction)) {
@@ -1099,6 +1187,11 @@ list(
           rai_species = rai_species,
           diel_site = diel_site,
           diel_overall = diel_overall,
+          species_summary = species_summary,
+          first_detection_wait_time = first_detection_wait_time,
+          first_detection_wait_time_species = first_detection_wait_time_species,
+          multi_species_images = multi_species_images,
+          multi_species_pairs = multi_species_pairs,
           rarefaction_data = rarefaction_data,
           community_abundance = community_abundance,
           community_presence = community_presence,
@@ -1371,6 +1464,11 @@ list(
           diel_site = diel_site_csv,
           diel_site_season = diel_site_season_csv,
           diel_overall = diel_overall_csv,
+          species_summary = species_summary_csv,
+          first_detection_wait_time = first_detection_wait_time_csv,
+          first_detection_wait_time_species = first_detection_wait_time_species_csv,
+          multi_species_images = multi_species_images_csv,
+          multi_species_pairs = multi_species_pairs_csv,
           rarefaction = rarefaction_table_csv
         ),
         figures = list(

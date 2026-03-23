@@ -83,6 +83,14 @@ Diel proportions are computed from event timestamps, using either the camera fla
 
 - `r file.path(run_dir_display, "tables", "diel_overall.csv")`
 
+## Exploratory summaries
+
+The workflow also emits a small set of exploratory descriptive summaries that retain useful ideas from earlier Camelot-era scripts without preserving the legacy implementation. These outputs are derived from the same standardised event and effort tables used elsewhere in the pipeline.
+
+- `r file.path(run_dir_display, "tables", "species_summary.csv")`
+- `r file.path(run_dir_display, "tables", "first_detection_wait_time_species.csv")`
+- `r file.path(run_dir_display, "tables", "multi_species_images.csv")`
+
 ## Occupancy modelling
 
 Single-season occupancy models are fitted using detection histories with explicit detection probability (`p`) and occupancy probability (`psi`) parameters [@mackenzie2002]. Candidate models include base and effort terms plus optional site covariates; models are compared via AIC, and site-level predictions are generated from the top models. Models are fit with the `unmarked` framework [@fiske2011].

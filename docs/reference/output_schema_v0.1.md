@@ -46,6 +46,11 @@ Expected (current MVP):
 - `tables/diel_site.csv` — diel proportions per site/species.
 - `tables/diel_site_season.csv` — diel proportions per site/species/season.
 - `tables/diel_overall.csv` — overall day/night proportions.
+- `tables/species_summary.csv` — consolidated exploratory species summary (sites detected, pooled event rate, active-day coverage, diel mix, group size).
+- `tables/first_detection_wait_time.csv` — site × species wait time from the first active day to the first independent detection, counted in active days only.
+- `tables/first_detection_wait_time_species.csv` — species-level summaries of first-detection wait times across sites.
+- `tables/multi_species_images.csv` — images containing more than one detected species, with a compact species list per image.
+- `tables/multi_species_pairs.csv` — pairwise co-occurrence counts across qualifying multi-species images.
 - `tables/rarefaction.csv` — rarefaction curve data (sites, richness, se).
 
 ## Figures (MVP)
