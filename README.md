@@ -21,7 +21,7 @@ The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the e
 ## Quickstart
 
 ### 1) Prerequisites
-- R 4.5.3
+- R 4.6.0
 - Quarto (for report rendering). Verify with: `quarto --version`
 - LaTeX/TinyTeX (for PDF report rendering)
 - System build tools appropriate for your OS (some R packages compile from source)

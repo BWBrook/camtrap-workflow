@@ -66,12 +66,22 @@ write_run_manifest <- function(path, schema_version, params, outputs, session_in
 }
 
 get_git_commit <- function() {
+  env_commit <- Sys.getenv("CAMTRAP_WORKFLOW_GIT_COMMIT", unset = NA_character_)
+  if (!is.na(env_commit) && nzchar(env_commit) && !identical(env_commit, "unknown")) {
+    return(env_commit)
+  }
+
   out <- tryCatch(
-    system2("git", c("rev-parse", "HEAD"), stdout = TRUE, stderr = TRUE),
+    suppressWarnings(system2("git", c("rev-parse", "HEAD"), stdout = TRUE, stderr = TRUE)),
     error = function(e) character(0)
   )
+  status <- attr(out, "status")
 
-  if (length(out) == 0 || any(grepl("fatal", out))) {
+  if (
+    length(out) == 0 ||
+      (!is.null(status) && !is.na(status) && status != 0) ||
+      any(grepl("fatal", out, ignore.case = TRUE))
+  ) {
     return(NA_character_)
   }
 

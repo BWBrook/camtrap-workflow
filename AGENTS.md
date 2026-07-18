@@ -53,7 +53,7 @@ Details are in `docs/workflow.md`. This is not optional.
 
 ## Technical constraints and defaults
 
-- Primary language: R (R 4.5.3).
+- Primary language: R (R 4.6.0).
 - Reproducibility: `renv` + (optional) `pak` for faster installs.
 - Pipeline: `targets` (and `tarchetypes` for report rendering if adopted).
 - Prefer tidyverse-style data handling (`dplyr`, `tidyr`, `readr`).

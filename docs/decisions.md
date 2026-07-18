@@ -13,6 +13,26 @@ Use the format:
 
 ---
 
+## 2026-05-29 — Move project baseline to R 4.6.0 on the Mac mini
+Decision:
+- Treat the previous R 4.5.x pin as stale and migrate the project baseline to R 4.6.0.
+- Refresh `renv.lock` under R 4.6.0 and use current CRAN-compatible package versions for this development bedrock.
+- Update CI and the container recipe to R 4.6.0.
+
+Rationale:
+- The Mac mini dev box has Homebrew R 4.6.0 as the default terminal R.
+- Moving the lockfile forward avoids carrying obsolete package pins such as `Matrix 1.7-4`, which does not compile cleanly against R 4.6 headers.
+- Native Apple Silicon validation is now a first-class development target for this repo.
+
+Consequences / follow-ups:
+- R 4.6.0 is now the supported local and CI baseline.
+- The Dockerfile installs a matching R base and uses an architecture-aware Quarto download so local arm64 Docker builds and amd64 CI builds can both work.
+- Container builds can pass `GIT_COMMIT` so image-generated run manifests preserve source provenance even though `.git/` is excluded from the build context.
+- Generated targets metadata is no longer tracked because it stores machine-specific absolute paths and changes on every local run.
+- Re-run lint, tests, and the full exemplar pipeline after the migration.
+
+---
+
 ## 2025-12-16 — Project is an analysis workflow repo (not a CRAN package)
 Decision:
 - Treat camtrap-workflow as a reproducible analysis project built around `targets` + Quarto, not as a CRAN-ready R package.
@@ -438,6 +458,7 @@ Consequences / follow-ups:
 ## 2026-01-07 — Container base image and Quarto strategy
 Decision:
 - Use `rocker/r-ver:4.5.2` as the container base and install Quarto + TinyTeX during the build.
+- Superseded on 2026-05-29 by the R 4.6.0 migration decision above.
 
 Rationale:
 - Aligns with the project’s R version requirement and enables PDF report rendering inside the container.

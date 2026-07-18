@@ -1,6 +1,7 @@
 import::from("testthat", test_that, expect_true, expect_equal)
 import::from("jsonlite", read_json)
 import::from("here", here)
+import::from("withr", local_envvar)
 
 source(here("R", "run_manifest.R"))
 
@@ -35,4 +36,10 @@ test_that("write_run_manifest creates a JSON file with required fields", {
   expect_true(!grepl("^/", manifest$outputs$figures$rarefaction))
   expect_true(!grepl("^/", manifest$session_info))
   expect_equal(manifest$config$path, "config.yml")
+})
+
+test_that("get_git_commit uses container-provided commit metadata", {
+  local_envvar(c(CAMTRAP_WORKFLOW_GIT_COMMIT = "abc123"), .local_envir = testthat::teardown_env())
+
+  expect_equal(get_git_commit(), "abc123")
 })
