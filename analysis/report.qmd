@@ -120,7 +120,7 @@ if (flagged_rows > 0) {
 
 ## Event definition & spacing diagnostics
 
-Independent events are defined by clustering detections of the same species at the same site
+Operational detection events are defined by clustering detections of the same species at the same site
 with a gap threshold of `r inputs$params$event_threshold_minutes` minutes.
 
 ```{r}
@@ -286,7 +286,7 @@ North arrow and scale bar are added by default; site labels are optional via `sp
 
 ## Relative abundance index (pooled)
 
-RAI is defined as independent events per trap night, pooled over total survey effort across all included sites (Poisson confidence intervals).
+RAI is defined as operational detection events per trap night, pooled over total survey effort across all included sites (Poisson confidence intervals).
 
 ```{r}
 knitr::kable(inputs$rai_species)
@@ -395,7 +395,7 @@ Note: `psi` in the summary table is the occupancy estimate at mean covariate val
 ## Limitations & assumptions
 
 - Datetimes are interpreted in the configured timezone; DST gaps are flagged unless a fixed offset is specified.
-- Independent events depend on the gap threshold; sensitivity analysis is provided above to assess robustness.
+- Operational detection events depend on the gap threshold; sensitivity analysis is provided above to assess robustness.
 - Diel proportions use the configured method (`flash` or `clock`) and do not account for sunrise/sunset variation.
 - RAI reflects relative detection rates, not absolute abundance.
 - Occupancy models are single-season and illustrative; uncertainty is constrained by the number of sites and the presence of all-zero sites.
@@ -407,4 +407,5 @@ Note: `psi` in the summary table is the occupancy estimate at mean covariate val
 
 Run outputs are stored under: `r run_dir_display`  
 Run manifest: `r file.path(run_dir_display, "run_manifest.json")`  
+Validation and lineage evidence: `r file.path(run_dir_display, "provenance", "phase2")`
 Session info: `r file.path(run_dir_display, "session_info.txt")`

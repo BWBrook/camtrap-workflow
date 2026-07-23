@@ -2,7 +2,7 @@
 
 Reproducible camera-trap workflow for end-to-end analysis in R.
 
-This repository provides a **targets-based** pipeline that starts from labelled camera-trap detections plus site and effort metadata, performs validation and standardisation, constructs independent events, and produces core ecological analyses (including community diversity and trait summaries) and a rendered report.
+This repository provides a **targets-based** pipeline that starts from labelled camera-trap detections plus site and effort metadata, performs validation and standardisation, constructs operational detection events, and produces core ecological analyses (including community diversity and trait summaries) and a rendered report.
 
 The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the exemplar case study.
 
@@ -48,6 +48,19 @@ Use the supported publisher from the project root:
 Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
+Preview validation, proposed repairs, and source-row/event lineage without
+running the analytical target graph:
+
+```sh
+Rscript scripts/run_full_evidence_run.R \
+  --validate-only --config config.yml
+```
+
+Validation previews are immutable under `outputs/preflight/<run_id>/`. They do
+not create `COMPLETED.json` or change `outputs/latest`. Repairs are not applied
+by default; an exact proposal ID and digest must be reviewed and recorded in
+the configuration before a later invocation can apply that proposal.
+
 To run with an alternate config file:
 
 ```sh
@@ -76,6 +89,8 @@ Outputs are written to `outputs/` (gitignored). Look for:
 * `outputs/runs/<run_id>/session_info.txt` for session provenance
 * `outputs/runs/<run_id>/provenance/config.raw.yml` for the exact consumed
   configuration
+* `outputs/runs/<run_id>/provenance/phase2/` for source-row, validation,
+  repair, transformation, and operational-event membership evidence
 * `outputs/runs/<run_id>/run_manifest.json` for run provenance
 
 Verify any copied or in-place bundle without its original repository path:

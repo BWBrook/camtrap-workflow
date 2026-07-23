@@ -5,6 +5,9 @@ timezone_fixed_offset_hours: 10
 event_threshold_minutes: 15
 input_mode: "four_table"
 
+validation:
+  repair_decisions: []
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

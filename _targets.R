@@ -78,7 +78,20 @@ import::here(
 
 import::here(
   load_inputs,
+  load_preflight_inputs,
   .from = "R/input_loader.R"
+)
+
+import::here(
+  read_camtrapdp_dataset,
+  camtrapdp_to_internal,
+  .from = "R/camtrapdp_adapter.R"
+)
+
+import::here(
+  validate_validation_artifacts,
+  validate_recorded_membership,
+  .from = "R/validation_ledger.R"
 )
 
 import::here(
@@ -280,10 +293,35 @@ list(
     },
     cue = tar_cue(mode = "always")
   ),
+  tar_target(
+    phase2_validation_check,
+    {
+      if (isTRUE(run_context$supported_full_run)) {
+        validate_validation_artifacts(
+          run_context$staging_dir,
+          run_context$validation$artifacts,
+          require_analysis_ready = TRUE
+        )
+      } else {
+        TRUE
+      }
+    },
+    cue = tar_cue(mode = "always")
+  ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
   tar_target(
     raw_inputs,
-    load_inputs(config, source_snapshot = source_snapshot)
+    {
+      phase2_validation_check
+      load_preflight_inputs(
+        config,
+        source_snapshot = source_snapshot,
+        run_context = run_context,
+        four_table_reader = read_jc_csv,
+        camtrapdp_reader = read_camtrapdp_dataset,
+        camtrapdp_adapter = camtrapdp_to_internal
+      )
+    }
   ),
   tar_target(
     site_raw,
@@ -450,6 +488,21 @@ list(
   tar_target(
     event_invariants_check,
     validate_event_invariants(obs_events, obs_filtered),
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    event_lineage_check,
+    {
+      if (isTRUE(run_context$supported_full_run)) {
+        validate_recorded_membership(
+          run_context$staging_dir,
+          run_context$validation$artifacts,
+          obs_events
+        )
+      } else {
+        TRUE
+      }
+    },
     cue = tar_cue(mode = "always")
   ),
   tar_target(
@@ -1521,6 +1574,8 @@ list(
   tar_target(
     run_manifest,
     {
+      phase2_validation_check
+      event_lineage_check
       out_path <- file.path(run_dir, "run_manifest.json")
       outputs <- list(
         tables = list(
@@ -1589,7 +1644,12 @@ list(
         outputs = outputs,
         session_info_path = session_info,
         config_file = config_file,
-        context = if (isTRUE(run_context$supported_full_run)) run_context else NULL
+        context = if (isTRUE(run_context$supported_full_run)) run_context else NULL,
+        phase2 = if (isTRUE(run_context$supported_full_run)) {
+          run_context$validation$artifacts
+        } else {
+          NULL
+        }
       )
     },
     format = "file"

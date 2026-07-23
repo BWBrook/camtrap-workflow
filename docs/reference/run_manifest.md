@@ -10,6 +10,16 @@ publishes `outputs/runs/<run_id>/run_manifest.json`. A direct or partial
 `tar_make()` call is not a publisher and cannot write a terminal completion
 record or update `outputs/latest`.
 
+The same runner also provides a validation-only preflight:
+
+```sh
+Rscript scripts/run_full_evidence_run.R --config config.yml --validate-only
+```
+
+It publishes an immutable `outputs/preflight/<run_id>/PREVIEW.json` record.
+Preflight never creates `COMPLETED.json`, publishes a completed run, renders
+the report, or changes `outputs/latest`.
+
 ## Identity model
 
 `run_id` identifies one invocation. It is unique, filesystem-safe, and copied
@@ -31,7 +41,8 @@ excluded from equivalence fingerprints.
 
 ## Manifest schema
 
-`manifest_schema` is `camtrap-evidence-manifest/1.0`. The main fields are:
+New completed runs use
+`manifest_schema = "camtrap-evidence-manifest/1.1"`. The main fields are:
 
 - `run_id` and `legacy_run_label`;
 - `status`;
@@ -44,6 +55,9 @@ excluded from equivalence fingerprints.
 - `source_inventory`, pointing to
   `provenance/source_inventory.json`;
 - `engine`, with Git/R/file inventory metadata;
+- `phase2`, linking the validation, repair, row-lineage, changed-field,
+  transformation, event-membership, and post-validation records described
+  below;
 - `outputs`, the named compatibility map used by reports and readers;
 - `session_info`;
 - `payload`, the exact sorted relative set of every bundle file except
@@ -55,6 +69,50 @@ traversal, and symlinks. It also recomputes the source inventory, exact raw and
 canonical resolved configuration hashes, engine record, installed-package
 record, and composite fingerprint. Rewriting the manifest and completion hash
 around inconsistent provenance does not make a bundle valid.
+
+### Phase 2 records
+
+Manifest 1.1 requires these cross-linked files under `provenance/phase2/`:
+
+- `resource_registry.json`;
+- `source_row_ledger.json`;
+- `validation_findings.json`;
+- `transformations.json`;
+- `repair_proposals.json`;
+- `repair_decisions.json`;
+- `repair_applications.json`;
+- `changed_fields.json`;
+- `event_membership.json`;
+- `post_validation.json`; and
+- `validated_inputs.rds`.
+
+The portable verifier checks each wrapper schema and identity, source-row
+accounting, decision authority, repair applications, changed-field links,
+event membership, and the analysis-ready RDS record. Missing or orphaned
+records, unexplained exclusions, stale approvals, changed proposal content,
+or a mismatch between recorded and recomputed operational detection events
+invalidate the bundle.
+
+It also reconstructs every Phase 2 document and all four analytical tables
+from the immutable source snapshot plus the exact decisions in the raw
+configuration. A checksum-reclosed change to any scientific value therefore
+fails even when it does not alter operational event membership.
+
+Existing `camtrap-evidence-manifest/1.0` bundles remain supported by the
+portable verifier. They are verified under their original contract and are
+not required to contain Phase 2 records.
+
+## Validation preview
+
+`PREVIEW.json` uses schema `camtrap-validation-preview/1.0`. It records the
+invocation identity, `ready` or `blocked` status, the same provenance
+fingerprint domains used by a full run, the complete Phase 2 link map, and an
+exact payload inventory. A blocked preflight is still published for review
+before the command exits unsuccessfully.
+
+The preview is evidence of validation and repair state, not a scientific
+completion record. It is immutable, non-overwriting, and deliberately outside
+`outputs/runs/`.
 
 ## Terminal trust record
 

@@ -85,7 +85,28 @@ Notes:
 - Unparseable datetimes fail validation immediately.
 - Camtrap DP ingestion uses a mapping adapter before validation (see `docs/reference/camtrapdp_mapping_v0.1.md`).
 
+## Internal source-row identity
+
+Goal 006 does not add fields to this public v0.1 contract. Supported
+preflight and full runs instead record audit identity in sidecar provenance:
+
+- `resource_id` is deterministic from logical resource identity and exact
+  content hash; and
+- `source_row_id` is deterministic from `resource_id` and the one-based
+  parsed record ordinal.
+
+The ordinal is the order presented by the parser. It is not a physical file
+line number or a stable semantic entity identifier across content-changing
+runs. Every parser-consumed row receives one ledger record and disposition.
+Observation rows additionally link to retained operational detection events
+or carry an explicit exclusion rule and reason.
+
 ## Validation failures
 
 Validation fails early with explicit table/column messages and suggested fixes.
-See `R/qc_schema.R` for implementation details.
+The supported runner also writes structured Phase 2 findings and repair state
+to an immutable validation preview. Integrity findings cannot be waived.
+Semantic repairs default to preview without application and require an exact
+proposal-specific decision. See `R/qc_schema.R`,
+`R/source_row_lineage.R`, and `R/validation_ledger.R` for implementation
+details.

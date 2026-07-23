@@ -19,7 +19,7 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   Optional fixed offset in hours (e.g., `10` for UTC+10). When provided, datetimes are parsed using a fixed offset (`Etc/GMT±H`) and DST gaps are ignored.
 
 - `event_threshold_minutes`  
-  Gap threshold (minutes) for independent-event clustering.
+  Gap threshold (minutes) for operational detection event clustering.
 
 - `input_mode`  
   Input mode selector: `four_table` (default) or `camtrapdp`.
@@ -50,6 +50,14 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 
 - `paths.outputs`  
   Base output directory for all artefacts (default `outputs`).
+
+- `validation.repair_decisions`
+  Provisional Phase 2 list of exact proposal decisions. Each record requires
+  `proposal_id`, `proposal_digest`, and `decision` (`approved` or `declined`);
+  `reason` is optional except that an approved `override_explicit` proposal
+  requires a non-empty reason. Unknown fields, wildcard/class-wide authority,
+  stale digests, duplicates, and conflicts fail safely. The block may be
+  omitted by legacy configurations; shipped configurations use an empty list.
 
 - `analysis.rarefaction`  
   Toggle rarefaction/species accumulation outputs (TRUE/FALSE).

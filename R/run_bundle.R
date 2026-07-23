@@ -12,14 +12,183 @@ payload_inventory <- function(bundle_dir) {
   inventory_files(bundle_dir, exclude = c("run_manifest.json", "COMPLETED.json"))
 }
 
+preflight_record_path <- function(preflight_dir) {
+  file.path(preflight_dir, "PREVIEW.json")
+}
+
+preflight_payload_inventory <- function(preflight_dir) {
+  inventory_files(preflight_dir, exclude = "PREVIEW.json")
+}
+
+bundle_relative_path <- function(path, root) {
+  relative <- normalize_relative_path(fs::path_rel(path, start = root))
+  assert_safe_relative_path(relative, "Evidence artifact path")
+  relative
+}
+
+phase2_bundle_paths <- function(bundle_dir, links) {
+  lapply(links, function(relative) {
+    bundle_identity_path(bundle_dir, relative, "Phase-2 artifact path")
+  })
+}
+
+write_preflight_record <- function(staging_dir, context) {
+  path <- preflight_record_path(staging_dir)
+  if (file.exists(path)) {
+    stop("Preflight preview record already exists: ", path)
+  }
+  phase2 <- lapply(
+    context$validation$artifacts,
+    bundle_relative_path,
+    root = staging_dir
+  )
+  record <- list(
+    preview_schema = "camtrap-validation-preview/1.0",
+    run_id = context$run_id,
+    status = if (isTRUE(context$validation$can_analyze)) "ready" else "blocked",
+    created_utc = context$created_utc,
+    fingerprints = context$fingerprints,
+    config = list(
+      source_name = context$config_source_name,
+      raw = bundle_relative_path(context$provenance$raw_config, staging_dir),
+      effective = bundle_relative_path(
+        context$provenance$effective_config,
+        staging_dir
+      )
+    ),
+    source_inventory = bundle_relative_path(
+      context$provenance$source_inventory,
+      staging_dir
+    ),
+    engine = context$engine,
+    phase2 = phase2,
+    payload = preflight_payload_inventory(staging_dir)
+  )
+  atomic_write_json(record, path)
+  invisible(path)
+}
+
+validate_preflight_payload <- function(preflight_dir) {
+  path <- preflight_record_path(preflight_dir)
+  if (!file.exists(path)) {
+    stop("Preflight preview record is missing.")
+  }
+  record <- jsonlite::read_json(path, simplifyVector = FALSE)
+  if (!identical(record$preview_schema, "camtrap-validation-preview/1.0")) {
+    stop("Unsupported validation preview schema.")
+  }
+  assert_safe_run_id(record$run_id)
+  if (!is.character(record$status) ||
+        length(record$status) != 1L ||
+        !record$status %in% c("ready", "blocked")) {
+    stop("Invalid validation preview status.")
+  }
+  expected <- record$payload
+  actual <- preflight_payload_inventory(preflight_dir)
+  expected_paths <- vapply(expected, `[[`, character(1), "path")
+  actual_paths <- vapply(actual, `[[`, character(1), "path")
+  if (!identical(expected_paths, actual_paths)) {
+    stop("Preflight payload set mismatch.")
+  }
+  for (index in seq_along(expected)) {
+    same_bytes <- identical(
+      as.numeric(expected[[index]]$bytes),
+      as.numeric(actual[[index]]$bytes)
+    )
+    same_hash <- identical(
+      expected[[index]]$sha256,
+      actual[[index]]$sha256
+    )
+    if (!same_bytes || !same_hash) {
+      stop("Preflight payload fixity mismatch: ", expected[[index]]$path)
+    }
+  }
+  record
+}
+
+verify_preflight_record <- function(preflight_dir) {
+  if (!dir.exists(preflight_dir) || nzchar(Sys.readlink(preflight_dir))) {
+    stop("Preflight directory is missing or is a symlink.")
+  }
+  record <- validate_preflight_payload(preflight_dir)
+  if (!identical(
+    basename(normalizePath(preflight_dir, winslash = "/", mustWork = TRUE)),
+    record$run_id
+  )) {
+    stop("Preflight directory and invocation identities disagree.")
+  }
+  validate_source_identity(preflight_dir, record)
+  validate_config_identity(preflight_dir, record)
+  validate_engine_identity(record)
+  validate_composite_identity(record)
+  phase2 <- phase2_bundle_paths(preflight_dir, record$phase2)
+  validate_validation_artifacts(
+    preflight_dir,
+    phase2,
+    require_analysis_ready = identical(record$status, "ready")
+  )
+  forbidden <- c("COMPLETED.json", "run_manifest.json")
+  if (any(file.exists(file.path(preflight_dir, forbidden))) ||
+        dir.exists(file.path(preflight_dir, "report"))) {
+    stop("Validation preview contains a completion or scientific-report artifact.")
+  }
+  list(
+    valid = TRUE,
+    run_id = record$run_id,
+    status = record$status,
+    payload_files = length(record$payload)
+  )
+}
+
+publish_preflight_record <- function(staging_dir, outputs_root, run_id) {
+  assert_safe_run_id(run_id)
+  if (!dir.exists(staging_dir)) {
+    stop("Preflight staging directory does not exist.")
+  }
+  if (file.exists(file.path(outputs_root, "runs", run_id))) {
+    stop("Refusing invocation collision with an existing completed run.")
+  }
+  write_preflight_record(
+    staging_dir,
+    jsonlite::read_json(
+      file.path(outputs_root, ".runtime", paste0(run_id, ".json")),
+      simplifyVector = FALSE
+    )
+  )
+  staged <- verify_preflight_record(staging_dir)
+  if (!identical(staged$run_id, run_id)) {
+    stop("Staged preflight identity verification failed.")
+  }
+
+  final_dir <- file.path(outputs_root, "preflight", run_id)
+  if (file.exists(final_dir)) {
+    stop("Refusing to overwrite immutable validation preview: ", final_dir)
+  }
+  dir.create(dirname(final_dir), recursive = TRUE, showWarnings = FALSE)
+  if (!file.rename(staging_dir, final_dir)) {
+    stop("Atomic validation preview publication failed.")
+  }
+  verify_preflight_record(final_dir)
+  invisible(final_dir)
+}
+
 validate_manifest_payload <- function(bundle_dir) {
   path <- manifest_path(bundle_dir)
   if (!file.exists(path)) {
     stop("Bundle manifest is missing: ", path)
   }
   manifest <- jsonlite::read_json(path, simplifyVector = FALSE)
-  if (!identical(manifest$manifest_schema, "camtrap-evidence-manifest/1.0")) {
-    stop("Unsupported run manifest schema.")
+  supported_schemas <- c(
+    "camtrap-evidence-manifest/1.0",
+    "camtrap-evidence-manifest/1.1"
+  )
+  if (!is.character(manifest$manifest_schema) ||
+        length(manifest$manifest_schema) != 1L ||
+        !manifest$manifest_schema %in% supported_schemas) {
+    stop(
+      "Unsupported run manifest schema: ",
+      paste(manifest$manifest_schema, collapse = ",")
+    )
   }
   assert_safe_run_id(manifest$run_id)
 
@@ -209,6 +378,67 @@ validate_composite_identity <- function(manifest) {
   invisible(recomputed)
 }
 
+validate_phase2_manifest <- function(bundle_dir, manifest) {
+  if (!identical(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.1"
+  )) {
+    return(invisible(TRUE))
+  }
+  required <- c(
+    "resource_registry",
+    "source_row_ledger",
+    "validation_findings",
+    "transformations",
+    "repair_proposals",
+    "repair_decisions",
+    "repair_applications",
+    "changed_fields",
+    "event_membership",
+    "post_validation",
+    "validated_inputs"
+  )
+  if (!is.list(manifest$phase2) ||
+        !setequal(names(manifest$phase2), required)) {
+    stop("Manifest 1.1 Phase-2 links are incomplete.")
+  }
+  paths <- phase2_bundle_paths(bundle_dir, manifest$phase2)
+  validate_validation_artifacts(
+    bundle_dir,
+    paths,
+    require_analysis_ready = TRUE
+  )
+
+  resources <- jsonlite::read_json(
+    paths$resource_registry,
+    simplifyVector = FALSE
+  )$records
+  source <- jsonlite::read_json(
+    bundle_identity_path(
+      bundle_dir,
+      manifest$source_inventory,
+      "Source inventory path"
+    ),
+    simplifyVector = FALSE
+  )
+  source_paths <- vapply(source$files, `[[`, character(1), "path")
+  for (resource in resources) {
+    index <- match(resource$inventory_path, source_paths)
+    content_matches <- !is.na(index) && identical(
+      resource$content_sha256,
+      source$files[[index]]$sha256
+    )
+    inventory_matches <- identical(
+      resource$source_inventory_link,
+      manifest$source_inventory
+    )
+    if (!content_matches || !inventory_matches) {
+      stop("Phase-2 logical resource does not cross-link to source inventory.")
+    }
+  }
+  invisible(TRUE)
+}
+
 bundle_identity_path <- function(bundle_dir, relative_path, label) {
   assert_safe_relative_path(relative_path, label)
   path <- file.path(bundle_dir, relative_path)
@@ -221,6 +451,7 @@ validate_bundle_identities <- function(bundle_dir, manifest) {
   validate_config_identity(bundle_dir, manifest)
   validate_engine_identity(manifest)
   validate_composite_identity(manifest)
+  validate_phase2_manifest(bundle_dir, manifest)
 
   inputs_path <- bundle_identity_path(
     bundle_dir,

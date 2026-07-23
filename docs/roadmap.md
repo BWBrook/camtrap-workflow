@@ -1086,6 +1086,24 @@ The PI review ZIP must include:
 
 ---
 
+## Goal 006 - Validation, repair preview, and source-row lineage
+
+- [x] Publish immutable validation-only previews without completion or latest
+  mutation.
+- [x] Add deterministic logical-resource and parsed-row identities without
+  changing the public v0.1 input schema.
+- [x] Enforce preview-first, proposal-specific repair authority and preserve
+  proposal, decision, application, and changed-field state.
+- [x] Remove automatic authority from historical CamtrapDP semantic defaults.
+- [x] Record complete row dispositions and observation-source membership for
+  retained operational detection events.
+- [x] Publish manifest 1.1 with semantic reconstruction and retain manifest
+  1.0 verification.
+- [x] Preserve default Judbury scientific outputs and complete the local
+  acceptance ladder plus one independent review and focused repair.
+
+---
+
 ## References (for context; not requirements)
 
 - WildObsR (Camtrap DP support, matrix generation for occupancy, schema validation): https://github.com/WildObs/WildObsR

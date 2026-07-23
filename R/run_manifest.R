@@ -33,6 +33,7 @@ relativize_manifest_paths <- function(value, base_dir) {
 #' @param session_info_path Path to session info text file.
 #' @param config_file Path to the raw configuration file.
 #' @param context Supported evidence-run context, or NULL for a partial run.
+#' @param phase2 Named Phase-2 artifact paths for manifest schema 1.1.
 #' @return Manifest path invisibly.
 #' @export
 write_run_manifest <- function(
@@ -42,7 +43,8 @@ write_run_manifest <- function(
     outputs,
     session_info_path,
     config_file = NULL,
-    context = NULL) {
+    context = NULL,
+    phase2 = NULL) {
   bundle_dir <- dirname(path)
   dir.create(bundle_dir, recursive = TRUE, showWarnings = FALSE)
   if (file.exists(path)) {
@@ -74,7 +76,11 @@ write_run_manifest <- function(
   }
 
   manifest <- list(
-    manifest_schema = "camtrap-evidence-manifest/1.0",
+    manifest_schema = if (supported && !is.null(phase2)) {
+      "camtrap-evidence-manifest/1.1"
+    } else {
+      "camtrap-evidence-manifest/1.0"
+    },
     run_id = run_id,
     legacy_run_label = params$run_id,
     status = if (supported) "completed" else "partial_unpublished",
@@ -98,6 +104,11 @@ write_run_manifest <- function(
     ),
     source_inventory = if (supported) "provenance/source_inventory.json" else NULL,
     engine = if (supported) context$engine else list(git_commit = get_git_commit()),
+    phase2 = if (supported && !is.null(phase2)) {
+      relativize_manifest_paths(phase2, bundle_dir)
+    } else {
+      NULL
+    },
     outputs = relativize_manifest_paths(outputs, bundle_dir),
     session_info = relativize_manifest_paths(session_info_path, bundle_dir),
     payload = payload_inventory(bundle_dir)

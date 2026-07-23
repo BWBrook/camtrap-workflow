@@ -7,6 +7,14 @@ load_evidence_helpers <- function(project_root) {
     "R/run_identity.R",
     "R/config.R",
     "R/source_inventory.R",
+    "R/custom_funcs.R",
+    "R/qc_schema.R",
+    "R/camtrapdp_adapter.R",
+    "R/input_loader.R",
+    "R/source_row_lineage.R",
+    "R/repair_ledger.R",
+    "R/event_outputs.R",
+    "R/validation_ledger.R",
     "R/run_bundle.R"
   )
   for (file in files) {
@@ -17,6 +25,7 @@ load_evidence_helpers <- function(project_root) {
 parse_full_run_args <- function(args) {
   config <- "config.yml"
   verify_bundle <- NULL
+  validation_only <- FALSE
   index <- 1L
   while (index <= length(args)) {
     argument <- args[[index]]
@@ -32,11 +41,21 @@ parse_full_run_args <- function(args) {
       }
       verify_bundle <- args[[index + 1L]]
       index <- index + 2L
+    } else if (identical(argument, "--validate-only")) {
+      validation_only <- TRUE
+      index <- index + 1L
     } else {
       stop("Unknown argument: ", argument)
     }
   }
-  list(config = config, verify_bundle = verify_bundle)
+  if (!is.null(verify_bundle) && isTRUE(validation_only)) {
+    stop("--verify-bundle and --validate-only cannot be combined.")
+  }
+  list(
+    config = config,
+    verify_bundle = verify_bundle,
+    validation_only = validation_only
+  )
 }
 
 restore_environment <- function(previous) {
@@ -53,6 +72,7 @@ restore_environment <- function(previous) {
 run_full_evidence_run <- function(
     config_path = "config.yml",
     run_id = NULL,
+    validation_only = FALSE,
     clock = Sys.time,
     token = default_run_token,
     fail_at = Sys.getenv("CAMTRAP_TEST_FAIL_AT", unset = ""),
@@ -72,11 +92,16 @@ run_full_evidence_run <- function(
   run_id <- if (is.null(run_id)) allocate_run_id(clock = clock, token = token) else run_id
   assert_safe_run_id(run_id)
 
-  final_dir <- file.path(output_root_path, "runs", run_id)
-  staging_dir <- file.path(output_root_path, "runs", ".staging", run_id)
+  run_final_dir <- file.path(output_root_path, "runs", run_id)
+  preview_final_dir <- file.path(output_root_path, "preflight", run_id)
+  staging_dir <- if (isTRUE(validation_only)) {
+    file.path(output_root_path, "preflight", ".staging", run_id)
+  } else {
+    file.path(output_root_path, "runs", ".staging", run_id)
+  }
   runtime_path <- file.path(output_root_path, ".runtime", paste0(run_id, ".json"))
-  if (file.exists(final_dir)) {
-    stop("Refusing run ID collision with existing bundle: ", run_id)
+  if (file.exists(run_final_dir) || file.exists(preview_final_dir)) {
+    stop("Refusing invocation identity collision: ", run_id)
   }
   if (file.exists(staging_dir)) {
     stop("Refusing run ID collision with existing staging directory: ", run_id)
@@ -119,6 +144,11 @@ run_full_evidence_run <- function(
   context <- list(
     context_schema = "camtrap-evidence-context/1.0",
     supported_full_run = TRUE,
+    execution_mode = if (isTRUE(validation_only)) {
+      "validation_only"
+    } else {
+      "full"
+    },
     run_id = run_id,
     legacy_run_label = resolved_config$run_id,
     created_utc = format(clock(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
@@ -138,11 +168,61 @@ run_full_evidence_run <- function(
 
   write_source_inventory(snapshot, run_id, context$provenance$source_inventory)
   write_effective_config(resolved_config, context, context$provenance$effective_config)
-  dir.create(dirname(runtime_path), recursive = TRUE, showWarnings = FALSE)
-  atomic_write_json(context, runtime_path)
 
   if (identical(fail_at, "after_snapshot")) {
     stop("Injected failure after source snapshot.")
+  }
+
+  validation_state <- prepare_validation_preflight(
+    resolved_config,
+    snapshot,
+    four_table_reader = read_jc_csv,
+    camtrapdp_reader = read_camtrapdp_dataset,
+    camtrapdp_adapter = camtrapdp_to_internal
+  )
+  validation_artifacts <- write_validation_artifacts(
+    validation_state,
+    staging_dir
+  )
+  context$validation <- list(
+    validation_schema = "camtrap-validation-context/1.0",
+    can_analyze = validation_state$can_analyze,
+    artifacts = validation_artifacts,
+    validated_inputs_sha256 = sha256_file(
+      validation_artifacts$validated_inputs
+    )
+  )
+  dir.create(dirname(runtime_path), recursive = TRUE, showWarnings = FALSE)
+  atomic_write_json(context, runtime_path)
+
+  if (identical(fail_at, "after_preflight")) {
+    stop("Injected failure after validation preflight.")
+  }
+  if (isTRUE(validation_only)) {
+    final_dir <- publish_preflight_record(
+      staging_dir,
+      output_root_path,
+      run_id
+    )
+    published <- TRUE
+    result <- list(
+      mode = "validation_only",
+      run_id = run_id,
+      preview = final_dir,
+      analysis_ready = validation_state$can_analyze,
+      fingerprints = fingerprints
+    )
+    cat(canonical_json(result, pretty = TRUE), "\n")
+    if (!isTRUE(validation_state$can_analyze)) {
+      stop(
+        "Validation preview published but analysis is blocked: ",
+        final_dir
+      )
+    }
+    return(invisible(result))
+  }
+  if (!isTRUE(validation_state$can_analyze)) {
+    stop("Validation preflight blocked the full run before analysis.")
   }
 
   environment_names <- c("CAMTRAP_CONFIG", "CAMTRAP_EVIDENCE_CONTEXT")
@@ -175,6 +255,7 @@ run_full_evidence_run <- function(
   published <- TRUE
 
   result <- list(
+    mode = "full",
     run_id = run_id,
     bundle = final_dir,
     latest = latest_pointer_path(output_root_path),
@@ -192,7 +273,11 @@ main <- function() {
     result <- verify_run_bundle(args$verify_bundle)
     cat(canonical_json(result, pretty = TRUE), "\n")
   } else {
-    run_full_evidence_run(config_path = args$config, project_root = project_root)
+    run_full_evidence_run(
+      config_path = args$config,
+      validation_only = args$validation_only,
+      project_root = project_root
+    )
   }
 }
 

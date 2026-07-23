@@ -5,10 +5,17 @@ All outputs are written under a **canonical run folder**:
 ```
 outputs/
   latest                   (regular file containing one validated run ID)
+  preflight/
+    <run_id>/
+      source_snapshot/
+      provenance/
+        phase2/
+      PREVIEW.json
   runs/
     <run_id>/
       source_snapshot/
       provenance/
+        phase2/
       figures/
       tables/
       report/
@@ -24,14 +31,18 @@ a compatibility label. Repeated equivalent invocations receive different IDs.
 Direct or partial target calls write under `outputs/work/` and are never
 complete evidence bundles.
 
+Validation-only execution publishes an immutable preview under
+`outputs/preflight/<run_id>/`. It never writes a terminal completion record,
+renders a report, publishes a completed run, or changes `outputs/latest`.
+
 ## Tables (MVP)
 
 Expected (current MVP):
 - `tables/effort_summary.csv` — per-site effort metrics (trap nights, dates, proportion active).
 - `tables/time_qc_summary.csv` — per-site datetime QC summary (parse failures, DST gaps, backward jumps).
 - `tables/time_qc_flags.csv` — row-level flags for parse failures, DST gaps, and backward jumps.
-- `tables/events_per_day.csv` — independent event counts per site/species/day.
-- `tables/event_spacing.csv` — gap (hours) between successive independent events.
+- `tables/events_per_day.csv` — operational detection event counts per site/species/day.
+- `tables/event_spacing.csv` — gap (hours) between successive operational detection events.
 - `tables/event_threshold_sensitivity.csv` — event totals per threshold and events per trap night.
 - `tables/occasion_length_sensitivity.csv` — naive occupancy and detection rates by occasion length.
 - `tables/detection_history.csv` — detection histories in long format (site × species × occasion).
@@ -68,7 +79,7 @@ Expected (current MVP):
 - `figures/effort_heatmap.png` — site-by-date effort heatmap (active/inactive).
 - `figures/site_map.png` — spatial overview with an interpolated covariate surface and site locations.
 - `figures/time_qc_backward_jumps.png` — per-site count of backward time jumps.
-- `figures/event_spacing.png` — distribution of time gaps between independent events.
+- `figures/event_spacing.png` — distribution of time gaps between operational detection events.
 - `figures/event_threshold_sensitivity.png` — sensitivity of event rate to threshold choice.
 - `figures/occasion_length_sensitivity.png` — sensitivity of naive occupancy to occasion length.
 - `figures/occupancy_pred_<species>.png` — site-level occupancy predictions for each modelled species.
@@ -104,6 +115,28 @@ Expected (current MVP):
   supported target invocation.
 - `provenance/effective_config.json` — canonical effective configuration with
   raw and resolved configuration hashes.
+- `provenance/phase2/resource_registry.json` — logical parser resources and
+  their deterministic content-derived identities.
+- `provenance/phase2/source_row_ledger.json` — one record for every parsed
+  source row, its parser ordinal, disposition, and observation mapping.
+- `provenance/phase2/validation_findings.json` — structured integrity,
+  semantic, and advisory findings.
+- `provenance/phase2/transformations.json` — recorded meaning-preserving
+  mappings between source resources and internal tables.
+- `provenance/phase2/repair_proposals.json` — deterministic proposal-specific
+  repair records.
+- `provenance/phase2/repair_decisions.json` — exact reviewed approval,
+  decline, or unresolved records.
+- `provenance/phase2/repair_applications.json` — applied or not-applied state
+  for every proposal.
+- `provenance/phase2/changed_fields.json` — field-level lineage for values
+  actually changed under exact authority.
+- `provenance/phase2/event_membership.json` — retained operational detection
+  events and their observation source-row memberships.
+- `provenance/phase2/post_validation.json` — compact analysis-readiness and
+  row/event accounting summary.
+- `provenance/phase2/validated_inputs.rds` — the analysis-ready four-table
+  object consumed by supported full runs.
 - `run_manifest.json` — exact relative payload inventory with byte sizes and
   SHA-256 values plus source/config/engine/composite fingerprints.
 - `COMPLETED.json` — terminal record written last; binds the run ID, manifest
@@ -124,4 +157,7 @@ Expected (current MVP):
 - Output names should be stable across runs to enable comparisons.
 - A completed run directory is immutable and never overwritten.
 - `outputs/latest` is replaced only after completion and bundle verification.
+- `PREVIEW.json` is a validation record, not a completion record.
+- Existing output filenames containing `event` remain compatibility names;
+  current prose uses `operational detection event`.
 - Changes to output schema require doc updates and sanity/regression tests.

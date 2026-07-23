@@ -589,6 +589,42 @@ Consequences / follow-ups:
 
 ---
 
+## 2026-07-23 - Validation repair authority and source-row lineage
+
+Decision:
+- Run one immutable validation preflight before supported scientific analysis,
+  with a validation-only mode that cannot publish completion or advance
+  `outputs/latest`.
+- Keep the public four-table input schema unchanged and assign deterministic
+  internal resource and parsed-row identities in provenance sidecars.
+- Default every semantic repair to preview without application. Approval is
+  exact and proposal-specific; overriding explicit supplied evidence also
+  requires a recorded reason.
+- Ship no production fill-unknown or deployment-period inference rule.
+- Publish new completed bundles as
+  `camtrap-evidence-manifest/1.1`, while retaining portable verification of
+  legacy manifest 1.0 bundles.
+- Use `operational detection event` in current user-facing prose; preserve
+  existing compatibility filenames and configuration keys.
+
+Rationale:
+- Scientific evidence should remain source-derived unless a reviewer has
+  explicitly authorized the exact proposed change.
+- Row dispositions, changed values, and operational event membership need
+  auditable source links without changing scientific table columns.
+- Validation previews must remain reviewable even when analysis is blocked.
+
+Consequences / follow-ups:
+- Integrity failures are non-waivable and stop before analysis.
+- Declined or unresolved proposals leave source-derived values unchanged;
+  analysis continues only when those values already satisfy the current
+  contract.
+- Manifest 1.1 cross-links the validation, repair, transformation,
+  source-row, changed-field, and event-membership records.
+- General selective module execution remains deferred to Phase 4.
+
+---
+
 ## 2026-01-08 — Add spatial site map with interpolated covariate surface
 Decision:
 - Implement a spatial site map using interpolation of existing site covariates (default `ndvi`, fallback to `elevation_m` or `canopy_h_m`) and insert a new WP before Line 0.8 to satisfy the PI request for spatial overlays.

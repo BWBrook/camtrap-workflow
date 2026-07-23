@@ -1,0 +1,4 @@
+index,site,datetime,flash,count,species,filename,age,sex,imageid
+1,jc_a,01/01/2020 00:00:00,0,1,sp1,jc_a_20200101_000000.jpg,adult,unknown,1001
+2,jc_a,01/01/2020 00:20:00,1,1,sp1,jc_a_20200101_002000.jpg,adult,unknown,1002
+3,jc_b,02/01/2020 01:00:00,0,2,sp1,jc_b_20200102_010000.jpg,adult,unknown,1003

@@ -1,4 +1,11 @@
-import::from("testthat", test_that, expect_equal, expect_false, expect_true)
+import::from(
+  "testthat",
+  test_that,
+  expect_equal,
+  expect_error,
+  expect_false,
+  expect_true
+)
 import::from("here", here)
 import::from("jsonlite", read_json)
 
@@ -67,4 +74,56 @@ test_that("effective configuration carries authoritative and compatibility ident
   expect_equal(value$legacy_run_label, "latest")
   expect_equal(value$config$evidence_run$id, context$run_id)
   expect_true(file.exists(path))
+})
+
+test_that("repair decisions are explicit while legacy configuration stays compatible", {
+  expect_false("validation" %in% names(default_config()))
+
+  current <- c(
+    "config.yml",
+    "config.template_example.yml",
+    "config.forest_example.yml",
+    "config.camtrapdp_example.yml",
+    "config.camtrapdp_export.yml"
+  )
+  for (path in current) {
+    config <- read_config(here(path), attach_runtime = FALSE)
+    expect_equal(
+      config$validation,
+      list(repair_decisions = list()),
+      info = path
+    )
+  }
+
+  legacy <- read_config(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal005",
+      "config_equivalent_a.yml"
+    ),
+    attach_runtime = FALSE
+  )
+  expect_false("validation" %in% names(legacy))
+})
+
+test_that("repair decision configuration rejects broad or malformed authority", {
+  config <- default_config()
+  config$validation <- list(apply_all = TRUE)
+  expect_error(validate_config(config), "repair_decisions")
+
+  config$validation <- list(repair_decisions = list(list(
+    repair_class = "fill_unknown",
+    decision = "approved"
+  )))
+  expect_error(validate_config(config), "exact proposal_id")
+
+  config$validation <- list(repair_decisions = list(list(
+    proposal_id = paste(rep("a", 64L), collapse = ""),
+    proposal_digest = paste(rep("b", 64L), collapse = ""),
+    decision = "approved",
+    wildcard = TRUE
+  )))
+  expect_error(validate_config(config), "exact proposal_id")
 })

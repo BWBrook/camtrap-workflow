@@ -67,6 +67,19 @@ Rscript ./bootstrap_env.R
 From a terminal in the project root:
 
 ```sh
+Rscript scripts/run_full_evidence_run.R \
+  --validate-only --config config.yml
+```
+
+This publishes an immutable validation preview under
+`outputs/preflight/<run_id>/` without running the scientific analysis or
+changing `outputs/latest`. Review any proposal records before adding an exact
+proposal-specific decision to the configuration. There is no "apply all"
+setting.
+
+When the preflight is analysis-ready, publish the full run:
+
+```sh
 Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
@@ -74,7 +87,8 @@ Rscript scripts/run_full_evidence_run.R --config config.yml
   `outputs/runs/<run_id>/`.
 * `outputs/latest` contains the current validated run ID.
 * A run is complete only when both `run_manifest.json` and `COMPLETED.json`
-  verify, including recomputed source/configuration/engine cross-links.
+  verify, including recomputed source/configuration/engine and Phase 2
+  validation/lineage cross-links.
 
 To verify a bundle after copying it to another location:
 

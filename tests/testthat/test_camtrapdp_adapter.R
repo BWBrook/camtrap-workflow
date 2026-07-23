@@ -51,6 +51,212 @@ test_that("camtrapdp_to_internal maps minimal dataset", {
   expect_equal(out$obs$site[1], "dep1")
 })
 
+goal006_camtrapdp_object <- function(
+    deployments,
+    observations,
+    media = NULL) {
+  structure(
+    list(data = list(
+      deployments = deployments,
+      observations = observations,
+      media = media
+    )),
+    class = c("camtrapdp", "datapackage", "list")
+  )
+}
+
+test_that("CamtrapDP legacy unknown-value defaults stay unapplied and classified", {
+  deployments <- tibble(
+    deploymentID = "dep1",
+    locationID = "loc1",
+    locationName = "Site 1",
+    latitude = 1,
+    longitude = 2,
+    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
+    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
+    featureType = "trail"
+  )
+  observations <- tibble(
+    observationID = "obs1",
+    deploymentID = "dep1",
+    eventStart = as.POSIXct(NA),
+    scientificName = "Canis lupus",
+    count = NA_integer_,
+    lifeStage = "adult",
+    sex = "unknown",
+    mediaID = "m1"
+  )
+  media <- tibble(
+    mediaID = "m1",
+    deploymentID = "dep1",
+    timestamp = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
+    fileName = "img1.jpg"
+  )
+  out <- camtrapdp_to_internal(
+    goal006_camtrapdp_object(deployments, observations, media),
+    tz = "UTC",
+    include_audit = TRUE
+  )
+  defaults <- out$.audit$semantic_defaults
+  rules <- vapply(defaults, `[[`, character(1), "legacy_rule")
+
+  expect_true(is.na(out$obs$datetime[[1]]))
+  expect_true(is.na(out$obs$count[[1]]))
+  expect_true(is.na(out$obs$flash[[1]]))
+  expect_equal(
+    sort(rules),
+    sort(c(
+      "legacy.copy_media_timestamp",
+      "legacy.fill_count_one",
+      "legacy.fill_flash_zero"
+    ))
+  )
+  expect_true(all(vapply(
+    defaults,
+    function(record) {
+      identical(record$repair_class, "fill_unknown") &&
+        identical(record$production_applicable, FALSE)
+    },
+    logical(1)
+  )))
+})
+
+test_that("CamtrapDP deployment endpoints are never copied automatically", {
+  deployments <- tibble(
+    deploymentID = "dep1",
+    locationID = "loc1",
+    locationName = "Site 1",
+    latitude = 1,
+    longitude = 2,
+    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
+    deploymentEnd = as.POSIXct(NA),
+    featureType = "trail"
+  )
+  observations <- tibble(
+    observationID = "obs1",
+    deploymentID = "dep1",
+    eventStart = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
+    scientificName = "Canis lupus",
+    count = 1L,
+    flash = 1L,
+    lifeStage = "adult",
+    sex = "unknown",
+    mediaID = NA_character_
+  )
+  dp <- goal006_camtrapdp_object(deployments, observations)
+  preview <- camtrapdp_to_internal(dp, tz = "UTC", include_audit = TRUE)
+  defaults <- preview$.audit$semantic_defaults
+
+  expect_equal(nrow(preview$op), 0L)
+  expect_true(is.na(
+    preview$.audit$parsed_tables$deployments$deploymentEnd[[1]]
+  ))
+  expect_true(any(vapply(
+    defaults,
+    function(record) {
+      identical(record$legacy_rule, "legacy.copy_deployment_endpoint") &&
+        identical(record$production_applicable, FALSE)
+    },
+    logical(1)
+  )))
+  expect_error(
+    camtrapdp_to_internal(dp, tz = "UTC"),
+    "forbids automatic endpoint copying"
+  )
+})
+
+test_that("CamtrapDP supplied evidence and meaning-preserving mappings stay exact", {
+  deployments <- tibble(
+    deploymentID = "dep1",
+    locationID = "loc1",
+    locationName = "Site 1",
+    latitude = 1,
+    longitude = 2,
+    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
+    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
+    featureType = "trail"
+  )
+  observations <- tibble(
+    observationID = "obs1",
+    deploymentID = "dep1",
+    eventStart = as.POSIXct("2020-01-02 10:00:00", tz = "UTC"),
+    scientificName = "Canis lupus",
+    count = 3L,
+    flash = 1L,
+    lifeStage = "adult",
+    sex = "female",
+    mediaID = "m1"
+  )
+  media <- tibble(
+    mediaID = "m1",
+    deploymentID = "dep1",
+    timestamp = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
+    fileName = "img1.jpg"
+  )
+  out <- camtrapdp_to_internal(
+    goal006_camtrapdp_object(deployments, observations, media),
+    tz = "UTC",
+    include_audit = TRUE
+  )
+
+  expect_equal(out$obs$datetime[[1]], "02/01/2020 10:00:00")
+  expect_equal(out$obs$count[[1]], 3L)
+  expect_equal(out$obs$flash[[1]], 1L)
+  expect_equal(length(out$.audit$semantic_defaults), 0L)
+  expect_true(all(vapply(
+    out$.audit$transformations,
+    `[[`,
+    logical(1),
+    "meaning_preserving"
+  )))
+})
+
+test_that("CamtrapDP collisions and broken references fail without row loss", {
+  deployments <- tibble(
+    deploymentID = "dep1",
+    locationID = "loc1",
+    locationName = "Site 1",
+    latitude = 1,
+    longitude = 2,
+    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
+    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
+    featureType = "trail"
+  )
+  observations <- tibble(
+    observationID = c("obs1", "obs2"),
+    deploymentID = c("dep1", "dep1"),
+    eventStart = as.POSIXct(
+      c("2020-01-02 10:00:00", "2020-01-02 11:00:00"),
+      tz = "UTC"
+    ),
+    scientificName = c("Foo bar-baz", "Foo bar baz"),
+    count = c(1L, 1L),
+    flash = c(1L, 1L),
+    lifeStage = c("adult", "adult"),
+    sex = c("unknown", "unknown"),
+    mediaID = c(NA_character_, NA_character_)
+  )
+  expect_error(
+    camtrapdp_to_internal(
+      goal006_camtrapdp_object(deployments, observations),
+      tz = "UTC",
+      include_audit = TRUE
+    ),
+    "mapping collides"
+  )
+
+  observations$scientificName <- c("Canis lupus", "Vulpes vulpes")
+  observations$deploymentID[[2]] <- "missing"
+  expect_error(
+    camtrapdp_to_internal(
+      goal006_camtrapdp_object(deployments, observations),
+      tz = "UTC",
+      include_audit = TRUE
+    ),
+    "deployment key is unresolved"
+  )
+})
+
 goal005_camtrapdp_config <- function(descriptor, mode = "local", cache_dir = tempfile()) {
   config <- default_config()
   config$input_mode <- "camtrapdp"

@@ -1,10 +1,13 @@
 # Goal 006 - Packet log
 
-- **Canonical packet state:** `DRAFT_FOR_BARRY_REVIEW`
-- **Execution state:** `NOT_AUTHORIZED`
+- **Canonical packet state:** `APPROVED_AND_PUBLISHED`
+- **Execution state:** `LOCAL_ACCEPTANCE_COMPLETE`
+- **Publication state:** `NOT_STAGED_OR_COMMITTED`
 - **Packet date:** 2026-07-23 AEST
 - **Packet-authoring baseline:** clean synchronized `main` at
   `b9934a116c41ab2250c7975daf6d19f1c70effb1`.
+- **Implementation baseline:** clean synchronized `main` at
+  `9c7c70d2e722015347e9afaeec28574c0dc498ce`.
 - **Intended packet subject:** `docs: define Goal 006 validation repair lineage`
 
 ## Exact packet paths
@@ -83,7 +86,81 @@ No local acceptance can substitute for Barry's execution gate.
 
 ## Handoff
 
-The orchestrator should critically review the draft against the accepted
-policy and Phase 2 boundary. If accepted, Barry may authorize packet
-publication and execution. Until then, canonical execution state remains
-`NOT_AUTHORIZED`.
+The packet was subsequently approved, published exactly as specified at
+`9c7c70d2e722015347e9afaeec28574c0dc498ce`, and separately authorized for
+execution. The implementation record follows.
+
+## Implementation outcome
+
+The supported runner now has a validation-only mode that atomically publishes
+an immutable `PREVIEW.json` outside completed runs. It never writes
+`COMPLETED.json`, renders a scientific report, or changes `outputs/latest`.
+A supported full run executes the same preflight and enters the analytical
+graph only through the verified `validated_inputs.rds`.
+
+Phase 2 records deterministic resource and parsed-row identities, every row
+disposition, structured findings, meaning-preserving transformations, exact
+repair proposals/decisions/applications, changed fields, post-validation
+state, and operational detection event membership. Semantic repairs default
+to preview without application. Broad, stale, unknown, duplicate,
+conflicting, or tampered authority fails integrity; an explicit-evidence
+override additionally requires a non-empty reason. Historical CamtrapDP
+fills remain non-applicable production proposals and cannot auto-apply.
+
+New completed runs use `camtrap-evidence-manifest/1.1`. Portable verification
+retains the Goal 005 manifest 1.0 path and, for 1.1, reconstructs every Phase 2
+record and all four analytical tables from immutable source bytes plus the
+exact raw-config decisions.
+
+## Local acceptance evidence
+
+Raw evidence is ignored beneath `outputs/goal006_acceptance/`.
+
+- Pre-edit baseline bundle:
+  `20260723T100735Z-198a9df77af1446e`, manifest 1.0, 72 payload files.
+- Clean validation-only invocation:
+  `20260723T105546Z-f692b617b4ae4487`, ready preview, 19 payload files,
+  with latest-pointer bytes unchanged.
+- Clean supported full invocation:
+  `20260723T105817Z-6ed71ceea2ee4f15`, 90 completed and 42 skipped targets,
+  manifest 1.1, 83 payload files, manifest SHA-256
+  `3eb073b64f934a4c112fb66f1868e6e17be88aab5a3912d4b9edb0bfe14c5273`.
+- The clean preflight and full run have identical hashes for all 11 Phase 2
+  artifacts.
+- All 16,806 parsed rows reconcile: 16,784 retained and 22 excluded with
+  explicit rules/reasons. The 15,694 observation rows yield 11,572
+  operational detection events and 15,672 source-row memberships.
+- The default Judbury run has zero proposals, decisions, applications, or
+  changed fields.
+- All 10 stable tables are byte- and value-identical to baseline. All three
+  occupancy tables have identical shape, missingness, text, and numeric
+  values, with maximum absolute difference zero.
+- The real manifest 1.1 bundle and preserved manifest 1.0 bundle both verify
+  after the focused repair.
+- Final lint is clean. The authoritative suite reports 406 PASS, 0 FAIL,
+  0 SKIP, and one expected existing CamtrapDP export warning.
+
+## Independent implementation review and single repair
+
+The independent audit returned `REPAIR_IMPLEMENTATION`. It demonstrated that
+a checksum-reclosed `validated_inputs.rds` could alter a non-event scientific
+value while the first verifier checked only proposal targets and operational
+event membership.
+
+The single permitted repair now reconstructs all four analytical tables and
+every Phase 2 document from the immutable source snapshot plus exact config
+decisions, then requires semantic equivalence. A new regression changes
+`obs$count` by 1,000, recloses payload and completion fixity, and is rejected.
+The first post-repair full-suite attempt exposed one incomplete low-level test
+fixture that lacked the raw config/source inventory required by the portable
+contract. The fixture was completed; covering tests and the authoritative
+suite then passed.
+The focused verifier suite passes 50 checks; the combined validation/verifier
+coverage passes 68 and 50 checks; the full gate and real bundle checks above
+also pass. No second broad review or repair was performed.
+
+## Publication handoff
+
+Nothing has been staged, committed, pushed, or submitted to CI. The
+orchestrator owns exact-path staging, implementation publication, and
+exact-SHA GitHub Actions confirmation.

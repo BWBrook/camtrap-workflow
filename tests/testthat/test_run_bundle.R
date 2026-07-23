@@ -13,8 +13,17 @@ source(here("R", "fixity.R"))
 source(here("R", "run_identity.R"))
 source(here("R", "config.R"))
 source(here("R", "source_inventory.R"))
+source(here("R", "custom_funcs.R"))
+source(here("R", "qc_schema.R"))
+source(here("R", "camtrapdp_adapter.R"))
+source(here("R", "input_loader.R"))
+source(here("R", "source_row_lineage.R"))
+source(here("R", "repair_ledger.R"))
+source(here("R", "event_outputs.R"))
+source(here("R", "validation_ledger.R"))
 source(here("R", "run_bundle.R"))
 source(here("R", "run_manifest.R"))
+source(here("scripts", "run_full_evidence_run.R"))
 
 goal005_bundle_stage <- function(outputs_root, run_id) {
   stage <- file.path(outputs_root, "runs", ".staging", run_id)
@@ -149,6 +158,95 @@ goal005_reclose_bundle <- function(bundle) {
     digits = NA
   )
   invisible(bundle)
+}
+
+goal006_bundle_stage <- function(outputs_root, run_id) {
+  fixture <- here(
+    "tests",
+    "testthat",
+    "fixtures",
+    "goal006",
+    "four_table_clean"
+  )
+  source_root <- tempfile("goal006-bundle-input-")
+  fs::dir_copy(fixture, source_root)
+  config <- default_config()
+  config$schema_version_path <- here("schema_version.txt")
+  config$timezone_fixed_offset_hours <- 10
+  config$paths$inputs <- list(
+    site = file.path(source_root, "site.csv"),
+    op = file.path(source_root, "op.csv"),
+    obs = file.path(source_root, "obs.csv"),
+    taxa = file.path(source_root, "taxa.csv"),
+    camtrapdp = NULL
+  )
+  config$paths$outputs <- outputs_root
+  config_path <- tempfile("goal006-bundle-config-", fileext = ".yml")
+  yaml::write_yaml(config, config_path)
+
+  run_full_evidence_run(
+    config_path = config_path,
+    run_id = run_id,
+    validation_only = TRUE,
+    project_root = here()
+  )
+  preview <- file.path(outputs_root, "preflight", run_id)
+  preview_record <- jsonlite::read_json(
+    preflight_record_path(preview),
+    simplifyVector = FALSE
+  )
+  stage <- file.path(outputs_root, "runs", ".staging", run_id)
+  dir.create(dirname(stage), recursive = TRUE, showWarnings = FALSE)
+  if (!file.rename(preview, stage)) {
+    stop("Could not convert fixture preview to a bundle stage.")
+  }
+  unlink(preflight_record_path(stage))
+
+  raw_config <- file.path(stage, preview_record$config$raw)
+  resolved <- read_config(raw_config, attach_runtime = FALSE)
+  phase2 <- lapply(preview_record$phase2, function(path) {
+    file.path(stage, path)
+  })
+  context <- list(
+    supported_full_run = TRUE,
+    run_id = run_id,
+    created_utc = preview_record$created_utc,
+    legacy_run_label = resolved$run_id,
+    config_file = raw_config,
+    config_source_name = preview_record$config$source_name,
+    fingerprints = preview_record$fingerprints,
+    engine = preview_record$engine,
+    provenance = list(
+      raw_config = raw_config,
+      effective_config = file.path(stage, preview_record$config$effective),
+      source_inventory = file.path(stage, preview_record$source_inventory)
+    )
+  )
+  dir.create(file.path(stage, "report"), recursive = TRUE)
+  dir.create(file.path(stage, "exports"), recursive = TRUE)
+  report <- file.path(stage, "report", "report.html")
+  report_inputs <- file.path(stage, "report", "report_inputs.rds")
+  export <- file.path(stage, "exports", "data.csv")
+  writeLines(paste("report", run_id), report)
+  saveRDS(
+    list(params = list(evidence_run = list(id = run_id))),
+    report_inputs
+  )
+  writeLines("export", export)
+  write_run_manifest(
+    path = file.path(stage, "run_manifest.json"),
+    schema_version = "0.1.0",
+    params = resolved,
+    outputs = list(
+      report = list(html = report),
+      exports = list(data = export)
+    ),
+    session_info_path = report_inputs,
+    config_file = raw_config,
+    context = context,
+    phase2 = phase2
+  )
+  stage
 }
 
 test_that("publication is non-overwriting and identity agrees through latest", {
@@ -335,4 +433,195 @@ test_that("a copied bundle verifies without its repository or original root", {
     "report/report_inputs.rds"
   ) %in% paths))
   expect_false(any(fs::is_absolute_path(paths)))
+})
+
+test_that("manifest 1.1 verifies Phase-2 links after portable relocation", {
+  root <- tempfile("goal006-output-")
+  run_id <- "20260723T123456Z-0000000000000061"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+  verified <- verify_run_bundle(final)
+
+  expect_equal(manifest$manifest_schema, "camtrap-evidence-manifest/1.1")
+  expect_true(verified$valid)
+  expect_true(all(c(
+    "resource_registry",
+    "source_row_ledger",
+    "validation_findings",
+    "transformations",
+    "repair_proposals",
+    "repair_decisions",
+    "repair_applications",
+    "changed_fields",
+    "event_membership",
+    "post_validation",
+    "validated_inputs"
+  ) %in% names(manifest$phase2)))
+  expect_false(any(fs::is_absolute_path(unlist(manifest$phase2))))
+
+  portable_root <- tempfile("goal006-portable-")
+  dir.create(portable_root)
+  copied <- file.path(portable_root, run_id)
+  fs::dir_copy(final, copied)
+  expect_true(verify_run_bundle(copied)$valid)
+})
+
+test_that("checksum-reclosed Phase-2 schema tamper fails for every ledger", {
+  root <- tempfile("goal006-output-")
+  run_id <- "20260723T123456Z-0000000000000062"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+  schema_fields <- c(
+    resource_registry = "resource_registry_schema",
+    source_row_ledger = "source_row_ledger_schema",
+    validation_findings = "validation_findings_schema",
+    transformations = "transformations_schema",
+    repair_proposals = "repair_proposals_schema",
+    repair_decisions = "repair_decisions_schema",
+    repair_applications = "repair_applications_schema",
+    changed_fields = "changed_fields_schema",
+    event_membership = "event_membership_schema",
+    post_validation = "post_validation_schema"
+  )
+
+  for (name in names(schema_fields)) {
+    copy_root <- tempfile(paste0("goal006-schema-", name, "-"))
+    dir.create(copy_root)
+    copied <- file.path(copy_root, run_id)
+    fs::dir_copy(final, copied)
+    path <- file.path(copied, manifest$phase2[[name]])
+    document <- jsonlite::read_json(path, simplifyVector = FALSE)
+    document[[schema_fields[[name]]]] <- "camtrap-unsupported/9.9"
+    unlink(path)
+    atomic_write_json(document, path)
+    goal005_reclose_bundle(copied)
+    expect_error(
+      verify_run_bundle(copied),
+      paste0("Unsupported Phase-2 artifact schema: ", name),
+      info = name
+    )
+  }
+})
+
+test_that("Phase-2 removal, fixity tamper, and semantic reclosure fail", {
+  root <- tempfile("goal006-output-")
+  run_id <- "20260723T123456Z-0000000000000063"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+
+  removed_root <- tempfile("goal006-removed-")
+  dir.create(removed_root)
+  removed <- file.path(removed_root, run_id)
+  fs::dir_copy(final, removed)
+  unlink(file.path(removed, manifest$phase2$repair_decisions))
+  expect_error(verify_run_bundle(removed), "payload set mismatch")
+
+  altered_root <- tempfile("goal006-altered-")
+  dir.create(altered_root)
+  altered <- file.path(altered_root, run_id)
+  fs::dir_copy(final, altered)
+  write(
+    "tampered",
+    file.path(altered, manifest$phase2$validation_findings),
+    append = TRUE
+  )
+  expect_error(verify_run_bundle(altered), "fixity mismatch")
+
+  orphan_root <- tempfile("goal006-orphan-")
+  dir.create(orphan_root)
+  orphan <- file.path(orphan_root, run_id)
+  fs::dir_copy(final, orphan)
+  membership_path <- file.path(orphan, manifest$phase2$event_membership)
+  membership <- jsonlite::read_json(
+    membership_path,
+    simplifyVector = FALSE
+  )
+  membership$records[[1]]$source_row_id <- paste(rep("0", 64L), collapse = "")
+  membership$records[[1]]$membership_id <- event_membership_identity(
+    membership$records[[1]]$event_id,
+    membership$records[[1]]$source_row_id
+  )
+  unlink(membership_path)
+  atomic_write_json(membership, membership_path)
+  goal005_reclose_bundle(orphan)
+  expect_error(verify_run_bundle(orphan), "Orphan event membership")
+
+  duplicate_root <- tempfile("goal006-duplicate-")
+  dir.create(duplicate_root)
+  duplicate <- file.path(duplicate_root, run_id)
+  fs::dir_copy(final, duplicate)
+  resource_path <- file.path(duplicate, manifest$phase2$resource_registry)
+  resources <- jsonlite::read_json(resource_path, simplifyVector = FALSE)
+  resources$records <- c(resources$records, resources$records[1])
+  unlink(resource_path)
+  atomic_write_json(resources, resource_path)
+  goal005_reclose_bundle(duplicate)
+  expect_error(verify_run_bundle(duplicate), "Duplicate logical resource")
+
+  rds_root <- tempfile("goal006-rds-")
+  dir.create(rds_root)
+  rds_tamper <- file.path(rds_root, run_id)
+  fs::dir_copy(final, rds_tamper)
+  rds_path <- file.path(rds_tamper, manifest$phase2$validated_inputs)
+  inputs <- readRDS(rds_path)
+  inputs$obs$.source_row_id <- "forged"
+  saveRDS(inputs, rds_path)
+  goal005_reclose_bundle(rds_tamper)
+  expect_error(verify_run_bundle(rds_tamper), "invalid audit surface")
+
+  value_root <- tempfile("goal006-rds-value-")
+  dir.create(value_root)
+  value_tamper <- file.path(value_root, run_id)
+  fs::dir_copy(final, value_tamper)
+  value_path <- file.path(value_tamper, manifest$phase2$validated_inputs)
+  inputs <- readRDS(value_path)
+  inputs$obs$count[[1]] <- inputs$obs$count[[1]] + 1000
+  saveRDS(inputs, value_path)
+  goal005_reclose_bundle(value_tamper)
+  expect_error(
+    verify_run_bundle(value_tamper),
+    "Validated analytical inputs do not reproduce"
+  )
+})
+
+test_that("unknown manifest schema fails explicit dispatch", {
+  root <- tempfile("goal006-output-")
+  run_id <- "20260723T123456Z-0000000000000064"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id),
+    root,
+    run_id
+  )
+  manifest_file <- manifest_path(final)
+  manifest <- jsonlite::read_json(manifest_file, simplifyVector = FALSE)
+  manifest$manifest_schema <- "camtrap-evidence-manifest/9.9"
+  unlink(manifest_file)
+  atomic_write_json(manifest, manifest_file)
+  goal005_reclose_bundle(final)
+
+  expect_error(
+    verify_run_bundle(final),
+    "Unsupported run manifest schema: camtrap-evidence-manifest/9.9"
+  )
 })

@@ -348,6 +348,58 @@ validate_config <- function(config) {
     }
   }
 
+  if (!is.null(config$validation)) {
+    if (!is.list(config$validation) ||
+          !identical(names(config$validation), "repair_decisions")) {
+      stop(
+        "config.yml validation must contain only the provisional ",
+        "repair_decisions list."
+      )
+    }
+    decisions <- config$validation$repair_decisions
+    if (!is.list(decisions)) {
+      stop("config.yml validation.repair_decisions must be an exact list.")
+    }
+    allowed_decision_fields <- c(
+      "proposal_id",
+      "proposal_digest",
+      "decision",
+      "reason"
+    )
+    for (decision in decisions) {
+      required_decision_fields <- c(
+        "proposal_id",
+        "proposal_digest",
+        "decision"
+      )
+      exact_fields <- is.list(decision) &&
+        all(required_decision_fields %in% names(decision)) &&
+        length(setdiff(names(decision), allowed_decision_fields)) == 0L
+      if (!exact_fields) {
+        stop(
+          "config.yml repair decisions require exact proposal_id, ",
+          "proposal_digest, decision, and optional reason fields."
+        )
+      }
+      if (!is.character(decision$proposal_id) ||
+            length(decision$proposal_id) != 1L ||
+            !grepl("^[a-f0-9]{64}$", decision$proposal_id) ||
+            !is.character(decision$proposal_digest) ||
+            length(decision$proposal_digest) != 1L ||
+            !grepl("^[a-f0-9]{64}$", decision$proposal_digest) ||
+            !is.character(decision$decision) ||
+            length(decision$decision) != 1L ||
+            !decision$decision %in% c("approved", "declined")) {
+        stop("config.yml repair decision fields are malformed.")
+      }
+      valid_reason <- is.null(decision$reason) ||
+        is.character(decision$reason) && length(decision$reason) == 1L
+      if (!valid_reason) {
+        stop("config.yml repair decision reason must be one string or null.")
+      }
+    }
+  }
+
   if (!is.null(config$occupancy$species) &&
         !is.character(config$occupancy$species)) {
     stop("config.yml occupancy.species must be NULL or a character vector.")
