@@ -1,8 +1,8 @@
 # Goal 005 — Packet Log
 
-- **Canonical status:** `PACKET_READY`
+- **Canonical status:** `COMPLETE`
 - **Packet date:** 2026-07-23 AEST
-- **Execution status:** `LOCAL_ACCEPTED_UNCOMMITTED`
+- **Execution status:** `PUBLISHED_CI_CONFIRMED`
 - **Packet-authoring baseline:** clean `main` at
   `17761af107dc43399e223e35e2fd130f24ab05e6`.
 - **Execution gate:** after publication, clean synchronized `main` with
@@ -188,7 +188,15 @@ the packet executor must not stage, commit, or push.
 
 ## Handoff and stop rule
 
-Local implementation acceptance is complete. The implementation remains
-uncommitted and unstaged for orchestrator review; no commit, push, or GitHub
-Actions run has occurred. Post-push CI bound to the eventual published SHA is
-still required for final remote confirmation.
+Local implementation acceptance and publication are complete. Commit
+`d40689c883d00d6d71740a440196507a558461f2`
+(`feat: add immutable evidence runs`) was pushed to `origin/main`.
+
+Exact-SHA GitHub Actions run
+[`29987722220`](https://github.com/BWBrook/camtrap-workflow/actions/runs/29987722220)
+completed successfully for that commit. Job `89143227550` succeeded in 3m51s:
+checkout, system dependencies, Quarto, TinyTeX, R, `renv` restore, lint, unit
+tests, pipeline smoke, the full immutable evidence run, bundle verification,
+and artifact upload were all green. Unexpired artifact
+`immutable-evidence-bundle` has ID `8555780919`, size 7,089,890 bytes, and
+expires 2026-10-21.

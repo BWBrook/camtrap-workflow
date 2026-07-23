@@ -70,6 +70,14 @@ exact CamtrapDP descriptors, included installed dependency versions, and fixed
 internal-symlink detection. Its bounded recheck returned
 `ACCEPT_IMPLEMENTATION` with no material findings.
 
-Local acceptance is complete. Changes remain unstaged and uncommitted; the
-orchestrator still owns exact-path staging, commit, push, and SHA-bound CI
-confirmation.
+Local acceptance and publication are complete. Commit
+`d40689c883d00d6d71740a440196507a558461f2`
+(`feat: add immutable evidence runs`) was pushed to `origin/main`.
+Exact-SHA GitHub Actions run
+[`29987722220`](https://github.com/BWBrook/camtrap-workflow/actions/runs/29987722220)
+completed successfully for that commit. Job `89143227550` succeeded in 3m51s
+with checkout, system dependencies, Quarto, TinyTeX, R, `renv` restore, lint,
+unit tests, pipeline smoke, the full immutable evidence run, bundle
+verification, and artifact upload all green. Unexpired artifact
+`immutable-evidence-bundle` has ID `8555780919`, size 7,089,890 bytes, and
+expires 2026-10-21.
