@@ -28,10 +28,23 @@ params:
 stopifnot(!is.null(params$inputs_path))
 inputs <- readRDS(params$inputs_path)
 repo_root <- here::here()
-run_dir_display <- tryCatch(
-  fs::path_rel(params$run_dir, start = repo_root),
-  error = function(e) params$run_dir
-)
+evidence_run_id <- if (!is.null(inputs$params$evidence_run$id)) {
+  inputs$params$evidence_run$id
+} else {
+  "partial / unpublished"
+}
+run_dir_display <- if (!is.null(inputs$params$evidence_run$id)) {
+  configured_outputs <- inputs$params$paths$outputs
+  if (fs::is_absolute_path(configured_outputs)) {
+    configured_outputs <- basename(configured_outputs)
+  }
+  file.path(configured_outputs, "runs", evidence_run_id)
+} else {
+  tryCatch(
+    fs::path_rel(params$run_dir, start = repo_root),
+    error = function(e) params$run_dir
+  )
+}
 ```
 
 ## Snapshot
@@ -40,7 +53,8 @@ run_dir_display <- tryCatch(
 - Observations (raw rows): `r inputs$n_obs_raw`
 - Observations (filtered to active effort days): `r inputs$n_obs_filtered`
 - Input schema version: `r inputs$schema_version`
-- Run ID: `r inputs$params$run_id`
+- Evidence run ID: `r evidence_run_id`
+- Compatibility label: `r inputs$params$run_id`
 - Input mode: `r inputs$params$input_mode`
 
 ## QC summary

@@ -48,4 +48,4 @@ COPY . .
 ARG GIT_COMMIT=unknown
 ENV CAMTRAP_WORKFLOW_GIT_COMMIT=${GIT_COMMIT}
 
-CMD ["Rscript", "-e", "targets::tar_make(callr_function = NULL)"]
+CMD ["Rscript", "scripts/run_full_evidence_run.R", "--config", "config.yml"]

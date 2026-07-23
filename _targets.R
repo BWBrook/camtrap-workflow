@@ -37,6 +37,46 @@ import::here(
 )
 
 import::here(
+  attach_evidence_context,
+  canonical_json,
+  .from = "R/config_identity.R"
+)
+
+import::here(
+  assert_safe_run_id,
+  read_run_context,
+  run_context_or_partial,
+  safe_compatibility_label,
+  .from = "R/run_identity.R"
+)
+
+import::here(
+  resolve_project_path,
+  verify_source_snapshot,
+  .from = "R/source_inventory.R"
+)
+
+import::here(
+  assert_path_within_root,
+  assert_safe_relative_path,
+  atomic_replace_text,
+  atomic_write_json,
+  file_fixity_record,
+  fixity_identity,
+  inventory_files,
+  normalize_relative_path,
+  sha256_file,
+  sha256_text,
+  .from = "R/fixity.R"
+)
+
+import::here(
+  manifest_path,
+  payload_inventory,
+  .from = "R/run_bundle.R"
+)
+
+import::here(
   load_inputs,
   .from = "R/input_loader.R"
 )
@@ -205,34 +245,45 @@ list(
   ),
   tar_target(
     config,
-    read_config(config_file)
+    read_config(config_file),
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    run_context,
+    run_context_or_partial(config),
+    cue = tar_cue(mode = "always")
   ),
   tar_target(
     outputs_root,
-    here(config$paths$outputs)
+    resolve_project_path(config$paths$outputs)
   ),
   tar_target(
     run_dir,
-    file.path(outputs_root, "runs", config$run_id)
-  ),
-  ## ── DATA DICTIONARY SYNC ─────────────────────────────────────────────
-  tar_target(
-    data_dictionary_md,
-    here("data_dictionary.md"),
-    format = "file"
+    if (isTRUE(run_context$supported_full_run)) {
+      run_context$staging_dir
+    } else {
+      file.path(outputs_root, "work", safe_compatibility_label(config$run_id))
+    }
   ),
   tar_target(
-    data_dictionary_csv,
+    source_snapshot,
     {
-      source(here("scripts/update_data_dictionary.R"))
-      here("data", "data_dictionary.csv")
+      if (isTRUE(run_context$supported_full_run)) {
+        verify_source_snapshot(
+          run_context$snapshot,
+          staging_dir = run_context$staging_dir
+        )
+        run_context$snapshot
+      } else {
+        NULL
+      }
     },
-    format = "file"
+    cue = tar_cue(mode = "always")
   ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
   tar_target(
     raw_inputs,
-    load_inputs(config)
+    load_inputs(config, source_snapshot = source_snapshot)
   ),
   tar_target(
     site_raw,
@@ -250,7 +301,17 @@ list(
     taxa_raw,
     raw_inputs$taxa
   ),
-  tar_target(schema_version, get_schema_version(config$schema_version_path)),
+  tar_target(
+    schema_version,
+    {
+      schema_path <- if (isTRUE(run_context$supported_full_run)) {
+        source_snapshot$parser_paths$schema_version
+      } else {
+        config$schema_version_path
+      }
+      get_schema_version(schema_path)
+    }
+  ),
 
   ## ── QC CHECKS (pipeline halts on error) ──────────────────────────────
   tar_target(
@@ -1210,7 +1271,13 @@ list(
 
         saveRDS(report_inputs, out_path)
       } else {
-        saveRDS(list(message = "Report disabled by config."), out_path)
+        saveRDS(
+          list(
+            message = "Report disabled by config.",
+            params = config
+          ),
+          out_path
+        )
       }
 
       out_path
@@ -1267,7 +1334,13 @@ list(
           )
         )
       } else {
-        write_disabled_file(out_path, "Report disabled by config.")
+        write_disabled_file(
+          out_path,
+          paste(
+            "Report disabled by config. Evidence run ID:",
+            if (is.null(config$evidence_run$id)) "partial / unpublished" else config$evidence_run$id
+          )
+        )
       }
 
       out_path
@@ -1356,7 +1429,14 @@ list(
             "-P",
             paste0("inputs_path:", report_inputs_rds),
             "-P",
-            paste0("run_dir:", run_dir)
+            paste0(
+              "run_dir:",
+              if (isTRUE(run_context$supported_full_run)) {
+                file.path(outputs_root, "runs", run_context$run_id)
+              } else {
+                run_dir
+              }
+            )
           )
         )
       } else {
@@ -1387,7 +1467,14 @@ list(
             "-P",
             paste0("inputs_path:", report_inputs_rds),
             "-P",
-            paste0("run_dir:", run_dir)
+            paste0(
+              "run_dir:",
+              if (isTRUE(run_context$supported_full_run)) {
+                file.path(outputs_root, "runs", run_context$run_id)
+              } else {
+                run_dir
+              }
+            )
           )
         )
       } else {
@@ -1501,7 +1588,8 @@ list(
         params = config,
         outputs = outputs,
         session_info_path = session_info,
-        config_file = config_file
+        config_file = config_file,
+        context = if (isTRUE(run_context$supported_full_run)) run_context else NULL
       )
     },
     format = "file"

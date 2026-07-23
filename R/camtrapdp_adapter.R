@@ -1,8 +1,8 @@
 # camtrapdp_adapter.R
 
-#' Read a Camtrap DP dataset (local path or URL)
+#' Read a materialised local Camtrap DP dataset
 #'
-#' @param path Path or URL to a Camtrap DP `datapackage.json`.
+#' @param path Local path to a snapshotted Camtrap DP `datapackage.json`.
 #' @return camtrapdp object.
 #' @export
 read_camtrapdp_dataset <- function(path) {
@@ -10,6 +10,12 @@ read_camtrapdp_dataset <- function(path) {
 
   if (is.null(path) || !nzchar(path)) {
     stop("camtrapdp path must be provided when input_mode = 'camtrapdp'.")
+  }
+  if (grepl("^https?://", path, ignore.case = TRUE)) {
+    stop("CamtrapDP URLs must be acquired and snapshotted before parsing.")
+  }
+  if (!file.exists(path)) {
+    stop("Snapshotted CamtrapDP descriptor does not exist: ", path)
   }
 
   read_camtrapdp(path)

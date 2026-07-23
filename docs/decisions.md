@@ -518,6 +518,77 @@ Consequences / follow-ups:
 
 ---
 
+## 2026-07-23 — Separate evidence invocation identity from equivalence
+
+Decision:
+- Allocate a unique filesystem-safe ID for every supported full invocation,
+  including same-second and content-equivalent reruns.
+- Keep source, raw/resolved configuration, engine, and composite SHA-256
+  fingerprints as equivalence evidence; do not reuse or collapse runs.
+- Retain configured `run_id` only as a report-facing compatibility label.
+
+Rationale:
+- Invocation provenance and content equivalence answer different questions.
+  Collapsing them would erase execution history and make collision handling
+  ambiguous.
+
+Consequences / follow-ups:
+- Completed bundles are immutable and non-overwriting.
+- Engine equivalence includes the installed versions of packages named by
+  `renv.lock`, not only the lockfile bytes.
+- Explicit content reuse remains a later, separately authorized capability.
+
+---
+
+## 2026-07-23 — Completion record and regular latest pointer form the trust root
+
+Decision:
+- Inventory every payload file by relative path, byte size, and SHA-256 in a
+  versioned manifest; write `COMPLETED.json` last and bind it to the manifest
+  hash.
+- Publish by same-filesystem directory rename, then atomically replace the
+  regular-file `outputs/latest` pointer with the validated run ID.
+- Reject pointer traversal, separators, symlinks, and unknown targets.
+- Snapshot the raw YAML once and make both fingerprinting and scientific
+  targets consume that exact payload.
+
+Rationale:
+- This order preserves prior evidence and prior latest bytes across failure,
+  supports portable verification, and avoids platform-dependent symlink
+  semantics.
+
+Consequences / follow-ups:
+- A valid completed bundle may remain discoverable if failure occurs after
+  directory publication but before pointer replacement.
+- Portable verification recomputes source, raw/resolved config, engine, and
+  composite cross-links, including against checksum-reclosed inconsistencies.
+- Internal hashes provide tamper evidence, not publisher authentication or
+  signing.
+
+---
+
+## 2026-07-23 — Scientific runs consume snapshots and exclude dictionary maintenance
+
+Decision:
+- Materialize parser-consumed source bytes before analysis, including explicit
+  local/remote CamtrapDP acquisition with pinned remote digests and a
+  content-addressed cache.
+- Preserve the CamtrapDP descriptor byte-for-byte in the parser snapshot;
+  acquisition parsing must not replace it with a normalized serialization.
+- Remove data-dictionary generation from the scientific target graph while
+  retaining `scripts/update_data_dictionary.R` and the sync test.
+
+Rationale:
+- Parser inputs must remain fixed for the invocation, and scientific execution
+  must not mutate tracked repository documentation.
+
+Consequences / follow-ups:
+- Pre-invocation byte changes create new source/composite fingerprints.
+- Missing resources, digest mismatch, snapshot mutation, and path escape fail
+  before publication.
+
+---
+
 ## 2026-01-08 — Add spatial site map with interpolated covariate surface
 Decision:
 - Implement a spatial site map using interpolation of existing site covariates (default `ndvi`, fallback to `elevation_m` or `canopy_h_m`) and insert a new WP before Line 0.8 to satisfy the PI request for spatial overlays.

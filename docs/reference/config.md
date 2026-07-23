@@ -8,7 +8,9 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   Path to `schema_version.txt`.
 
 - `run_id`  
-  Run identifier used for the canonical run folder (default: `latest`).
+  Legacy compatibility label shown in reports (default: `latest`). It is not
+  the evidence directory name, manifest identity, collision key, or latest
+  selector. The supported publisher allocates a unique invocation ID.
 
 - `timezone`  
   Olson timezone string used for datetime parsing (e.g., `Australia/Hobart`).
@@ -22,13 +24,29 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 - `input_mode`  
   Input mode selector: `four_table` (default) or `camtrapdp`.
 
+- `camtrapdp_acquisition.mode`
+  Explicit acquisition mode: `local` for a local descriptor or `remote` for an
+  HTTP(S) descriptor.
+
+- `camtrapdp_acquisition.cache_dir`
+  Controlled content-addressed cache used by remote acquisition.
+
+- `camtrapdp_acquisition.descriptor_sha256`
+  Required pinned SHA-256 for a remote `datapackage.json`; null for local
+  acquisition.
+
+- `camtrapdp_acquisition.resource_sha256`
+  Named map from each remote resource path to its required SHA-256. A SHA-256
+  declared by the resource may be used when present.
+
 - `paths.inputs`  
   Input table paths for the four-table contract:
   - `site`
   - `op`
   - `obs`
   - `taxa`
-  - `camtrapdp` (path or URL to `datapackage.json` when `input_mode = camtrapdp`)
+  - `camtrapdp` (local path or HTTP(S) URL consistent with the explicit
+    acquisition mode)
 
 - `paths.outputs`  
   Base output directory for all artefacts (default `outputs`).
@@ -142,4 +160,9 @@ The pipeline is configured via a single YAML file at the project root: `config.y
 ## Notes
 
 - Changes to `config.yml` invalidate downstream targets.
+- The publisher snapshots the YAML once at
+  `provenance/config.raw.yml`. Fingerprinting and the target graph both consume
+  that immutable copy, while `provenance/effective_config.json` records its
+  resolved meaning. YAML formatting and key order can change the raw hash
+  without changing the resolved hash.
 - When outputs are disabled via toggles, a placeholder file is written to keep the pipeline consistent.

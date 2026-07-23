@@ -1,0 +1,3 @@
+run_id: "equivalent"
+input_mode: "four_table"
+event_threshold_minutes: 15

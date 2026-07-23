@@ -4,17 +4,25 @@ All outputs are written under a **canonical run folder**:
 
 ```
 outputs/
+  latest                   (regular file containing one validated run ID)
   runs/
     <run_id>/
+      source_snapshot/
+      provenance/
       figures/
       tables/
       report/
       models/           (reserved for Beta+)
       run_manifest.json
+      COMPLETED.json
       session_info.txt
 ```
 
-`<run_id>` is configured in `config.yml` (default: `latest`).
+`<run_id>` is a unique filesystem-safe invocation identity allocated by
+`scripts/run_full_evidence_run.R`. The configured `run_id` is retained only as
+a compatibility label. Repeated equivalent invocations receive different IDs.
+Direct or partial target calls write under `outputs/work/` and are never
+complete evidence bundles.
 
 ## Tables (MVP)
 
@@ -88,7 +96,18 @@ Expected (current MVP):
 
 ## Provenance
 
-- `run_manifest.json` — run parameters, schema version, outputs, timestamp.
+- `source_snapshot/` — immutable bytes consumed by parsers, including schema
+  files and materialised CamtrapDP resources.
+- `provenance/source_inventory.json` — sorted SHA-256 inventory of
+  parser-consumed bytes.
+- `provenance/config.raw.yml` — byte-exact YAML snapshot consumed by the
+  supported target invocation.
+- `provenance/effective_config.json` — canonical effective configuration with
+  raw and resolved configuration hashes.
+- `run_manifest.json` — exact relative payload inventory with byte sizes and
+  SHA-256 values plus source/config/engine/composite fingerprints.
+- `COMPLETED.json` — terminal record written last; binds the run ID, manifest
+  schema, and manifest SHA-256.
 - `session_info.txt` — `sessionInfo()` output for the run.
 
 ## Camtrap DP export (optional)
@@ -103,4 +122,6 @@ Expected (current MVP):
 ## Notes
 
 - Output names should be stable across runs to enable comparisons.
+- A completed run directory is immutable and never overwritten.
+- `outputs/latest` is replaced only after completion and bundle verification.
 - Changes to output schema require doc updates and sanity/regression tests.

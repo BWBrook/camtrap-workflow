@@ -61,19 +61,22 @@ jobs:
       - name: Pipeline smoke test
         run: Rscript -e 'targets::tar_make(names = "input_contract_validation", callr_function = NULL)'
 
+      - name: Full immutable evidence run
+        run: Rscript scripts/run_full_evidence_run.R --config config.yml
+
+      - name: Verify published evidence bundle
+        run: |
+          RUN_ID="$(tr -d '\n' < outputs/latest)"
+          Rscript scripts/run_full_evidence_run.R \
+            --verify-bundle "outputs/runs/${RUN_ID}"
+
       - name: Upload artefacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: outputs
+          name: immutable-evidence-bundle
           if-no-files-found: warn
           path: |
-            outputs/runs/latest/report/report.html
-            outputs/runs/latest/report/report.pdf
-            outputs/runs/latest/figures/rarefaction.png
-            outputs/runs/latest/figures/event_spacing.png
-            outputs/runs/latest/figures/event_threshold_sensitivity.png
-            outputs/runs/latest/figures/rai_species.png
-            outputs/runs/latest/figures/diel_overall.png
-            outputs/runs/latest/session_info.txt
-            outputs/runs/latest/run_manifest.json
+            outputs/latest
+            outputs/runs/*/
+            !outputs/runs/.staging/

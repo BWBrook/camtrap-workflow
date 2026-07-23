@@ -62,16 +62,30 @@ Rscript ./bootstrap_env.R
 
 ---
 
-### 6. **Run the Analysis Pipeline**
+### 6. **Publish the Analysis Evidence Run**
 
-In your RStudio Console or R terminal:
+From a terminal in the project root:
 
-```r
-targets::tar_make()
+```sh
+Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
-* The first run will build all steps of the analysis.
-* If you see `"pipeline is up to date"`, everything is ready.
+* Every full invocation creates a new immutable folder under
+  `outputs/runs/<run_id>/`.
+* `outputs/latest` contains the current validated run ID.
+* A run is complete only when both `run_manifest.json` and `COMPLETED.json`
+  verify, including recomputed source/configuration/engine cross-links.
+
+To verify a bundle after copying it to another location:
+
+```sh
+Rscript scripts/run_full_evidence_run.R \
+  --verify-bundle outputs/runs/<run_id>
+```
+
+Developers may still call `targets::tar_make()` for partial builds. Those calls
+write under `outputs/work/` and cannot publish completion or change
+`outputs/latest`.
 
 ---
 
@@ -80,6 +94,9 @@ targets::tar_make()
 * **`bootstrap_env.R`**: Activates the project and runs `renv::restore(prompt = FALSE)`.
 * **`renv.lock`**: Records the exact versions of all R packages needed.
 * **`_targets.R`**: Controls automated, reproducible analysis pipelines.
+* **`scripts/run_full_evidence_run.R`**: Snapshots inputs and raw configuration,
+  records installed dependency versions, and publishes a verified immutable
+  bundle.
 * Custom code lives in `R/`.
 
 ---

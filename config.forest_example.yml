@@ -4,6 +4,12 @@ timezone: "UTC"
 event_threshold_minutes: 15
 input_mode: "four_table"
 
+camtrapdp_acquisition:
+  mode: "local"
+  cache_dir: "outputs/cache/camtrapdp"
+  descriptor_sha256: null
+  resource_sha256: {}
+
 paths:
   inputs:
     site: "data/forest_example/site.csv"

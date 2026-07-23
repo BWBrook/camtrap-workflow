@@ -1071,6 +1071,21 @@ The PI review ZIP must include:
 
 ---
 
+## Goal 005 - Immutable evidence-run foundation
+
+- [x] Distinguish unique invocation identity from content equivalence.
+- [x] Snapshot and inventory every parser-consumed four-table/CamtrapDP byte.
+- [x] Record raw/resolved config, engine, and composite SHA-256 domains.
+- [x] Publish exact manifests, terminal completion records, and immutable run
+  directories.
+- [x] Add atomic traversal-safe latest resolution and portable verification.
+- [x] Keep partial target calls unpublished and separate dictionary
+  maintenance from the scientific DAG.
+- [x] Complete the local acceptance ladder and independent implementation
+  review before publication.
+
+---
+
 ## References (for context; not requirements)
 
 - WildObsR (Camtrap DP support, matrix generation for occupancy, schema validation): https://github.com/WildObs/WildObsR

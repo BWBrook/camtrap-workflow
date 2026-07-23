@@ -1,0 +1,2 @@
+observationID,deploymentID,eventStart,scientificName,count,lifeStage,sex,mediaID
+obs1,dep1,2020-01-02T12:00:00Z,Canis lupus,1,adult,unknown,m1

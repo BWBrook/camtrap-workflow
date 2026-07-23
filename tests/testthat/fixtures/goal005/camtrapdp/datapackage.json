@@ -1,0 +1,53 @@
+{
+  "name": "goal005-fixture",
+  "profile": "https://raw.githubusercontent.com/tdwg/camtrap-dp/1.0.1/camtrap-dp-profile.json",
+  "resources": [
+    {
+      "name": "deployments",
+      "path": "deployments.csv",
+      "profile": "tabular-data-resource",
+      "schema": {
+        "fields": [
+          {"name": "deploymentID", "type": "string"},
+          {"name": "locationID", "type": "string"},
+          {"name": "locationName", "type": "string"},
+          {"name": "latitude", "type": "number"},
+          {"name": "longitude", "type": "number"},
+          {"name": "deploymentStart", "type": "datetime"},
+          {"name": "deploymentEnd", "type": "datetime"},
+          {"name": "featureType", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "media",
+      "path": "media.csv",
+      "profile": "tabular-data-resource",
+      "schema": {
+        "fields": [
+          {"name": "mediaID", "type": "string"},
+          {"name": "deploymentID", "type": "string"},
+          {"name": "timestamp", "type": "datetime"},
+          {"name": "fileName", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "observations",
+      "path": "observations.csv",
+      "profile": "tabular-data-resource",
+      "schema": {
+        "fields": [
+          {"name": "observationID", "type": "string"},
+          {"name": "deploymentID", "type": "string"},
+          {"name": "eventStart", "type": "datetime"},
+          {"name": "scientificName", "type": "string"},
+          {"name": "count", "type": "integer"},
+          {"name": "lifeStage", "type": "string"},
+          {"name": "sex", "type": "string"},
+          {"name": "mediaID", "type": "string"}
+        ]
+      }
+    }
+  ]
+}

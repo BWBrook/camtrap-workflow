@@ -40,37 +40,50 @@ install.packages("renv")
 renv::restore(prompt = FALSE)
 ```
 
-### 3) Run the pipeline
+### 3) Publish a full evidence run
 
-In R:
-
-```r
-targets::tar_make()
-```
-
-Or from the shell (non-interactive):
+Use the supported publisher from the project root:
 
 ```sh
-Rscript -e 'targets::tar_make()'
+Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
 To run with an alternate config file:
 
 ```sh
-CAMTRAP_CONFIG=config.camtrapdp_example.yml Rscript -e 'targets::tar_make()'
+Rscript scripts/run_full_evidence_run.R --config config.forest_example.yml
 ```
 
-### 4) View outputs
+Each invocation receives a unique immutable run ID, even when its source,
+configuration, and engine fingerprints match an earlier invocation. The
+publisher snapshots the raw YAML once, and both identity calculation and the
+target graph consume that copy. Direct
+`targets::tar_make()` calls remain useful for development and partial targets,
+but they write only under `outputs/work/` and never publish `COMPLETED.json` or
+advance `outputs/latest`.
+
+### 4) Verify and view outputs
 
 Outputs are written to `outputs/` (gitignored). Look for:
 
+* `outputs/latest` for the current validated run ID
+* `outputs/runs/<run_id>/COMPLETED.json` for the terminal trust record
 * `outputs/runs/<run_id>/report/` for the rendered report
   - HTML: `report.html`
   - PDF: `report.pdf`
 * `outputs/runs/<run_id>/figures/` for plots
 * `outputs/runs/<run_id>/tables/` for community matrices, diversity, and trait summaries
 * `outputs/runs/<run_id>/session_info.txt` for session provenance
+* `outputs/runs/<run_id>/provenance/config.raw.yml` for the exact consumed
+  configuration
 * `outputs/runs/<run_id>/run_manifest.json` for run provenance
+
+Verify any copied or in-place bundle without its original repository path:
+
+```sh
+Rscript scripts/run_full_evidence_run.R \
+  --verify-bundle outputs/runs/<run_id>
+```
 
 ## Running on your own dataset
 
@@ -92,14 +105,14 @@ Update `config.yml` to point to your input file paths and parameters (timezone, 
 
 ## Example datasets
 
-- **Judbury exemplar** (default): `data/jc_*` with `config.yml` (run_id `latest`).
+- **Judbury exemplar** (default): `data/jc_*` with `config.yml`.
 - **Template dataset**: `data/template_dataset/` with `config.template_example.yml`.
 - **Forest example (synthetic)**: `data/forest_example/` with `config.forest_example.yml`.
 
-Run an example dataset by setting the config:
+Run an example dataset with the publisher:
 
 ```sh
-CAMTRAP_CONFIG=config.forest_example.yml Rscript -e 'targets::tar_make()'
+Rscript scripts/run_full_evidence_run.R --config config.forest_example.yml
 ```
 
 ## Development workflow
@@ -114,7 +127,7 @@ Run quality gates locally:
 ```sh
 Rscript scripts/run_lint.R
 Rscript scripts/run_tests.R
-Rscript -e 'targets::tar_make()'
+Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
 Container users: see `docs/container.md` for build/run instructions.

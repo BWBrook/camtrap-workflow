@@ -23,6 +23,20 @@ docker build \
 docker run --rm -v "$PWD/outputs:/app/outputs" camtrap-workflow:latest
 ```
 
+The container command uses the supported full-run publisher. It writes a
+unique bundle under `outputs/runs/<run_id>/`, writes `COMPLETED.json` last, and
+updates the regular-file pointer `outputs/latest` only after verification.
+
+Verify a mounted bundle with the same image:
+
+```sh
+RUN_ID="$(tr -d '\n' < outputs/latest)"
+docker run --rm -v "$PWD/outputs:/app/outputs" \
+  camtrap-workflow:latest \
+  Rscript scripts/run_full_evidence_run.R \
+  --verify-bundle "outputs/runs/${RUN_ID}"
+```
+
 ## Notes
 
 - The container installs Quarto and TinyTeX to support PDF rendering.

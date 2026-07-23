@@ -12,6 +12,12 @@ default_config <- function() {
     timezone_fixed_offset_hours = NULL,
     event_threshold_minutes = 15,
     input_mode = "four_table",
+    camtrapdp_acquisition = list(
+      mode = "local",
+      cache_dir = "outputs/cache/camtrapdp",
+      descriptor_sha256 = NULL,
+      resource_sha256 = list()
+    ),
     paths = list(
       inputs = list(
         site = "data/jc_site.csv",
@@ -82,9 +88,10 @@ default_config <- function() {
 #' Read and validate configuration
 #'
 #' @param path Path to config YAML.
+#' @param attach_runtime Whether to attach a supported evidence-run context.
 #' @return List with configuration values.
 #' @export
-read_config <- function(path = "config.yml") {
+read_config <- function(path = "config.yml", attach_runtime = TRUE) {
   import::from("fs", file_exists)
   import::from("yaml", read_yaml)
 
@@ -94,8 +101,17 @@ read_config <- function(path = "config.yml") {
 
   config <- read_yaml(path)
   config <- modifyList(default_config(), config)
+  config <- validate_config(config)
 
-  validate_config(config)
+  context_path <- Sys.getenv("CAMTRAP_EVIDENCE_CONTEXT", unset = "")
+  if (isTRUE(attach_runtime) && nzchar(context_path)) {
+    if (!exists("read_run_context", mode = "function") ||
+          !exists("attach_evidence_context", mode = "function")) {
+      stop("Evidence-run helpers must be loaded before reading runtime configuration.")
+    }
+    config <- attach_evidence_context(config, read_run_context(context_path))
+  }
+  config
 }
 
 #' Validate configuration values
@@ -111,6 +127,7 @@ validate_config <- function(config) {
     "timezone_fixed_offset_hours",
     "event_threshold_minutes",
     "input_mode",
+    "camtrapdp_acquisition",
     "paths",
     "analysis",
     "spatial_map",
@@ -153,6 +170,28 @@ validate_config <- function(config) {
 
   if (!config$input_mode %in% c("four_table", "camtrapdp")) {
     stop("config.yml input_mode must be 'four_table' or 'camtrapdp'.")
+  }
+
+  acquisition <- config$camtrapdp_acquisition
+  if (!is.list(acquisition) ||
+        !is.character(acquisition$mode) ||
+        length(acquisition$mode) != 1L ||
+        !acquisition$mode %in% c("local", "remote")) {
+    stop("config.yml camtrapdp_acquisition.mode must be 'local' or 'remote'.")
+  }
+  if (!is.character(acquisition$cache_dir) ||
+        length(acquisition$cache_dir) != 1L ||
+        !nzchar(acquisition$cache_dir)) {
+    stop("config.yml camtrapdp_acquisition.cache_dir must be one non-empty path.")
+  }
+  if (!is.null(acquisition$descriptor_sha256) &&
+        (!is.character(acquisition$descriptor_sha256) ||
+           length(acquisition$descriptor_sha256) != 1L ||
+           !grepl("^[A-Fa-f0-9]{64}$", acquisition$descriptor_sha256))) {
+    stop("config.yml camtrapdp_acquisition.descriptor_sha256 must be NULL or one SHA-256 digest.")
+  }
+  if (!is.list(acquisition$resource_sha256)) {
+    stop("config.yml camtrapdp_acquisition.resource_sha256 must be a named map.")
   }
 
   analysis_fields <- c("rarefaction", "report")
@@ -296,6 +335,16 @@ validate_config <- function(config) {
     camtrap_path <- config$paths$inputs$camtrapdp
     if (is.null(camtrap_path) || !is.character(camtrap_path) || !nzchar(camtrap_path)) {
       stop("config.yml paths.inputs.camtrapdp must be a non-empty string when input_mode = 'camtrapdp'.")
+    }
+    is_remote <- grepl("^https?://", camtrap_path, ignore.case = TRUE)
+    if (identical(acquisition$mode, "remote") && !is_remote) {
+      stop("Remote CamtrapDP acquisition requires an HTTP(S) descriptor URL.")
+    }
+    if (identical(acquisition$mode, "local") && is_remote) {
+      stop("Local CamtrapDP acquisition requires a local descriptor path.")
+    }
+    if (identical(acquisition$mode, "remote") && is.null(acquisition$descriptor_sha256)) {
+      stop("Remote CamtrapDP acquisition requires descriptor_sha256.")
     }
   }
 

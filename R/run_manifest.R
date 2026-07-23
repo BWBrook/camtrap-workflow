@@ -1,68 +1,108 @@
-# run_manifest.R
+# Versioned immutable evidence-run manifest.
 
-#' Write a run manifest to disk
+relativize_manifest_paths <- function(value, base_dir) {
+  if (is.null(value)) {
+    return(value)
+  }
+  if (is.list(value)) {
+    return(lapply(value, relativize_manifest_paths, base_dir = base_dir))
+  }
+  if (length(value) > 1L) {
+    return(vapply(
+      value,
+      relativize_manifest_paths,
+      base_dir = base_dir,
+      FUN.VALUE = character(1)
+    ))
+  }
+  if (!is.character(value) || is.na(value)) {
+    return(value)
+  }
+  if (fs::is_absolute_path(value)) {
+    return(normalize_relative_path(fs::path_rel(value, start = base_dir)))
+  }
+  normalize_relative_path(value)
+}
+
+#' Write an evidence-run manifest to disk
 #'
 #' @param path Path to the manifest JSON.
 #' @param schema_version Input schema version string.
-#' @param params Configuration list used for the run.
+#' @param params Effective configuration used for the run.
 #' @param outputs Named list of output paths.
 #' @param session_info_path Path to session info text file.
-#' @param config_file Path to the configuration file used for the run.
+#' @param config_file Path to the raw configuration file.
+#' @param context Supported evidence-run context, or NULL for a partial run.
 #' @return Manifest path invisibly.
 #' @export
-write_run_manifest <- function(path, schema_version, params, outputs, session_info_path, config_file = NULL) {
-  import::from("jsonlite", write_json)
-  import::from("fs", path_rel, is_absolute_path)
-
-  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-
-  relativize_paths <- function(x, base_dir) {
-    if (is.null(x)) return(x)
-    if (is.list(x)) {
-      return(lapply(x, relativize_paths, base_dir = base_dir))
-    }
-    if (length(x) > 1) {
-      return(vapply(x, relativize_paths, base_dir = base_dir, FUN.VALUE = character(1)))
-    }
-    if (!is.character(x) || is.na(x)) return(x)
-    if (is_absolute_path(x)) {
-      return(path_rel(x, start = base_dir))
-    }
-    x
+write_run_manifest <- function(
+    path,
+    schema_version,
+    params,
+    outputs,
+    session_info_path,
+    config_file = NULL,
+    context = NULL) {
+  bundle_dir <- dirname(path)
+  dir.create(bundle_dir, recursive = TRUE, showWarnings = FALSE)
+  if (file.exists(path)) {
+    unlink(path)
   }
 
-  base_dir <- dirname(path)
-  outputs_rel <- relativize_paths(outputs, base_dir)
-  session_info_rel <- relativize_paths(session_info_path, base_dir)
-  config_path_rel <- relativize_paths(config_file, base_dir)
-  config_hash <- if (!is.null(config_file) && file.exists(config_file)) {
-    unname(tools::md5sum(config_file))
+  supported <- !is.null(context) && isTRUE(context$supported_full_run)
+  run_id <- if (supported) {
+    context$run_id
   } else {
-    NA_character_
+    safe_compatibility_label(paste0("partial-", params$run_id))
   }
+  assert_safe_run_id(run_id)
 
-  git_commit <- get_git_commit()
-  if (is.na(git_commit)) {
-    warning("Git commit unavailable; run manifest may not be reproducible.")
+  fingerprints <- if (supported) {
+    context$fingerprints
+  } else {
+    config_hash <- if (!is.null(config_file) && file.exists(config_file)) {
+      sha256_file(config_file)
+    } else {
+      NA_character_
+    }
+    list(
+      source = NA_character_,
+      config = list(raw = config_hash, resolved = NA_character_),
+      engine = NA_character_,
+      composite = NA_character_
+    )
   }
 
   manifest <- list(
-    run_id = format(Sys.time(), "%Y%m%dT%H%M%SZ", tz = "UTC"),
-    timestamp_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    schema_version = schema_version,
-    git_commit = git_commit,
+    manifest_schema = "camtrap-evidence-manifest/1.0",
+    run_id = run_id,
+    legacy_run_label = params$run_id,
+    status = if (supported) "completed" else "partial_unpublished",
+    created_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    input_schema_version = schema_version,
+    fingerprints = fingerprints,
     config = list(
-      path = config_path_rel,
-      md5 = config_hash
+      source_name = if (supported) {
+        context$config_source_name
+      } else if (is.null(config_file)) {
+        NULL
+      } else {
+        basename(config_file)
+      },
+      raw = if (supported) {
+        relativize_manifest_paths(context$provenance$raw_config, bundle_dir)
+      } else {
+        NULL
+      },
+      effective = if (supported) "provenance/effective_config.json" else NULL
     ),
-    params = params,
-    outputs = outputs_rel,
-    session_info = session_info_rel
+    source_inventory = if (supported) "provenance/source_inventory.json" else NULL,
+    engine = if (supported) context$engine else list(git_commit = get_git_commit()),
+    outputs = relativize_manifest_paths(outputs, bundle_dir),
+    session_info = relativize_manifest_paths(session_info_path, bundle_dir),
+    payload = payload_inventory(bundle_dir)
   )
-
-  write_json(manifest, path, pretty = TRUE, auto_unbox = TRUE)
-
-  invisible(path)
+  atomic_write_json(manifest, path)
 }
 
 get_git_commit <- function() {
@@ -73,17 +113,13 @@ get_git_commit <- function() {
 
   out <- tryCatch(
     suppressWarnings(system2("git", c("rev-parse", "HEAD"), stdout = TRUE, stderr = TRUE)),
-    error = function(e) character(0)
+    error = function(e) character()
   )
   status <- attr(out, "status")
-
-  if (
-    length(out) == 0 ||
-      (!is.null(status) && !is.na(status) && status != 0) ||
-      any(grepl("fatal", out, ignore.case = TRUE))
-  ) {
+  if (length(out) == 0L ||
+        (!is.null(status) && !is.na(status) && status != 0L) ||
+        any(grepl("fatal", out, ignore.case = TRUE))) {
     return(NA_character_)
   }
-
   out[[1]]
 }

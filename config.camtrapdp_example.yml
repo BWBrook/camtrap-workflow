@@ -4,6 +4,15 @@ timezone: "UTC"
 event_threshold_minutes: 15
 input_mode: "camtrapdp"
 
+camtrapdp_acquisition:
+  mode: "remote"
+  cache_dir: "outputs/cache/camtrapdp"
+  descriptor_sha256: "41a0bfec15e522ff0e5c670266c9d3be99fff1e01448cd0e508e97c355b58590"
+  resource_sha256:
+    deployments.csv: "96084baa2eaac9221780ebd0fc096c23a1317b354931b71be0335280e4bcec7b"
+    media.csv: "910596bb60af429fc955f17401ce98b915e9c8e72e491c1e715f3b51cfc6bbce"
+    observations.csv: "845cfb09da01f3e60139b1c5b31088318ff17b7f4bafcc913bd7cd63f01289ca"
+
 paths:
   inputs:
     site: null

@@ -1,0 +1,2 @@
+deploymentID,locationID,locationName,latitude,longitude,deploymentStart,deploymentEnd,featureType
+dep1,loc1,Site 1,1,2,2020-01-01T00:00:00Z,2020-01-03T00:00:00Z,trail
