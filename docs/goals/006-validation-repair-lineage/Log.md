@@ -1,8 +1,8 @@
 # Goal 006 - Packet log
 
 - **Canonical packet state:** `APPROVED_AND_PUBLISHED`
-- **Execution state:** `LOCAL_ACCEPTANCE_COMPLETE`
-- **Publication state:** `NOT_STAGED_OR_COMMITTED`
+- **Execution state:** `COMPLETE`
+- **Publication state:** `PUBLISHED_CI_CONFIRMED`
 - **Packet date:** 2026-07-23 AEST
 - **Packet-authoring baseline:** clean synchronized `main` at
   `b9934a116c41ab2250c7975daf6d19f1c70effb1`.
@@ -159,8 +159,21 @@ The focused verifier suite passes 50 checks; the combined validation/verifier
 coverage passes 68 and 50 checks; the full gate and real bundle checks above
 also pass. No second broad review or repair was performed.
 
-## Publication handoff
+## Publication and exact-SHA CI
 
-Nothing has been staged, committed, pushed, or submitted to CI. The
-orchestrator owns exact-path staging, implementation publication, and
-exact-SHA GitHub Actions confirmation.
+Implementation commit `584d3766d47ddbdd14d8dee34fc9df1d59255393`
+(parent packet commit `9c7c70d2e722015347e9afaeec28574c0dc498ce`,
+subject `feat: add validation repair lineage`) was pushed successfully and
+matched `origin/main` before this administrative closeout. Its committed
+footprint is exactly 39 allowlisted paths, with 5,265 insertions and 87
+deletions.
+
+GitHub Actions workflow `ci` run
+[`30003868386`](https://github.com/BWBrook/camtrap-workflow/actions/runs/30003868386)
+completed successfully against exact head SHA
+`584d3766d47ddbdd14d8dee34fc9df1d59255393`. Job `r-workflow`
+(`89195141980`) succeeded in about 20m02s. Lint, unit tests, pipeline smoke,
+the full immutable evidence run, published-bundle verification, and artifact
+upload all succeeded. The only annotation was a non-failing infrastructure
+notice that GitHub forced the Node.js-20-targeting `checkout@v4` and
+`upload-artifact@v4` actions onto Node.js 24.

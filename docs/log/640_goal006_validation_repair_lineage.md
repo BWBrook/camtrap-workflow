@@ -71,6 +71,13 @@ demonstrating a checksum-reclosed non-event value change in
 source/config reconstruction and a regression that mutates `obs$count`; the
 tampered bundle is now rejected. Focused and authoritative gates pass.
 
-Local implementation and acceptance are complete. Nothing was staged,
-committed, pushed, or submitted to CI; publication and exact-SHA CI
-confirmation remain with the orchestrator.
+Goal 006 implementation commit
+`584d3766d47ddbdd14d8dee34fc9df1d59255393` is published and exact-SHA CI
+confirmed. GitHub Actions workflow `ci` run
+[`30003868386`](https://github.com/BWBrook/camtrap-workflow/actions/runs/30003868386)
+completed successfully against that exact head SHA. Job `r-workflow`
+(`89195141980`) succeeded in about 20m02s, including lint, unit tests,
+pipeline smoke, the full immutable evidence run, published-bundle
+verification, and artifact upload. The only annotation was a non-failing
+infrastructure notice that GitHub forced the Node.js-20-targeting
+`checkout@v4` and `upload-artifact@v4` actions onto Node.js 24.
