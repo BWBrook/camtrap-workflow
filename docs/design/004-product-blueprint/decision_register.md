@@ -1,0 +1,20 @@
+# Goal 004 unresolved decision register
+
+Accepted boundaries are deliberately not reopened here: the simple
+versioned-CSV entry with CamtrapDP compatibility, immutable inputs and audited
+repair concept, fail-soft analytical omission, one engine, four distinct
+entities, three output layers, and independent LocalMap manifest boundary are
+already part of the contract. This table records only choices still needing
+authority or evidence.
+
+| ID | Decision | Rationale/evidence | Owner/authority | Dependency | Reversibility | Status | Next evidence | Blocks next goal |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| D004-02 | Define semantic-repair and reviewed operational-inference authority | Repairs and optional last-image/operational inference can change meaning; approval, uncertainty, and override basis must be explicit | Barry | C04-C05 / Phase 2 | high | open_now | Repair-policy matrix and approved override ledger fixture | no |
+| D004-03 | Select public fields, API, migration, and compatibility-release policy | The internal core can proceed, but external adoption makes field and migration choices less reversible | Barry | C07-C11 / Phase 3 | high before public v1 | defer_until_gate | Public contract review and migration fixture | no |
+| D004-04 | Approve the Judbury crosswalk and any analysis_site grouping | Nine nominal stations, 13 physical locations, and four moves do not determine ecological grouping | Barry | C07 / Phase 3 | moderate | defer_until_gate | Authorised crosswalk with named analytical purpose and sensitivity evidence | no |
+| D004-05 | Set exact standard-profile membership, eligibility thresholds, and claim boundaries | Descriptive modules are retained, but minimum cells, effort adequacy, and inferential gates need scientific authority | Barry | C14-C21 / Phase 5 | moderate | defer_until_gate | Profile matrix and Judbury plus independent adequacy fixtures | no |
+| D004-06 | Select the independent or synthetic validation case and comparison bar | Judbury demonstrates the contract but cannot establish portability or a broad software claim alone | Barry | C11/C26 / Phase 8 | high | defer_until_gate | Candidate case provenance, numerical comparison, and omission fixtures | no |
+| D004-07 | Select the final LocalMap interchange format and manifest profile | The independent file-plus-manifest boundary is accepted; exact file formats remain open | Barry | C23 / Phase 6 | high before adoption | defer_until_gate | Manifest round-trip, checksum mutation, CRS and placeholder evidence | no |
+| D004-08 | Select stakeholder platform, local interface, deployment and lifecycle posture | Goal 003 found operating-system, managed-desktop, network, procurement and licence evidence missing | Barry | C24-C25 / Phase 7 | moderate | defer_until_gate | Stakeholder requirements sample and bounded interface comparison | no |
+| D004-09 | Decide whether ALA/regional-context or AI interpretation spikes proceed | Both are downstream optional extensions with scientific, privacy, egress, review and governance risks | Barry | C27 / Phase 8 | high while deferred | defer_until_gate | Approved scientific extent/filters or egress/review policy and pilot evidence | no |
+| D004-10 | Set software-note claim, journal, release, and maintenance bar | Goal 003 rejects first/only and universal claims; venue and support obligations remain evidence-dependent | Barry | C26-C27 / Phase 8 | high before submission | defer_until_gate | Reproducibility, maintenance, documentation, independent-case and release evidence | no |
