@@ -1,15 +1,15 @@
-# Goal 004 unresolved decision register
+# Goal 004 decision register
 
 Accepted boundaries are deliberately not reopened here: the simple
 versioned-CSV entry with CamtrapDP compatibility, immutable inputs and audited
 repair concept, fail-soft analytical omission, one engine, four distinct
 entities, three output layers, and independent LocalMap manifest boundary are
-already part of the contract. This table records only choices still needing
-authority or evidence.
+already part of the contract. This table retains the resolved Phase 2 repair
+authority beside choices still needing authority or evidence.
 
 | ID | Decision | Rationale/evidence | Owner/authority | Dependency | Reversibility | Status | Next evidence | Blocks next goal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| D004-02 | Define semantic-repair and reviewed operational-inference authority | Repairs and optional last-image/operational inference can change meaning; approval, uncertainty, and override basis must be explicit | Barry | C04-C05 / Phase 2 | high | open_now | Repair-policy matrix and approved override ledger fixture | no |
+| D004-02 | Define semantic-repair and reviewed operational-inference authority | Accepted 2026-07-23: preview is the default; filling unknowns requires exact reviewed approval; explicit deployment/operational evidence requires proposal-specific approval plus reason and cannot be overridden broadly; all states remain auditable; Phase 2 adds no production operational-period inference | Barry | C04-C05 / Phase 2 | high | resolved_accepted | Goal 006 clean, preview, approval, decline, protected-override, and stale-approval evidence | no |
 | D004-03 | Select public fields, API, migration, and compatibility-release policy | The internal core can proceed, but external adoption makes field and migration choices less reversible | Barry | C07-C11 / Phase 3 | high before public v1 | defer_until_gate | Public contract review and migration fixture | no |
 | D004-04 | Approve the Judbury crosswalk and any analysis_site grouping | Nine nominal stations, 13 physical locations, and four moves do not determine ecological grouping | Barry | C07 / Phase 3 | moderate | defer_until_gate | Authorised crosswalk with named analytical purpose and sensitivity evidence | no |
 | D004-05 | Set exact standard-profile membership, eligibility thresholds, and claim boundaries | Descriptive modules are retained, but minimum cells, effort adequacy, and inferential gates need scientific authority | Barry | C14-C21 / Phase 5 | moderate | defer_until_gate | Profile matrix and Judbury plus independent adequacy fixtures | no |

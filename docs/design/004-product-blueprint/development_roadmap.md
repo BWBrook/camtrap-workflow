@@ -33,8 +33,12 @@ phase.
   before/after ledger, approval basis, row lineage, and allowed stop behaviour.
 - **Non-goals:** New ecological methods, automatic destructive repair, or a
   public field list.
-- **Decision gate:** Resolve semantic-repair authority, including when a
-  reviewed operational inference may override interval evidence.
+- **Decision gate:** Accepted 2026-07-23. Semantic repair defaults to preview;
+  filling an unknown requires exact reviewed approval; explicit supplied
+  deployment/operational evidence requires proposal-specific approval plus a
+  reason and cannot be overridden broadly. Original, proposal, decision,
+  application, and post-validation states remain auditable. Phase 2 adds no
+  production operational-period inference algorithm.
 
 ## Phase 3 — Entities, profiles, effort, events, and CamtrapDP adapter
 
@@ -126,7 +130,7 @@ phase.
 
 ## Recommended next implementation goal
 
-The accepted next goal is Phase 1: immutable evidence-run foundation. It is the
-highest-integrity, most reversible tranche and enables every later adapter,
-capability, interface, and portability decision. Barry has authorized it; this
-blueprint does not implement it.
+Phase 1 is complete. The proposed next goal is Goal 006, the Phase 2
+validation, repair-preview, and source-row-lineage foundation. Its packet is
+`DRAFT_FOR_BARRY_REVIEW`; framing it does not authorize packet publication or
+implementation.
