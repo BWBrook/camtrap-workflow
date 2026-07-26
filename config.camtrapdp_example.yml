@@ -7,6 +7,12 @@ input_mode: "camtrapdp"
 validation:
   repair_decisions: []
 
+entity_resolution:
+  profile_id: null
+  sidecar_path: null
+  sidecar_sha256: null
+  authority_reference: null
+
 camtrapdp_acquisition:
   mode: "remote"
   cache_dir: "outputs/cache/camtrapdp"

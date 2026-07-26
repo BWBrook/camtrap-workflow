@@ -59,6 +59,23 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   stale digests, duplicates, and conflicts fail safely. The block may be
   omitted by legacy configurations; shipped configurations use an empty list.
 
+- `entity_resolution`
+  Provisional internal evidence selection, not a public v0.1 input field.
+  The block contains exactly `profile_id`, `sidecar_path`, `sidecar_sha256`,
+  and `authority_reference`. All four values must either be explicit `null`,
+  or bind one approved profile and sidecar exactly. The default Judbury
+  configuration selects
+  `judbury-entity-crosswalk/1.0.0-proposed` with SHA-256
+  `553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec`.
+  That selected profile is valid only with `input_mode = four_table`;
+  CamtrapDP configurations must use the explicit null selection. Explicit
+  null requires zero entity sidecars and no dedicated snapshot path. Selection
+  requires exactly one matching non-parser inventory record whose configured,
+  inventoried, snapshotted, and reconstructed SHA-256 values agree. Inline
+  mappings, wildcard authority, unapproved digests, extra fields, and unused
+  sidecars are rejected. The selected sidecar changes source identity but
+  never becomes a fifth analytical table.
+
 - `analysis.rarefaction`  
   Toggle rarefaction/species accumulation outputs (TRUE/FALSE).
 

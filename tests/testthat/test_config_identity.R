@@ -127,3 +127,91 @@ test_that("repair decision configuration rejects broad or malformed authority", 
   )))
   expect_error(validate_config(config), "exact proposal_id")
 })
+
+test_that("entity resolution is explicit in current configs and absent from legacy defaults", {
+  expect_false("entity_resolution" %in% names(default_config()))
+
+  current <- c(
+    "config.yml",
+    "config.template_example.yml",
+    "config.forest_example.yml",
+    "config.camtrapdp_example.yml",
+    "config.camtrapdp_export.yml"
+  )
+  for (path in current) {
+    config <- read_config(here(path), attach_runtime = FALSE)
+    expect_true("entity_resolution" %in% names(config), info = path)
+    expect_equal(
+      names(config$entity_resolution),
+      c(
+        "profile_id",
+        "sidecar_path",
+        "sidecar_sha256",
+        "authority_reference"
+      ),
+      info = path
+    )
+  }
+
+  selected <- read_config(here("config.yml"), attach_runtime = FALSE)
+  expect_equal(
+    selected$entity_resolution$profile_id,
+    "judbury-entity-crosswalk/1.0.0-proposed"
+  )
+  expect_equal(
+    selected$entity_resolution$sidecar_sha256,
+    "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+  )
+
+  legacy <- read_config(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal005",
+      "config_equivalent_a.yml"
+    ),
+    attach_runtime = FALSE
+  )
+  expect_false("entity_resolution" %in% names(legacy))
+})
+
+test_that("entity-resolution configuration rejects broad or malformed authority", {
+  config <- default_config()
+  config$entity_resolution <- list(inline_mapping = list(site = "nominal"))
+  expect_error(validate_config(config), "exactly profile_id")
+
+  config$entity_resolution <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_path = "crosswalk.csv",
+    sidecar_sha256 = paste(rep("a", 64L), collapse = ""),
+    authority_reference = "pending"
+  )
+  expect_error(validate_config(config), "approved authority")
+
+  config$entity_resolution <- list(
+    profile_id = NULL,
+    sidecar_path = "crosswalk.csv",
+    sidecar_sha256 = NULL,
+    authority_reference = NULL
+  )
+  expect_error(validate_config(config), "exact null selection")
+
+  config <- default_config()
+  config$input_mode <- "camtrapdp"
+  config$paths$inputs$camtrapdp <- "camtrapdp/datapackage.json"
+  config$entity_resolution <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_path = "crosswalk.csv",
+    sidecar_sha256 =
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec",
+    authority_reference = paste0(
+      "goal007-judbury-crosswalk-sha256-",
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+    )
+  )
+  expect_error(
+    validate_config(config),
+    "only valid when input_mode = 'four_table'"
+  )
+})

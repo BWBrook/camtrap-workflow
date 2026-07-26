@@ -12,6 +12,7 @@ source(here("R", "config_identity.R"))
 source(here("R", "fixity.R"))
 source(here("R", "run_identity.R"))
 source(here("R", "config.R"))
+source(here("R", "entity_resolution.R"))
 source(here("R", "source_inventory.R"))
 source(here("R", "custom_funcs.R"))
 source(here("R", "qc_schema.R"))
@@ -46,6 +47,7 @@ goal006_validation_config <- function(root, outputs = tempfile("goal006-validati
     camtrapdp = NULL
   )
   config$paths$outputs <- outputs
+  config$entity_resolution <- entity_null_selection()
   validate_config(config)
 }
 
@@ -76,6 +78,8 @@ test_that("clean preflight reconciles rows, exclusions, and operational-event me
   expect_equal(nrow(state$event_lineage$memberships), 2L)
   expect_true(validate_event_lineage(state$event_lineage, state$lineage))
   expect_equal(state$post_validation$integrity_failures, 0L)
+  expect_equal(state$parser_audit$audit_schema, "camtrap-parser-audit/1.0")
+  expect_equal(names(state$inputs), c("site", "op", "obs", "taxa"))
 })
 
 test_that("mocked CamtrapDP preflight preserves unknown semantic defaults", {
@@ -293,10 +297,53 @@ test_that("supported validation-only runner publishes immutable preview without 
   expect_equal(result$mode, "validation_only")
   expect_true(dir.exists(preview))
   expect_true(file.exists(file.path(preview, "PREVIEW.json")))
+  preview_record <- jsonlite::read_json(
+    file.path(preview, "PREVIEW.json"),
+    simplifyVector = FALSE
+  )
+  expect_equal(
+    preview_record$preview_schema,
+    "camtrap-validation-preview/1.1"
+  )
+  expect_equal(
+    names(preview_record$entity_resolution),
+    c(
+      "entity_resolution",
+      "entity_links",
+      "deployment_lineage",
+      "entity_resolution_summary",
+      "join_readiness"
+    )
+  )
+  expect_equal(
+    unlist(preview_record$entity_resolution, use.names = TRUE),
+    c(
+      entity_resolution =
+        "provenance/entity_resolution/entity_resolution.csv",
+      entity_links = "provenance/entity_resolution/entity_links.csv",
+      deployment_lineage =
+        "provenance/entity_resolution/deployment_lineage.csv",
+      entity_resolution_summary =
+        "provenance/entity_resolution/entity_resolution_summary.json",
+      join_readiness =
+        "provenance/entity_resolution/join_readiness.json"
+    )
+  )
+  expect_true(all(file.exists(file.path(
+    preview,
+    unlist(preview_record$entity_resolution, use.names = FALSE)
+  ))))
   expect_false(file.exists(file.path(preview, "COMPLETED.json")))
   expect_false(dir.exists(file.path(output_root, "runs", run_id)))
   expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
   expect_true(verify_preflight_record(preview)$valid)
+  expect_equal(
+    names(readRDS(file.path(
+      preview,
+      preview_record$phase2$validated_inputs
+    ))),
+    c("site", "op", "obs", "taxa")
+  )
   expect_error(
     run_full_evidence_run(
       config_path = config_path,

@@ -114,6 +114,52 @@ read_config <- function(path = "config.yml", attach_runtime = TRUE) {
   config
 }
 
+validate_entity_config <- function(selection) {
+  fields <- c(
+    "profile_id",
+    "sidecar_path",
+    "sidecar_sha256",
+    "authority_reference"
+  )
+  if (!is.list(selection) ||
+        !identical(sort(names(selection)), sort(fields))) {
+    stop(
+      "config.yml entity_resolution must contain exactly profile_id, ",
+      "sidecar_path, sidecar_sha256, and authority_reference."
+    )
+  }
+  values <- selection[fields]
+  nulls <- vapply(values, is.null, logical(1))
+  if (all(nulls)) {
+    return(invisible(TRUE))
+  }
+  if (any(nulls) ||
+    !all(vapply(values, function(value) {
+      is.character(value) && length(value) == 1L && nzchar(value)
+    }, logical(1)))) {
+    stop(
+      "config.yml entity_resolution must be an exact null selection or a ",
+      "complete selected profile."
+    )
+  }
+  digest <- "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+  approved <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_sha256 = digest,
+    authority_reference = paste0(
+      "goal007-judbury-crosswalk-sha256-",
+      digest
+    )
+  )
+  if (!grepl("^[a-f0-9]{64}$", selection$sidecar_sha256) ||
+        !identical(selection[names(approved)], approved)) {
+    stop(
+      "config.yml entity_resolution selection has no exact approved authority."
+    )
+  }
+  invisible(TRUE)
+}
+
 #' Validate configuration values
 #'
 #' @param config List of configuration values.
@@ -397,6 +443,21 @@ validate_config <- function(config) {
       if (!valid_reason) {
         stop("config.yml repair decision reason must be one string or null.")
       }
+    }
+  }
+
+  if (!is.null(config$entity_resolution)) {
+    validate_entity_config(config$entity_resolution)
+    selected_entity_profile <- !is.null(
+      config$entity_resolution$profile_id
+    )
+    if (selected_entity_profile &&
+          !identical(config$input_mode, "four_table")) {
+      stop(
+        "The approved Judbury entity-resolution profile is only valid ",
+        "when input_mode = 'four_table'; CamtrapDP requires an explicit ",
+        "null entity_resolution selection."
+      )
     }
   }
 

@@ -544,6 +544,7 @@ prepare_validation_preflight <- function(
     validation_state_schema = "camtrap-validation-state/1.0",
     can_analyze = can_analyze,
     inputs = inputs,
+    parser_audit = audit,
     lineage = lineage,
     findings = findings,
     transformations = transformations,
@@ -886,18 +887,41 @@ portable_validation_snapshot <- function(root, config) {
     root,
     inventory_paths[[schema]]
   )
-  parser_files <- vapply(inventory, function(record) {
+  parser_inventory <- inventory[vapply(
+    inventory,
+    function(record) isTRUE(record$consumed_by_parser),
+    logical(1)
+  )]
+  parser_files <- vapply(parser_inventory, function(record) {
     file.path(root, record$path)
   }, character(1))
+  entity <- which(vapply(
+    inventory,
+    function(record) identical(record$role, "entity_resolution_input"),
+    logical(1)
+  ))
+  if (length(entity) > 1L) {
+    stop("Portable validation reconstruction has multiple entity sidecars.")
+  }
 
-  list(
+  snapshot <- list(
     parser_paths = parser_paths,
     parser_files = parser_files,
     acquisition = source$acquisition,
     inventory = inventory,
     source_sha256 = source$source_sha256,
-    snapshot_root = file.path(root, "source_snapshot")
+    snapshot_root = file.path(root, "source_snapshot"),
+    entity_resolution_path = if (length(entity) == 1L) {
+      file.path(root, inventory_paths[[entity]])
+    } else {
+      NULL
+    }
   )
+  if (exists("validate_entity_source", mode = "function")) {
+    selection <- entity_resolution_selection(config, require_explicit = FALSE)
+    validate_entity_source(config, snapshot, selection)
+  }
+  snapshot
 }
 
 analytical_column_content <- function(column) {

@@ -7,6 +7,12 @@ input_mode: "four_table"
 validation:
   repair_decisions: []
 
+entity_resolution:
+  profile_id: null
+  sidecar_path: null
+  sidecar_sha256: null
+  authority_reference: null
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

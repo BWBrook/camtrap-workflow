@@ -1,10 +1,10 @@
 # Goal 007 - Packet log
 
-- **Canonical packet state:** `DRAFT_FOR_BARRY_REVIEW`
+- **Canonical packet state:** `APPROVED_IMPLEMENTED_LOCAL_REPAIRED`
 - **Framing/publication authority:** `AUTHORIZED_2026-07-26`
-- **Crosswalk approval state:** `PENDING_BARRY_REVIEW`
-- **Execution state:** `NOT_AUTHORIZED`
-- **Publication state:** `NOT_PUBLISHED`
+- **Crosswalk approval state:** `APPROVED_EXACT_SHA256`
+- **Execution state:** `AUTHORIZED_FOCUSED_REPAIR_COMPLETE`
+- **Publication state:** `IMPLEMENTATION_NOT_COMMITTED`
 - **Packet date:** 2026-07-26 AEST
 - **Packet-authoring baseline:** clean synchronized `main` at
   `7ad07e936be33b82d9c0423324f6867d541a22bd`
@@ -145,13 +145,76 @@ work. It does not mark Phase 3 complete.
   network acquisition, generated artefact, stage, commit, push, fetch, reset,
   clean, stash, or merge was performed.
 
-## Handoff
+## Packet-publication handoff (historical)
 
-Following clean authoring verification, the packet may be published through
-the exact subject/parent/path gate in `Goal.md` under Barry's existing
-publication authority. Barry should then review the published packet's
+Following clean authoring verification, the packet was published through the
+exact subject/parent/path gate in `Goal.md`. Barry then reviewed the packet's
 plain-language objective, exact factual matrix, deployment non-resolution,
 zero `analysis_site` membership, closed implementation allowlist,
-scientific-invariance comparator, and stop rules. Implementation still
-requires his explicit packet/crosswalk approval and separate execution
-authorization.
+scientific-invariance comparator, and stop rules before supplying the
+implementation authority recorded below.
+
+## Authorized implementation record
+
+Barry approved the published packet commit
+`3d42c1cb9ad74bff107de42200122f93505e21e6`, the exact crosswalk version and
+SHA-256 above, and the stable authority reference
+`goal007-judbury-crosswalk-sha256-553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec`.
+Implementation retained the matrix unchanged.
+
+The bounded implementation:
+
+- snapshots the selected sidecar as non-parser `entity_resolution_input`;
+- publishes deterministic entity, link, deployment-lineage, summary, and
+  join-readiness records in both supported modes;
+- keeps Judbury at 13 physical locations, nine nominal stations, four
+  undirected move pairs, zero deployments, and zero `analysis_site`
+  memberships;
+- keeps optional CamtrapDP identity/interval absence unresolved while
+  stopping duplicate, competing, reversed, and orphan evidence;
+- advances previews to schema 1.1 and completed bundles to manifest 1.2 while
+  retaining 1.0/1.1 verification; and
+- does not route, join, filter, aggregate, or mutate scientific inputs.
+
+Local acceptance on 2026-07-26:
+
+- final preview `20260726T020035Z-9105b7497a6f440d`: ready, latest unchanged;
+- final bundle `20260726T020411Z-d034ea6eb0164fcd`: 91 targets completed,
+  42 skipped, manifest 1.2, 89 payload files, portable verification PASS;
+- validation/full copies of all five entity records: byte-identical;
+- 13 frozen scientific tables and all 11 Phase 2 artefacts: byte-identical to
+  the pre-edit manifest-1.1 baseline;
+- `validated_inputs.rds`: object-identical with only `site`, `op`, `obs`, and
+  `taxa`; all occupancy numerical differences zero;
+- lint PASS and authoritative tests 520 PASS, zero failures, one expected
+  CamtrapDP export warning;
+- checksum-reclosed crosswalk mutation rejected at exact approved authority;
+- actual manifest 1.1 baseline and final manifest 1.2 bundle verified, with
+  manifest 1.0 retained in the authoritative fixture suite; and
+- direct partial, validation-only, integrity-blocked, and failed-full pointer
+  boundaries preserved prior `outputs/latest` bytes.
+
+## Independent implementation review and focused repair
+
+Independent review found four material verifier/evidence gaps. The single
+authorized focused repair:
+
+- makes explicit null require zero entity sidecars and no dedicated snapshot
+  path, makes selected Judbury authority four-table-only, and requires exactly
+  one matching inventoried and reconciled entity sidecar;
+- closes preview 1.1 and manifest 1.2 to the exact canonical five-file entity
+  namespace, including after payload/completion reclosure;
+- retains one deployment-lineage row and source-row link for every
+  duplicate/competing CamtrapDP evidence row without resolving the mapping; and
+- binds join readiness to the immutable source SHA-256 as well as the entity
+  ledger digest.
+
+RED controls reproduced all four gaps before production edits. Final focused
+suites, lint, 520-test authoritative execution, fresh preview/full parity,
+portable verification, legacy 1.1 verification, and the frozen scientific
+comparator all pass. Review confirmation, publication, and CI remain
+orchestrator-owned.
+
+Raw ignored evidence and the implementation-owner report are under
+`outputs/goal007_acceptance/`. Independent implementation review, exact-path
+staging, commit, push, and exact-SHA CI remain orchestrator-owned.

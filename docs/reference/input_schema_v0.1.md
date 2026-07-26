@@ -101,6 +101,14 @@ runs. Every parser-consumed row receives one ledger record and disposition.
 Observation rows additionally link to retained operational detection events
 or carry an explicit exclusion rule and reason.
 
+Goal 007 likewise does not add a public field or analytical table. Entity
+evidence is stored in separate provenance records. A legacy four-table `site`
+key remains the scientific key and resolves only to a compatibility
+`physical_location` unless an exact approved sidecar supplies additional
+audit evidence. Nominal station, deployment, and `analysis_site` are never
+inferred from suffixes, coordinates, proximity, effort runs, or observation
+dates.
+
 ## Validation failures
 
 Validation fails early with explicit table/column messages and suggested fixes.

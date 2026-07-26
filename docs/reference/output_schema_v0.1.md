@@ -10,12 +10,14 @@ outputs/
       source_snapshot/
       provenance/
         phase2/
+        entity_resolution/
       PREVIEW.json
   runs/
     <run_id>/
       source_snapshot/
       provenance/
         phase2/
+        entity_resolution/
       figures/
       tables/
       report/
@@ -137,11 +139,29 @@ Expected (current MVP):
   row/event accounting summary.
 - `provenance/phase2/validated_inputs.rds` — the analysis-ready four-table
   object consumed by supported full runs.
+- `provenance/entity_resolution/entity_resolution.csv` — versioned entity
+  ledger with deterministic IDs and explicit resolved/unresolved states.
+- `provenance/entity_resolution/entity_links.csv` — closed typed links,
+  including undirected service-history move pairs.
+- `provenance/entity_resolution/deployment_lineage.csv` — explicit deployment
+  identity, location, interval, chronology, and readiness evidence. Duplicate
+  or competing CamtrapDP evidence retains one attributable row per
+  participating source row while remaining integrity-stopped or ambiguous.
+- `provenance/entity_resolution/entity_resolution_summary.json` — profile,
+  authority, counts, integrity findings, and the explicit unselected
+  `analysis_site` state.
+- `provenance/entity_resolution/join_readiness.json` — audit-only
+  unique/unresolved/ambiguous counts, bound to both the entity-ledger digest
+  and the immutable source SHA-256. It is not an analytical join.
 - `run_manifest.json` — exact relative payload inventory with byte sizes and
   SHA-256 values plus source/config/engine/composite fingerprints.
 - `COMPLETED.json` — terminal record written last; binds the run ID, manifest
   schema, and manifest SHA-256.
 - `session_info.txt` — `sessionInfo()` output for the run.
+
+The entity-resolution directory is a closed namespace: supported preview 1.1
+and manifest 1.2 evidence must contain exactly these five canonical paths, with
+no missing, renamed, redirected, symlinked, nested, or extra entry.
 
 ## Camtrap DP export (optional)
 

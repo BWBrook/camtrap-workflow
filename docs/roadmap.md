@@ -1104,6 +1104,27 @@ The PI review ZIP must include:
 
 ---
 
+## Goal 007 - Versioned entity-resolution evidence
+
+- [x] Bind the exact approved Judbury 13-to-nine crosswalk through immutable
+  configuration and source fixity.
+- [x] Keep nominal station, physical location, deployment, and
+  `analysis_site` distinct with closed resolved/unresolved/ambiguous states.
+- [x] Publish five deterministic entity-evidence records in validation-only
+  and full paths without analytical routing.
+- [x] Publish preview 1.1 and manifest 1.2 with semantic reconstruction while
+  retaining legacy 1.0/1.1 verification.
+- [x] Preserve the four validated inputs, all Phase 2 evidence, event
+  membership, effort, methods, and 13 scientific comparator tables exactly.
+- [ ] Complete independent implementation review, exact-path publication, and
+  exact-SHA CI confirmation.
+
+Goal 007 does not complete Phase 3. Judbury deployment identity/chronology,
+purpose-specific `analysis_site`, effort/event routing, public fields, and
+full adapter/profile work remain deferred.
+
+---
+
 ## References (for context; not requirements)
 
 - WildObsR (Camtrap DP support, matrix generation for occupancy, schema validation): https://github.com/WildObs/WildObsR

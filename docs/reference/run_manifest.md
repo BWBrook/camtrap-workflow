@@ -42,7 +42,7 @@ excluded from equivalence fingerprints.
 ## Manifest schema
 
 New completed runs use
-`manifest_schema = "camtrap-evidence-manifest/1.1"`. The main fields are:
+`manifest_schema = "camtrap-evidence-manifest/1.2"`. The main fields are:
 
 - `run_id` and `legacy_run_label`;
 - `status`;
@@ -57,6 +57,8 @@ New completed runs use
 - `engine`, with Git/R/file inventory metadata;
 - `phase2`, linking the validation, repair, row-lineage, changed-field,
   transformation, event-membership, and post-validation records described
+  below;
+- `entity_resolution`, linking the five entity-evidence records described
   below;
 - `outputs`, the named compatibility map used by reports and readers;
 - `session_info`;
@@ -102,9 +104,34 @@ Existing `camtrap-evidence-manifest/1.0` bundles remain supported by the
 portable verifier. They are verified under their original contract and are
 not required to contain Phase 2 records.
 
+### Entity-resolution records
+
+Manifest 1.2 retains the complete manifest 1.1 Phase 2 contract and requires
+exact links under `provenance/entity_resolution/` for:
+
+- `entity_resolution.csv`;
+- `entity_links.csv`;
+- `deployment_lineage.csv`;
+- `entity_resolution_summary.json`; and
+- `join_readiness.json`.
+
+The verifier reconstructs all five from the immutable parser evidence, raw
+configuration, and selected snapshotted sidecar. It rejects altered records
+even after payload hashes are reclosed, and it requires the configured
+approved sidecar SHA-256, source inventory, summary, and reconstructed bytes
+to agree. The link values and directory entries are a closed canonical
+five-file namespace; missing, renamed, redirected, symlinked, nested, or extra
+entries fail even after payload and completion hashes are reclosed.
+`join_readiness.json` also records the exact source-inventory SHA-256 used for
+semantic reconstruction. Manifest 1.1 and 1.0 continue to dispatch under their
+original contracts and do not require Goal 007 records.
+
 ## Validation preview
 
-`PREVIEW.json` uses schema `camtrap-validation-preview/1.0`. It records the
+New `PREVIEW.json` records use schema `camtrap-validation-preview/1.1`. They
+retain the complete 1.0 contract and add the required entity-resolution link
+map with the same closed canonical namespace rules as manifest 1.2. Existing
+1.0 previews remain verifiable. A preview records the
 invocation identity, `ready` or `blocked` status, the same provenance
 fingerprint domains used by a full run, the complete Phase 2 link map, and an
 exact payload inventory. A blocked preflight is still published for review

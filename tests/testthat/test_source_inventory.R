@@ -4,6 +4,7 @@ import::from("here", here)
 source(here("R", "config_identity.R"))
 source(here("R", "fixity.R"))
 source(here("R", "config.R"))
+source(here("R", "entity_resolution.R"))
 source(here("R", "source_inventory.R"))
 
 goal005_four_table_config <- function(input_root) {
@@ -100,4 +101,74 @@ test_that("engine identity is bounded, relative, and SHA-256 based", {
     engine_identity_fingerprint(engine),
     engine_identity_fingerprint(drifted)
   ))
+})
+
+test_that("approved entity sidecar is snapshotted with a distinct non-parser role", {
+  input_root <- copy_goal005_inputs(tempfile("goal007-input-"))
+  stage <- tempfile("goal007-stage-")
+  dir.create(stage)
+  config <- goal005_four_table_config(input_root)
+  sidecar <- here(
+    "docs",
+    "goals",
+    "007-entity-resolution",
+    "judbury_entity_crosswalk.csv"
+  )
+  config$entity_resolution <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_path = sidecar,
+    sidecar_sha256 =
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec",
+    authority_reference = paste0(
+      "goal007-judbury-crosswalk-sha256-",
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+    )
+  )
+  snapshot <- materialize_source_snapshot(config, stage)
+  roles <- vapply(snapshot$inventory, `[[`, character(1), "role")
+  entity_index <- which(roles == "entity_resolution_input")
+
+  expect_equal(length(entity_index), 1L)
+  expect_false(snapshot$inventory[[entity_index]]$consumed_by_parser)
+  expect_equal(
+    snapshot$inventory[[entity_index]]$sha256,
+    config$entity_resolution$sidecar_sha256
+  )
+  expect_false(snapshot$entity_resolution_path %in% snapshot$parser_files)
+  expect_true(verify_source_snapshot(snapshot, stage))
+})
+
+test_that("sidecar authority and post-snapshot mutation fail fixity", {
+  input_root <- copy_goal005_inputs(tempfile("goal007-input-"))
+  sidecar <- here(
+    "docs",
+    "goals",
+    "007-entity-resolution",
+    "judbury_entity_crosswalk.csv"
+  )
+  config <- goal005_four_table_config(input_root)
+  config$entity_resolution <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_path = sidecar,
+    sidecar_sha256 = paste(rep("a", 64L), collapse = ""),
+    authority_reference = paste0(
+      "goal007-judbury-crosswalk-sha256-",
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+    )
+  )
+  expect_error(
+    materialize_source_snapshot(config, tempfile("goal007-stage-")),
+    "approved authority|SHA-256"
+  )
+
+  config$entity_resolution$sidecar_sha256 <-
+    "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+  stage <- tempfile("goal007-stage-")
+  dir.create(stage)
+  snapshot <- materialize_source_snapshot(config, stage)
+  write("tamper", snapshot$entity_resolution_path, append = TRUE)
+  expect_error(
+    verify_source_snapshot(snapshot, stage),
+    "Source snapshot integrity mismatch"
+  )
 })

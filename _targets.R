@@ -57,6 +57,11 @@ import::here(
 )
 
 import::here(
+  validate_entity_artifacts,
+  .from = "R/entity_resolution.R"
+)
+
+import::here(
   assert_path_within_root,
   assert_safe_relative_path,
   atomic_replace_text,
@@ -308,11 +313,27 @@ list(
     },
     cue = tar_cue(mode = "always")
   ),
+  tar_target(
+    entity_resolution_check,
+    {
+      if (isTRUE(run_context$supported_full_run)) {
+        validate_entity_artifacts(
+          run_context$staging_dir,
+          run_context$entity_resolution$artifacts,
+          require_analysis_ready = TRUE
+        )
+      } else {
+        TRUE
+      }
+    },
+    cue = tar_cue(mode = "always")
+  ),
   ## ── RAW IMPORTS ──────────────────────────────────────────────────────
   tar_target(
     raw_inputs,
     {
       phase2_validation_check
+      entity_resolution_check
       load_preflight_inputs(
         config,
         source_snapshot = source_snapshot,
@@ -1575,6 +1596,7 @@ list(
     run_manifest,
     {
       phase2_validation_check
+      entity_resolution_check
       event_lineage_check
       out_path <- file.path(run_dir, "run_manifest.json")
       outputs <- list(
@@ -1647,6 +1669,11 @@ list(
         context = if (isTRUE(run_context$supported_full_run)) run_context else NULL,
         phase2 = if (isTRUE(run_context$supported_full_run)) {
           run_context$validation$artifacts
+        } else {
+          NULL
+        },
+        entity_resolution = if (isTRUE(run_context$supported_full_run)) {
+          run_context$entity_resolution$artifacts
         } else {
           NULL
         }

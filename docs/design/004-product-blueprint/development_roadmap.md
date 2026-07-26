@@ -47,19 +47,19 @@ phase.
   effort/time QC and operational events use conservative interval evidence.
 - **Dependencies:** Phases 1–2 and compatibility boundaries; public fields
   and ecological grouping remain unselected.
-- **Delivery state:** Phase 3 is not complete. Goal 007 is its first bounded
-  vertical slice: versioned entity records, typed links, explicit unresolved
-  states, immutable bundle evidence, and audit-only join readiness in the
-  supported validation and full paths. It preserves current effort/event
-  routing and all scientific outputs.
+- **Delivery state:** Phase 3 is not complete. Goal 007, its first bounded
+  vertical slice, completed local acceptance on 2026-07-26: versioned entity
+  records, typed links, explicit unresolved states, immutable bundle evidence,
+  and audit-only join readiness now run in both supported paths. Current
+  effort/event routing and all scientific outputs are preserved.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
   overrideable.
 - **Non-goals:** Selecting final public fields, Judbury grouping, thresholds,
   or removing the strict compatibility profile.
-- **Decision gate:** Goal 007 implementation requires Barry's approval of the
-  exact factual 13-physical-to-nine-nominal Judbury crosswalk. Authoritative
+- **Decision gate:** Barry approved the exact factual
+  13-physical-to-nine-nominal Judbury crosswalk for Goal 007. Authoritative
   deployment chronology, analysis_site grouping, effort/event routing, full
   resolved profiles, adapter completion, and public schema/API commitments
   remain later Phase 3 work with their own evidence and authority gates.
@@ -138,15 +138,13 @@ phase.
 
 ## Recommended next implementation goal
 
-Phases 1 and 2 are complete. The proposed next implementation goal is Goal
-007, the first bounded Phase 3 entity-resolution evidence slice. Barry
-authorized framing and packet publication on 2026-07-26 after approving the
-narrow concept, but implementation still requires his explicit approval of
-the complete packet and enumerated 13-row Judbury crosswalk.
+Phases 1 and 2 are complete, and Goal 007 has completed local implementation
+acceptance as the first bounded Phase 3 slice. Publication remains gated by
+independent review and exact-SHA CI.
 
-Goal 007 does not complete Phase 3. It leaves deployment chronology and
-intervals unresolved for Judbury, keeps analysis_site unselected with zero
-memberships, and does not reroute effort, observations, operational events, or
-analytical modules. Resolved profile precedence, conservative effort/event
-routing, and full CamtrapDP adapter completion remain subsequent Phase 3
-slices.
+The next Phase 3 slice should be selected only after that review. Goal 007
+leaves deployment chronology and intervals unresolved for Judbury, keeps
+analysis_site unselected with zero memberships, and does not reroute effort,
+observations, operational events, or analytical modules. Resolved profile
+precedence, conservative effort/event routing, and full CamtrapDP adapter
+completion remain candidates with their own authority and evidence gates.

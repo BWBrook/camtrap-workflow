@@ -208,6 +208,59 @@ snapshot_four_tables <- function(config, snapshot_root, project_root) {
   )
 }
 
+snapshot_entity_resolution <- function(config, snapshot_root, project_root) {
+  selection <- config$entity_resolution
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  if (exists("validate_entity_config", mode = "function")) {
+    validate_entity_config(selection)
+  }
+  fields <- c(
+    "profile_id",
+    "sidecar_path",
+    "sidecar_sha256",
+    "authority_reference"
+  )
+  if (!is.list(selection) ||
+        !identical(sort(names(selection)), sort(fields))) {
+    stop(
+      "Entity-resolution snapshot selection must contain exactly profile_id, ",
+      "sidecar_path, sidecar_sha256, and authority_reference."
+    )
+  }
+  if (all(vapply(selection[fields], is.null, logical(1)))) {
+    return(NULL)
+  }
+  if (!identical(config$input_mode, "four_table")) {
+    stop(
+      "The approved Judbury entity-resolution profile is only valid ",
+      "when input_mode = 'four_table'; CamtrapDP requires an explicit ",
+      "null entity_resolution selection."
+    )
+  }
+  source <- resolve_project_path(selection$sidecar_path, project_root)
+  root <- normalizePath(project_root, winslash = "/", mustWork = TRUE)
+  resolved <- normalizePath(source, winslash = "/", mustWork = FALSE)
+  if (!startsWith(resolved, paste0(root, "/"))) {
+    stop("Entity-resolution sidecar escapes the project root.")
+  }
+  actual <- sha256_file(source)
+  if (!identical(actual, selection$sidecar_sha256)) {
+    stop("Entity-resolution sidecar SHA-256 does not match approved authority.")
+  }
+  destination <- file.path(
+    snapshot_root,
+    "entity_resolution",
+    basename(source)
+  )
+  copy_snapshot_file(source, destination)
+  if (!identical(sha256_file(destination), selection$sidecar_sha256)) {
+    stop("Entity-resolution sidecar changed during snapshotting.")
+  }
+  destination
+}
+
 materialize_source_snapshot <- function(
     config,
     staging_dir,
@@ -224,15 +277,33 @@ materialize_source_snapshot <- function(
   } else {
     snapshot_four_tables(config, snapshot_root, project_root)
   }
+  entity_resolution_path <- snapshot_entity_resolution(
+    config,
+    snapshot_root,
+    project_root
+  )
 
   records <- lapply(snapshot$parser_files, function(path) {
     role <- if (identical(path, snapshot$parser_paths$schema_version)) "schema" else "parser_input"
     file_fixity_record(path, staging_dir, role = role, consumed = TRUE)
   })
+  if (!is.null(entity_resolution_path)) {
+    records[[length(records) + 1L]] <- file_fixity_record(
+      entity_resolution_path,
+      staging_dir,
+      role = "entity_resolution_input",
+      consumed = FALSE
+    )
+  }
   records <- records[order(vapply(records, `[[`, character(1), "path"), method = "radix")]
   snapshot$inventory <- records
   snapshot$source_sha256 <- fixity_identity(records)
   snapshot$snapshot_root <- snapshot_root
+  snapshot$entity_resolution_path <- entity_resolution_path
+  if (exists("validate_entity_source", mode = "function")) {
+    selection <- entity_resolution_selection(config, require_explicit = FALSE)
+    validate_entity_source(config, snapshot, selection)
+  }
   snapshot
 }
 

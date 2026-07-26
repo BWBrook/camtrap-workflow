@@ -32,6 +32,16 @@ phase2_bundle_paths <- function(bundle_dir, links) {
   })
 }
 
+entity_bundle_paths <- function(bundle_dir, links) {
+  lapply(links, function(relative) {
+    bundle_identity_path(
+      bundle_dir,
+      relative,
+      "Entity-resolution artifact path"
+    )
+  })
+}
+
 write_preflight_record <- function(staging_dir, context) {
   path <- preflight_record_path(staging_dir)
   if (file.exists(path)) {
@@ -42,8 +52,13 @@ write_preflight_record <- function(staging_dir, context) {
     bundle_relative_path,
     root = staging_dir
   )
+  entity <- lapply(
+    context$entity_resolution$artifacts,
+    bundle_relative_path,
+    root = staging_dir
+  )
   record <- list(
-    preview_schema = "camtrap-validation-preview/1.0",
+    preview_schema = "camtrap-validation-preview/1.1",
     run_id = context$run_id,
     status = if (isTRUE(context$validation$can_analyze)) "ready" else "blocked",
     created_utc = context$created_utc,
@@ -62,6 +77,7 @@ write_preflight_record <- function(staging_dir, context) {
     ),
     engine = context$engine,
     phase2 = phase2,
+    entity_resolution = entity,
     payload = preflight_payload_inventory(staging_dir)
   )
   atomic_write_json(record, path)
@@ -74,7 +90,11 @@ validate_preflight_payload <- function(preflight_dir) {
     stop("Preflight preview record is missing.")
   }
   record <- jsonlite::read_json(path, simplifyVector = FALSE)
-  if (!identical(record$preview_schema, "camtrap-validation-preview/1.0")) {
+  supported <- c(
+    "camtrap-validation-preview/1.0",
+    "camtrap-validation-preview/1.1"
+  )
+  if (!record$preview_schema %in% supported) {
     stop("Unsupported validation preview schema.")
   }
   assert_safe_run_id(record$run_id)
@@ -127,6 +147,14 @@ verify_preflight_record <- function(preflight_dir) {
     phase2,
     require_analysis_ready = identical(record$status, "ready")
   )
+  if (identical(record$preview_schema, "camtrap-validation-preview/1.1")) {
+    entity <- entity_bundle_paths(preflight_dir, record$entity_resolution)
+    validate_entity_artifacts(
+      preflight_dir,
+      entity,
+      require_analysis_ready = identical(record$status, "ready")
+    )
+  }
   forbidden <- c("COMPLETED.json", "run_manifest.json")
   if (any(file.exists(file.path(preflight_dir, forbidden))) ||
         dir.exists(file.path(preflight_dir, "report"))) {
@@ -180,7 +208,8 @@ validate_manifest_payload <- function(bundle_dir) {
   manifest <- jsonlite::read_json(path, simplifyVector = FALSE)
   supported_schemas <- c(
     "camtrap-evidence-manifest/1.0",
-    "camtrap-evidence-manifest/1.1"
+    "camtrap-evidence-manifest/1.1",
+    "camtrap-evidence-manifest/1.2"
   )
   if (!is.character(manifest$manifest_schema) ||
         length(manifest$manifest_schema) != 1L ||
@@ -247,9 +276,19 @@ validate_source_identity <- function(bundle_dir, manifest) {
     stop("Source inventory does not exactly cover the source snapshot.")
   }
 
+  goal007 <- identical(
+    manifest$preview_schema,
+    "camtrap-validation-preview/1.1"
+  ) || identical(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.2"
+  )
   for (record in records) {
-    if (!isTRUE(record$consumed_by_parser)) {
-      stop("Source inventory contains a non-parser input: ", record$path)
+    allowed_entity_input <- goal007 &&
+      identical(record$role, "entity_resolution_input") &&
+      identical(record$consumed_by_parser, FALSE)
+    if (!isTRUE(record$consumed_by_parser) && !allowed_entity_input) {
+      stop("Source inventory contains an unauthorized non-parser input: ", record$path)
     }
     path <- bundle_identity_path(
       bundle_dir,
@@ -379,9 +418,9 @@ validate_composite_identity <- function(manifest) {
 }
 
 validate_phase2_manifest <- function(bundle_dir, manifest) {
-  if (!identical(
-    manifest$manifest_schema,
-    "camtrap-evidence-manifest/1.1"
+  if (!manifest$manifest_schema %in% c(
+    "camtrap-evidence-manifest/1.1",
+    "camtrap-evidence-manifest/1.2"
   )) {
     return(invisible(TRUE))
   }
@@ -439,6 +478,33 @@ validate_phase2_manifest <- function(bundle_dir, manifest) {
   invisible(TRUE)
 }
 
+validate_entity_manifest <- function(bundle_dir, manifest) {
+  if (!identical(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.2"
+  )) {
+    return(invisible(TRUE))
+  }
+  required <- c(
+    "entity_resolution",
+    "entity_links",
+    "deployment_lineage",
+    "entity_resolution_summary",
+    "join_readiness"
+  )
+  if (!is.list(manifest$entity_resolution) ||
+        !identical(names(manifest$entity_resolution), required)) {
+    stop("Manifest 1.2 entity-resolution links are incomplete.")
+  }
+  paths <- entity_bundle_paths(bundle_dir, manifest$entity_resolution)
+  validate_entity_artifacts(
+    bundle_dir,
+    paths,
+    require_analysis_ready = TRUE
+  )
+  invisible(TRUE)
+}
+
 bundle_identity_path <- function(bundle_dir, relative_path, label) {
   assert_safe_relative_path(relative_path, label)
   path <- file.path(bundle_dir, relative_path)
@@ -452,6 +518,7 @@ validate_bundle_identities <- function(bundle_dir, manifest) {
   validate_engine_identity(manifest)
   validate_composite_identity(manifest)
   validate_phase2_manifest(bundle_dir, manifest)
+  validate_entity_manifest(bundle_dir, manifest)
 
   inputs_path <- bundle_identity_path(
     bundle_dir,

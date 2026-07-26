@@ -53,6 +53,20 @@ recorded as transformations. Source rows, transformations, proposals,
 decisions, applications, changed fields, and operational event membership are
 kept as separate provenance records.
 
+## Entity evidence
+
+Before adaptation discards source fields, the Goal 007 resolver retains exact
+supplied `locationID`, `deploymentID`, `deploymentStart`, and `deploymentEnd`
+as audit evidence. Opaque identifiers are accepted without parsing. A
+deployment becomes routing-ready evidence only when its ID, one explicit
+location link, and both ordered endpoints are supplied uniquely. Missing
+optional location or interval evidence remains unresolved; duplicates,
+competing evidence, reversed intervals, and orphan observation references
+stop analysis. Every source row participating in duplicate or competing
+deployment evidence remains separately attributable in deployment lineage;
+the resolver does not collapse to the first row or fabricate a resolved link.
+CamtrapDP does not supply or imply a nominal grid station or `analysis_site`.
+
 ## Outputs
 
 Mapped tables are validated against the existing input schema

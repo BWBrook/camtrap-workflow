@@ -634,3 +634,31 @@ Rationale:
 
 Consequences / follow-ups:
 - Map represents an interpolated surface, not measured continuous data; interpretation notes and report text should emphasize this.
+
+---
+
+## 2026-07-26 - Keep entity resolution as versioned audit evidence
+
+Decision:
+- Approve the exact Judbury 13-physical-to-nine-nominal crosswalk and four
+  undirected move pairs under its recorded SHA-256 authority.
+- Keep `nominal_grid_station`, `physical_location`, `deployment`, and
+  `analysis_site` distinct. Judbury deployment identity/interval/chronology
+  remain unresolved, and `analysis_site` remains unselected with zero
+  memberships.
+- Publish entity evidence in validation preview 1.1 and manifest 1.2 without
+  joining or rerouting analytical inputs. Retain manifest 1.0/1.1 verification.
+
+Rationale:
+- Explicit factual evidence makes identity risks inspectable without turning
+  suffixes, coordinates, effort runs, or legacy labels into unsupported
+  deployment or grouping rules.
+- Semantic reconstruction and exact sidecar authority prevent checksum
+  reclosure from manufacturing new mapping authority.
+
+Consequences / follow-ups:
+- The existing four validated tables and 13 Judbury scientific keys remain the
+  analytical contract.
+- Purpose-specific grouping, deployment chronology, effort/event routing,
+  public fields/API/migration, and full Phase 3 adapter/profile work require
+  separate authority and evidence.

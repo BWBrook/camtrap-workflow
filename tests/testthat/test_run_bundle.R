@@ -12,6 +12,7 @@ source(here("R", "config_identity.R"))
 source(here("R", "fixity.R"))
 source(here("R", "run_identity.R"))
 source(here("R", "config.R"))
+source(here("R", "entity_resolution.R"))
 source(here("R", "source_inventory.R"))
 source(here("R", "custom_funcs.R"))
 source(here("R", "qc_schema.R"))
@@ -160,7 +161,60 @@ goal005_reclose_bundle <- function(bundle) {
   invisible(bundle)
 }
 
-goal006_bundle_stage <- function(outputs_root, run_id) {
+goal007_reclose_source_identity <- function(bundle) {
+  source_path <- file.path(bundle, "provenance", "source_inventory.json")
+  source <- jsonlite::read_json(source_path, simplifyVector = FALSE)
+  source$files <- source$files[order(
+    vapply(source$files, `[[`, character(1), "path"),
+    method = "radix"
+  )]
+  source$source_sha256 <- fixity_identity(source$files)
+  jsonlite::write_json(
+    source,
+    source_path,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
+
+  manifest_file <- manifest_path(bundle)
+  manifest <- jsonlite::read_json(manifest_file, simplifyVector = FALSE)
+  manifest$fingerprints$source <- source$source_sha256
+  manifest$fingerprints$composite <- composite_fingerprint(
+    manifest$fingerprints$source,
+    manifest$fingerprints$config$resolved,
+    manifest$fingerprints$engine
+  )
+  jsonlite::write_json(
+    manifest,
+    manifest_file,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
+
+  effective_path <- file.path(bundle, "provenance", "effective_config.json")
+  effective <- jsonlite::read_json(effective_path, simplifyVector = FALSE)
+  effective$config$evidence_run$source_sha256 <- source$source_sha256
+  effective$config$evidence_run$composite_sha256 <-
+    manifest$fingerprints$composite
+  jsonlite::write_json(
+    effective,
+    effective_path,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
+  goal005_reclose_bundle(bundle)
+}
+
+goal006_bundle_stage <- function(outputs_root, run_id, include_entity = FALSE) {
   fixture <- here(
     "tests",
     "testthat",
@@ -181,6 +235,7 @@ goal006_bundle_stage <- function(outputs_root, run_id) {
     camtrapdp = NULL
   )
   config$paths$outputs <- outputs_root
+  config$entity_resolution <- entity_null_selection()
   config_path <- tempfile("goal006-bundle-config-", fileext = ".yml")
   yaml::write_yaml(config, config_path)
 
@@ -207,6 +262,17 @@ goal006_bundle_stage <- function(outputs_root, run_id) {
   phase2 <- lapply(preview_record$phase2, function(path) {
     file.path(stage, path)
   })
+  entity <- lapply(preview_record$entity_resolution, function(path) {
+    file.path(stage, path)
+  })
+  if (!isTRUE(include_entity)) {
+    unlink(
+      file.path(stage, "provenance", "entity_resolution"),
+      recursive = TRUE,
+      force = TRUE
+    )
+    entity <- NULL
+  }
   context <- list(
     supported_full_run = TRUE,
     run_id = run_id,
@@ -244,7 +310,8 @@ goal006_bundle_stage <- function(outputs_root, run_id) {
     session_info_path = report_inputs,
     config_file = raw_config,
     context = context,
-    phase2 = phase2
+    phase2 = phase2,
+    entity_resolution = entity
   )
   stage
 }
@@ -336,7 +403,15 @@ test_that("checksum-reclosed provenance inconsistencies fail verification", {
   effective_file <- file.path(config_final, "provenance", "effective_config.json")
   effective <- jsonlite::read_json(effective_file, simplifyVector = FALSE)
   effective$fingerprints$resolved <- paste(rep("0", 64L), collapse = "")
-  jsonlite::write_json(effective, effective_file, pretty = TRUE, auto_unbox = TRUE)
+  jsonlite::write_json(
+    effective,
+    effective_file,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
   goal005_reclose_bundle(config_final)
   expect_error(verify_run_bundle(config_final), "Resolved configuration fingerprint")
 
@@ -373,7 +448,15 @@ test_that("checksum-reclosed provenance inconsistencies fail verification", {
   effective <- jsonlite::read_json(effective_file, simplifyVector = FALSE)
   changed <- paste(rep("0", 64L), collapse = "")
   effective$config$evidence_run$composite_sha256 <- changed
-  jsonlite::write_json(effective, effective_file, pretty = TRUE, auto_unbox = TRUE)
+  jsonlite::write_json(
+    effective,
+    effective_file,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
   manifest_file <- manifest_path(composite_final)
   manifest <- jsonlite::read_json(manifest_file, simplifyVector = FALSE)
   manifest$fingerprints$composite <- changed
@@ -471,6 +554,174 @@ test_that("manifest 1.1 verifies Phase-2 links after portable relocation", {
   copied <- file.path(portable_root, run_id)
   fs::dir_copy(final, copied)
   expect_true(verify_run_bundle(copied)$valid)
+})
+
+test_that("manifest 1.2 verifies entity links and semantic reconstruction portably", {
+  root <- tempfile("goal007-output-")
+  run_id <- "20260723T123456Z-0000000000000071"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id, include_entity = TRUE),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+
+  expect_equal(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.2"
+  )
+  expect_equal(
+    names(manifest$entity_resolution),
+    c(
+      "entity_resolution",
+      "entity_links",
+      "deployment_lineage",
+      "entity_resolution_summary",
+      "join_readiness"
+    )
+  )
+  expect_equal(
+    unlist(manifest$entity_resolution, use.names = TRUE),
+    c(
+      entity_resolution =
+        "provenance/entity_resolution/entity_resolution.csv",
+      entity_links = "provenance/entity_resolution/entity_links.csv",
+      deployment_lineage =
+        "provenance/entity_resolution/deployment_lineage.csv",
+      entity_resolution_summary =
+        "provenance/entity_resolution/entity_resolution_summary.json",
+      join_readiness =
+        "provenance/entity_resolution/join_readiness.json"
+    )
+  )
+  readiness <- jsonlite::read_json(
+    file.path(final, manifest$entity_resolution$join_readiness),
+    simplifyVector = FALSE
+  )
+  source <- jsonlite::read_json(
+    file.path(final, manifest$source_inventory),
+    simplifyVector = FALSE
+  )
+  expect_equal(readiness$source_sha256, source$source_sha256)
+  expect_equal(readiness$source_sha256, manifest$fingerprints$source)
+  expect_true(verify_run_bundle(final)$valid)
+
+  portable_root <- tempfile("goal007-portable-")
+  dir.create(portable_root)
+  copied <- file.path(portable_root, run_id)
+  fs::dir_copy(final, copied)
+  expect_true(verify_run_bundle(copied)$valid)
+})
+
+test_that("reclosed undeclared sidecar and entity namespace extra fail", {
+  source_root <- tempfile("goal007-undeclared-source-")
+  source_id <- "20260723T123456Z-0000000000000073"
+  source_final <- publish_run_bundle(
+    goal006_bundle_stage(source_root, source_id, include_entity = TRUE),
+    source_root,
+    source_id
+  )
+  undeclared <- file.path(
+    source_final,
+    "source_snapshot",
+    "entity_resolution",
+    "undeclared.csv"
+  )
+  dir.create(dirname(undeclared), recursive = TRUE)
+  writeLines("undeclared", undeclared)
+  source_path <- file.path(
+    source_final,
+    "provenance",
+    "source_inventory.json"
+  )
+  source <- jsonlite::read_json(source_path, simplifyVector = FALSE)
+  source$files[[length(source$files) + 1L]] <- file_fixity_record(
+    undeclared,
+    source_final,
+    role = "entity_resolution_input",
+    consumed = FALSE
+  )
+  jsonlite::write_json(
+    source,
+    source_path,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
+  goal007_reclose_source_identity(source_final)
+  expect_error(
+    verify_run_bundle(source_final),
+    "explicit null.*zero entity-resolution sidecars"
+  )
+
+  namespace_root <- tempfile("goal007-namespace-")
+  namespace_id <- "20260723T123456Z-0000000000000074"
+  namespace_final <- publish_run_bundle(
+    goal006_bundle_stage(namespace_root, namespace_id, include_entity = TRUE),
+    namespace_root,
+    namespace_id
+  )
+  writeLines(
+    "extra",
+    file.path(
+      namespace_final,
+      "provenance",
+      "entity_resolution",
+      "extra.txt"
+    )
+  )
+  goal005_reclose_bundle(namespace_final)
+  expect_error(
+    verify_run_bundle(namespace_final),
+    "canonical five-file namespace"
+  )
+})
+
+test_that("checksum-reclosed entity evidence mutation fails reconstruction", {
+  root <- tempfile("goal007-output-")
+  run_id <- "20260723T123456Z-0000000000000072"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id, include_entity = TRUE),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+  entity_path <- file.path(
+    final,
+    manifest$entity_resolution$entity_resolution
+  )
+  records <- read_entity_csv(entity_path)
+  records$source_identifier[[1]] <- "forged-identity"
+  content <- as.list(records[1, setdiff(names(records), "record_digest"), drop = FALSE])
+  content <- lapply(content, function(value) {
+    if (length(value) == 1L && is.na(value)) NA_character_ else as.character(value)
+  })
+  records$record_digest[[1]] <- sha256_text(canonical_json(content))
+  unlink(entity_path)
+  readr::write_csv(records, entity_path, na = "")
+
+  summary_path <- file.path(
+    final,
+    manifest$entity_resolution$entity_resolution_summary
+  )
+  summary <- jsonlite::read_json(summary_path, simplifyVector = FALSE)
+  summary$ledger_sha256$entity_resolution <- sha256_file(entity_path)
+  unlink(summary_path)
+  atomic_write_json(summary, summary_path)
+  goal005_reclose_bundle(final)
+
+  expect_error(
+    verify_run_bundle(final),
+    "does not reproduce from immutable source"
+  )
 })
 
 test_that("checksum-reclosed Phase-2 schema tamper fails for every ledger", {

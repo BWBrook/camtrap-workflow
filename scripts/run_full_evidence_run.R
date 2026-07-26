@@ -6,6 +6,7 @@ load_evidence_helpers <- function(project_root) {
     "R/fixity.R",
     "R/run_identity.R",
     "R/config.R",
+    "R/entity_resolution.R",
     "R/source_inventory.R",
     "R/custom_funcs.R",
     "R/qc_schema.R",
@@ -88,6 +89,7 @@ run_full_evidence_run <- function(
   on.exit(unlink(bootstrap_config_path, force = TRUE), add = TRUE)
 
   resolved_config <- read_config(bootstrap_config_path, attach_runtime = FALSE)
+  entity_resolution_selection(resolved_config, require_explicit = TRUE)
   output_root_path <- resolve_project_path(resolved_config$paths$outputs, project_root)
   run_id <- if (is.null(run_id)) allocate_run_id(clock = clock, token = token) else run_id
   assert_safe_run_id(run_id)
@@ -184,13 +186,30 @@ run_full_evidence_run <- function(
     validation_state,
     staging_dir
   )
+  entity_state <- resolve_entity_evidence(
+    resolved_config,
+    snapshot,
+    validation_state
+  )
+  entity_artifacts <- write_entity_artifacts(
+    entity_state,
+    staging_dir
+  )
+  analysis_ready <- isTRUE(validation_state$can_analyze) &&
+    isTRUE(entity_state$can_analyze)
   context$validation <- list(
     validation_schema = "camtrap-validation-context/1.0",
-    can_analyze = validation_state$can_analyze,
+    can_analyze = analysis_ready,
     artifacts = validation_artifacts,
     validated_inputs_sha256 = sha256_file(
       validation_artifacts$validated_inputs
     )
+  )
+  context$entity_resolution <- list(
+    entity_resolution_context_schema =
+      "camtrap-entity-resolution-context/1.0",
+    can_analyze = entity_state$can_analyze,
+    artifacts = entity_artifacts
   )
   dir.create(dirname(runtime_path), recursive = TRUE, showWarnings = FALSE)
   atomic_write_json(context, runtime_path)
@@ -209,11 +228,11 @@ run_full_evidence_run <- function(
       mode = "validation_only",
       run_id = run_id,
       preview = final_dir,
-      analysis_ready = validation_state$can_analyze,
+      analysis_ready = analysis_ready,
       fingerprints = fingerprints
     )
     cat(canonical_json(result, pretty = TRUE), "\n")
-    if (!isTRUE(validation_state$can_analyze)) {
+    if (!isTRUE(analysis_ready)) {
       stop(
         "Validation preview published but analysis is blocked: ",
         final_dir
@@ -221,7 +240,7 @@ run_full_evidence_run <- function(
     }
     return(invisible(result))
   }
-  if (!isTRUE(validation_state$can_analyze)) {
+  if (!isTRUE(analysis_ready)) {
     stop("Validation preflight blocked the full run before analysis.")
   }
 

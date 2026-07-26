@@ -8,6 +8,12 @@ input_mode: "four_table"
 validation:
   repair_decisions: []
 
+entity_resolution:
+  profile_id: "judbury-entity-crosswalk/1.0.0-proposed"
+  sidecar_path: "docs/goals/007-entity-resolution/judbury_entity_crosswalk.csv"
+  sidecar_sha256: "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+  authority_reference: "goal007-judbury-crosswalk-sha256-553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"
