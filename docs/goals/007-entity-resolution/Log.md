@@ -1,10 +1,10 @@
 # Goal 007 - Packet log
 
-- **Canonical packet state:** `APPROVED_IMPLEMENTED_LOCAL_REPAIRED`
+- **Canonical packet state:** `COMPLETE_PUBLISHED`
 - **Framing/publication authority:** `AUTHORIZED_2026-07-26`
 - **Crosswalk approval state:** `APPROVED_EXACT_SHA256`
-- **Execution state:** `AUTHORIZED_FOCUSED_REPAIR_COMPLETE`
-- **Publication state:** `IMPLEMENTATION_NOT_COMMITTED`
+- **Execution state:** `COMPLETE`
+- **Publication state:** `PUBLISHED_CI_CONFIRMED`
 - **Packet date:** 2026-07-26 AEST
 - **Packet-authoring baseline:** clean synchronized `main` at
   `7ad07e936be33b82d9c0423324f6867d541a22bd`
@@ -212,9 +212,34 @@ authorized focused repair:
 RED controls reproduced all four gaps before production edits. Final focused
 suites, lint, 520-test authoritative execution, fresh preview/full parity,
 portable verification, legacy 1.1 verification, and the frozen scientific
-comparator all pass. Review confirmation, publication, and CI remain
-orchestrator-owned.
+comparator all pass. Independent confirmation returned
+`PASS_IMPLEMENTATION`.
 
 Raw ignored evidence and the implementation-owner report are under
-`outputs/goal007_acceptance/`. Independent implementation review, exact-path
-staging, commit, push, and exact-SHA CI remain orchestrator-owned.
+`outputs/goal007_acceptance/`. The accepted publication and exact-SHA CI
+closeout are recorded below.
+
+## Publication and exact-SHA CI closeout
+
+- Packet commit:
+  `3d42c1cb9ad74bff107de42200122f93505e21e6`.
+- Accepted implementation commit:
+  `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`
+  (`feat: add entity resolution evidence`).
+- Independent final verdict: `PASS_IMPLEMENTATION`, after the single focused
+  repair closed the four material provenance and verifier defects above.
+- Exact-SHA GitHub Actions run:
+  `https://github.com/BWBrook/camtrap-workflow/actions/runs/30184741535`;
+  workflow `ci`, push to `main`, run `30184741535`, job `89747281154`, head
+  SHA exactly `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`, conclusion `success`,
+  duration `24m4s`.
+- CI passed checkout, system dependencies, Quarto, TinyTeX, R, `renv`
+  restoration, lint, unit tests, pipeline smoke testing, the full immutable
+  evidence run, published evidence-bundle verification, artefact upload, and
+  cleanup.
+
+Goal 007 is accepted and published. This closeout does not complete Phase 3,
+resolve authoritative deployment identity, interval, direction, or chronology,
+select purpose-specific `analysis_site`, route effort or events, add a public
+schema/API/migration, resolve profile precedence, or complete the CamtrapDP
+adapter. No nine-station analysis has been performed.

@@ -48,6 +48,30 @@ ecological module changed.
 
 Detailed ignored evidence is in `outputs/goal007_acceptance/`.
 
+## Publication and exact-SHA CI closeout
+
+Goal 007 is accepted and published:
+
+- Packet commit:
+  `3d42c1cb9ad74bff107de42200122f93505e21e6`.
+- Accepted implementation commit:
+  `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`
+  (`feat: add entity resolution evidence`).
+- Independent final verdict: `PASS_IMPLEMENTATION`, after the single focused
+  repair closed four material provenance and verifier defects.
+- Exact-SHA GitHub Actions run:
+  `https://github.com/BWBrook/camtrap-workflow/actions/runs/30184741535`;
+  workflow `ci`, push to `main`, run `30184741535`, job `89747281154`, head
+  SHA exactly `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`, conclusion `success`,
+  duration `24m4s`.
+- CI passed checkout, system dependencies, Quarto, TinyTeX, R, `renv`
+  restoration, lint, unit tests, pipeline smoke testing, the full immutable
+  evidence run, published evidence-bundle verification, artefact upload, and
+  cleanup.
+
+This publication confirms the bounded factual entity-resolution evidence. It
+does not complete Phase 3 or constitute a nine-station analysis.
+
 ## Deferred
 
 Goal 007 does not complete Phase 3. Authoritative Judbury deployments,
