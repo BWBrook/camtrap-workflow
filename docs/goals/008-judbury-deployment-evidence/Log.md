@@ -1,11 +1,11 @@
 # Goal 008 - Packet log
 
-- **Canonical packet state:** `PUBLISHED_EXACT_PACKET_APPROVED_FOR_IMPLEMENTATION`
+- **Canonical packet state:** `COMPLETE_PUBLISHED`
 - **Evidence interpretation:** `BARRY_SUPPLIED_2026-07-27`
 - **Normalized source approval:** `APPROVED_EXACT_SHA256`
 - **Deployment-ledger approval:** `APPROVED_EXACT_SHA256`
-- **Implementation state:** `LOCAL_ACCEPTANCE_AND_REVIEW_PASS_WITH_NON_BLOCKING_NOTES`
-- **Publication state:** `NOT_PERFORMED`
+- **Execution state:** `COMPLETE`
+- **Publication state:** `PUBLISHED_CI_CONFIRMED`
 - **Independent packet review:** `PASS_PACKET`
 - **Independent implementation review:** `PASS_WITH_NON_BLOCKING_NOTES`
 - **Packet date:** 2026-07-27 AEST
@@ -15,14 +15,15 @@
 - **Intended packet subject:**
   `docs: define Goal 008 Judbury deployment evidence`
 
-## Authorized implementation checkpoint
+## Authorized implementation checkpoint (historical)
 
 Barry explicitly authorized implementation on 2026-07-27 against published
 packet commit `478832240e77388da299e55871bdeb6e386c90c5`, the exact normalized
 source and ledger SHA-256 values recorded below, the frozen Goal 007 crosswalk
 and `jc_op` SHA-256 values, and the exact combined authority reference.
 Implementation and verification remain bounded by the closed allowlist. Git
-publication remains owned by the orchestrator and has not been performed.
+publication remained owned by the orchestrator and had not yet been performed
+at this checkpoint.
 
 The required ignored pre-edit baseline passed:
 
@@ -122,7 +123,8 @@ portable verification, and scientific comparator all reran green.
 Raw evidence is retained in `outputs/goal008_acceptance/post/`, especially
 `authoritative-tests.log`, `final-lint.log`, `validate-only.log`,
 `full-run.log`, `verify-bundle.log`, and `scientific-invariance.log`.
-Git publication and exact-SHA CI remain pending and are not claimed here.
+At this local-acceptance checkpoint, Git publication and exact-SHA CI remained
+pending and were not yet claimed.
 
 ## Independent implementation review and adjudication
 
@@ -157,8 +159,41 @@ service source, reusing the reader generally, or introducing another
 deployment-evidence profile.
 
 Independent-review evidence and adjudication are recorded in
-`outputs/goal008_acceptance/review/implementer-report.md`. Publication remains
-`NOT_PERFORMED`; exact-SHA CI remains `NOT_RUN`.
+`outputs/goal008_acceptance/review/implementer-report.md`. At review
+adjudication, publication remained `NOT_PERFORMED` and exact-SHA CI remained
+`NOT_RUN`; the later closeout below supersedes those historical states.
+
+## Publication and exact-SHA CI closeout
+
+- Packet commit:
+  `478832240e77388da299e55871bdeb6e386c90c5`
+  (`docs: define Goal 008 Judbury deployment evidence`).
+- Accepted implementation commit:
+  `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`
+  (`feat: add Judbury deployment evidence`).
+- The implementation commit has the packet commit as its sole parent and
+  contains exactly the 29 reviewed implementation paths.
+- The implementation commit was pushed normally to `origin/main`.
+- Exact-SHA GitHub Actions:
+  [`30253764770`](https://github.com/BWBrook/camtrap-workflow/actions/runs/30253764770);
+  workflow `ci`, push to `main`, job `89937521084`, head SHA exactly
+  `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`, conclusion `success`, duration
+  `1h1m57s`.
+- CI passed every step through artefact upload.
+
+The accepted local evidence was lint PASS; 611 authoritative-test passes,
+zero failures, one expected warning, and zero skips; completed run
+`20260727T082247Z-fc187bae5fa44144`; manifest SHA-256
+`1d0461ae1e1073e45b0723104fbfb5e76b33b27fc4d5c8b2074ff5b170923e08`;
+91 payloads with portable verification PASS; exact scientific invariance; and
+the audit-only `13/13/9/4/75/62/0` structure with diagnostic `run_days` total
+7842 and analytical routing false.
+
+Goal 008 is complete, published, and exact-SHA-CI-confirmed. It remains an
+immutable audit-evidence slice: `analysis_site` is unselected, no effort or
+event routing changes, no scientific output changes, and no nine-station
+analysis. The non-blocking blank-token reader debt and hard future gate
+recorded above remain unresolved.
 
 ## Exact packet paths
 

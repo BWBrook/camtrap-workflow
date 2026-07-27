@@ -1142,13 +1142,15 @@ full adapter/profile work remain deferred.
   lineage 1.1, non-routing, and portable-reconstruction core.
 - [x] Complete post-implementation local acceptance and one independent review,
   accepted as `PASS_WITH_NON_BLOCKING_NOTES`.
-- [ ] Complete exact-path publication and exact-SHA CI within the closed Goal
+- [x] Complete exact-path publication and exact-SHA CI within the closed Goal
   008 allowlist.
 
-Goal 008 is an approved audit-evidence slice with local acceptance and
-independent review. It does not select `analysis_site`, perform a nine-station
-analysis, route effort or events, diagnose malfunction, change CamtrapDP
-adapter/export behaviour, or alter a scientific output.
+Goal 008 is closed as an accepted and published audit-evidence slice.
+Implementation `377c0fd4f78513885a3f2b53308e788bfa8d1cb4` passed exact-SHA
+workflow `ci` run `30253764770` with conclusion `success`. It does not select
+`analysis_site`, perform a nine-station analysis, route effort or events,
+diagnose malfunction, change CamtrapDP adapter/export behaviour, alter a
+scientific output, or complete Phase 3.
 
 The independent review found one non-blocking defence-in-depth debt: the
 standalone service reader accepts blank missing tokens in some unused or

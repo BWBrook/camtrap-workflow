@@ -55,9 +55,10 @@ phase.
   `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`. Current effort/event routing
   and all scientific outputs are preserved. Barry approved the exact Goal 008
   packet, source, ledger, packet commit, and authority reference on
-  2026-07-27. Its 13-deployment audit-evidence core is implemented locally
-  with local acceptance and independent review passed. Exact-path publication
-  and exact-SHA CI remain pending.
+  2026-07-27. Its 13-deployment audit-evidence core is accepted and published
+  as implementation `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`;
+  independent review passed with non-blocking notes and exact-SHA workflow
+  `ci` run `30253764770` concluded `success`.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
@@ -151,13 +152,14 @@ phase.
 Phases 1 and 2 are complete, and Goal 007 is accepted and published as the
 first bounded Phase 3 slice.
 
-Goal 008 is the active bounded slice. Barry approved the complete packet,
-normalized service source, deployment ledger, packet commit, and combined
-authority reference. The local implementation binds the service dates to 13
+Goal 008 is the second completed bounded Phase 3 slice. Barry approved the
+complete packet, normalized service source, deployment ledger, packet commit,
+and combined authority reference. Published implementation
+`377c0fd4f78513885a3f2b53308e788bfa8d1cb4` binds the service dates to 13
 explicit day-precision deployments and four directed chronology relations
 while keeping daily operation separate. Local acceptance and independent
-review passed with one non-blocking direct-reader note. Exact-path publication
-and exact-SHA CI remain before closeout.
+review passed with one non-blocking direct-reader note; exact-SHA workflow
+`ci` run `30253764770` concluded `success`.
 
 Goal 008 keeps `analysis_site` unselected with zero memberships and does not
 reroute effort, observations, operational events, denominators, or analytical
@@ -167,5 +169,5 @@ grouping remain later work with their own authority and evidence gates.
 Before any different deployment source or broader reader reuse, the service
 reader must reject blank missing tokens and test literal-`NA`-only behavior.
 
-Do not open another Phase 3 implementation slice until Goal 008 closes its
-remaining publication and exact-SHA CI gates.
+Goal 008 is closed. This closeout neither defines nor authorizes a subsequent
+Phase 3 implementation slice.

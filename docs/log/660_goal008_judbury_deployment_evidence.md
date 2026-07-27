@@ -2,6 +2,8 @@
 
 Date: 2026-07-27
 
+Status: `COMPLETE_PUBLISHED` / `PUBLISHED_CI_CONFIRMED`
+
 ## Authority
 
 Barry approved implementation against:
@@ -120,8 +122,47 @@ and last `jc_op == 1` dates. Substituting declared Goal 008 deployment spans
 into export behavior is explicitly deferred to a separate compatibility
 decision and packet.
 
-## Remaining closeout
+## Publication and exact-SHA CI closeout
 
-Exact-path publication and exact-SHA CI remain pending. Git staging, commit,
-push, and CI were not performed by the implementation agent and are not
-claimed here.
+The reviewed implementation was published as exactly one commit:
+
+- packet commit
+  `478832240e77388da299e55871bdeb6e386c90c5`
+  (`docs: define Goal 008 Judbury deployment evidence`);
+- implementation commit
+  `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`
+  (`feat: add Judbury deployment evidence`);
+- sole parent: the exact packet commit;
+- committed implementation scope: exactly 29 reviewed paths; and
+- publication: normal push of `main` to `origin/main`.
+
+Exact-SHA GitHub Actions completed successfully:
+
+- workflow `ci`;
+- event `push` to `main`;
+- run
+  [`30253764770`](https://github.com/BWBrook/camtrap-workflow/actions/runs/30253764770);
+- job `89937521084`;
+- head SHA exactly
+  `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`;
+- conclusion `success`;
+- duration `1h1m57s`; and
+- every step passed through artefact upload.
+
+The accepted evidence for that exact implementation SHA includes lint PASS,
+611 authoritative-test passes, zero failures, one expected warning, zero
+skips, completed bundle `20260727T082247Z-fc187bae5fa44144`, manifest SHA-256
+`1d0461ae1e1073e45b0723104fbfb5e76b33b27fc4d5c8b2074ff5b170923e08`,
+91 verified payloads, exact scientific invariance, and audit-only
+`13/13/9/4/75/62/0` evidence with diagnostic `run_days` total 7842 and false
+analytical routing.
+
+GitHub emitted a non-failing platform annotation that `actions/checkout@v4`
+and `actions/upload-artifact@v4` still target deprecated Node.js 20 and are
+being forced to Node.js 24. This is workflow-maintenance information, not a
+Goal 008 defect.
+
+Goal 008 is closed as complete, published, and exact-SHA-CI-confirmed. It does
+not complete Phase 3, select `analysis_site`, route effort or events, change a
+scientific output, or perform a nine-station analysis. The blank-token
+defence-in-depth debt remains subject to the hard future gate above.
