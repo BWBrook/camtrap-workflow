@@ -287,7 +287,15 @@ validate_source_identity <- function(bundle_dir, manifest) {
     allowed_entity_input <- goal007 &&
       identical(record$role, "entity_resolution_input") &&
       identical(record$consumed_by_parser, FALSE)
-    if (!isTRUE(record$consumed_by_parser) && !allowed_entity_input) {
+    allowed_deployment_input <- goal007 &&
+      record$role %in% c(
+        "deployment_service_input",
+        "deployment_ledger_input"
+      ) &&
+      identical(record$consumed_by_parser, FALSE)
+    if (!isTRUE(record$consumed_by_parser) &&
+          !allowed_entity_input &&
+          !allowed_deployment_input) {
       stop("Source inventory contains an unauthorized non-parser input: ", record$path)
     }
     path <- bundle_identity_path(

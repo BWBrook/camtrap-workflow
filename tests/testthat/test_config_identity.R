@@ -215,3 +215,115 @@ test_that("entity-resolution configuration rejects broad or malformed authority"
     "only valid when input_mode = 'four_table'"
   )
 })
+
+test_that("deployment evidence is explicit in current configs and omitted from legacy defaults", {
+  expect_false("deployment_evidence" %in% names(default_config()))
+
+  current <- c(
+    "config.yml",
+    "config.template_example.yml",
+    "config.forest_example.yml",
+    "config.camtrapdp_example.yml",
+    "config.camtrapdp_export.yml"
+  )
+  fields <- c(
+    "profile_id",
+    "service_sidecar_path",
+    "service_sidecar_sha256",
+    "deployment_ledger_path",
+    "deployment_ledger_sha256",
+    "authority_reference"
+  )
+  values <- lapply(current, function(path) {
+    config <- read_config(here(path), attach_runtime = FALSE)
+    expect_true("deployment_evidence" %in% names(config), info = path)
+    expect_equal(names(config$deployment_evidence), fields, info = path)
+    config$deployment_evidence
+  })
+  names(values) <- current
+
+  selected <- c("config.yml", "config.camtrapdp_export.yml")
+  for (path in selected) {
+    expect_equal(
+      values[[path]]$profile_id,
+      "judbury-deployment-evidence/1.0.0-proposed",
+      info = path
+    )
+    expect_equal(
+      values[[path]]$service_sidecar_sha256,
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+      info = path
+    )
+    expect_equal(
+      values[[path]]$deployment_ledger_sha256,
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+      info = path
+    )
+  }
+  for (path in setdiff(current, selected)) {
+    expect_true(all(vapply(values[[path]], is.null, logical(1))), info = path)
+  }
+
+  legacy <- read_config(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal005",
+      "config_equivalent_a.yml"
+    ),
+    attach_runtime = FALSE
+  )
+  expect_false("deployment_evidence" %in% names(legacy))
+})
+
+test_that("deployment-evidence configuration rejects partial or unapproved authority", {
+  null_entity <- list(
+    profile_id = NULL,
+    sidecar_path = NULL,
+    sidecar_sha256 = NULL,
+    authority_reference = NULL
+  )
+  selection <- list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 =
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+    deployment_ledger_path =
+      "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
+    deployment_ledger_sha256 =
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
+      "ledger-sha256-",
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+    )
+  )
+
+  config <- default_config()
+  config$entity_resolution <- null_entity
+  config$deployment_evidence <- selection
+  expect_error(
+    validate_config(config),
+    "exact Goal 007 entity-resolution selection"
+  )
+
+  config$deployment_evidence["deployment_ledger_sha256"] <- list(NULL)
+  expect_error(validate_config(config), "exact null selection|complete selected")
+
+  config$deployment_evidence <- c(selection, inline_mapping = list(site = "x"))
+  expect_error(validate_config(config), "contain exactly")
+
+  config$deployment_evidence <- selection
+  config$deployment_evidence$authority_reference <- "approved"
+  expect_error(validate_config(config), "exact approved authority")
+
+  config$deployment_evidence <- selection
+  config$input_mode <- "camtrapdp"
+  config$paths$inputs$camtrapdp <- "camtrapdp/datapackage.json"
+  expect_error(
+    validate_config(config),
+    "only valid when input_mode = 'four_table'"
+  )
+})

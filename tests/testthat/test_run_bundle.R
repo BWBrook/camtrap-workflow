@@ -214,28 +214,61 @@ goal007_reclose_source_identity <- function(bundle) {
   goal005_reclose_bundle(bundle)
 }
 
-goal006_bundle_stage <- function(outputs_root, run_id, include_entity = FALSE) {
-  fixture <- here(
-    "tests",
-    "testthat",
-    "fixtures",
-    "goal006",
-    "four_table_clean"
-  )
-  source_root <- tempfile("goal006-bundle-input-")
-  fs::dir_copy(fixture, source_root)
-  config <- default_config()
-  config$schema_version_path <- here("schema_version.txt")
-  config$timezone_fixed_offset_hours <- 10
-  config$paths$inputs <- list(
-    site = file.path(source_root, "site.csv"),
-    op = file.path(source_root, "op.csv"),
-    obs = file.path(source_root, "obs.csv"),
-    taxa = file.path(source_root, "taxa.csv"),
-    camtrapdp = NULL
-  )
+goal006_bundle_stage <- function(
+    outputs_root,
+    run_id,
+    include_entity = FALSE,
+    goal008 = FALSE) {
+  if (isTRUE(goal008)) {
+    config <- read_config(here("config.yml"), attach_runtime = FALSE)
+    config$deployment_evidence <- list(
+      profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+      service_sidecar_path = "data/jc_services.csv",
+      service_sidecar_sha256 =
+        "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+      deployment_ledger_path =
+        "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
+      deployment_ledger_sha256 =
+        "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+      authority_reference = paste0(
+        "goal008-judbury-deployment-evidence-source-sha256-",
+        "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
+        "ledger-sha256-",
+        "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+      )
+    )
+    include_entity <- TRUE
+  } else {
+    fixture <- here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal006",
+      "four_table_clean"
+    )
+    source_root <- tempfile("goal006-bundle-input-")
+    fs::dir_copy(fixture, source_root)
+    config <- default_config()
+    config$schema_version_path <- here("schema_version.txt")
+    config$timezone_fixed_offset_hours <- 10
+    config$paths$inputs <- list(
+      site = file.path(source_root, "site.csv"),
+      op = file.path(source_root, "op.csv"),
+      obs = file.path(source_root, "obs.csv"),
+      taxa = file.path(source_root, "taxa.csv"),
+      camtrapdp = NULL
+    )
+    config$entity_resolution <- entity_null_selection()
+    config$deployment_evidence <- list(
+      profile_id = NULL,
+      service_sidecar_path = NULL,
+      service_sidecar_sha256 = NULL,
+      deployment_ledger_path = NULL,
+      deployment_ledger_sha256 = NULL,
+      authority_reference = NULL
+    )
+  }
   config$paths$outputs <- outputs_root
-  config$entity_resolution <- entity_null_selection()
   config_path <- tempfile("goal006-bundle-config-", fileext = ".yml")
   yaml::write_yaml(config, config_path)
 
@@ -614,6 +647,155 @@ test_that("manifest 1.2 verifies entity links and semantic reconstruction portab
   copied <- file.path(portable_root, run_id)
   fs::dir_copy(final, copied)
   expect_true(verify_run_bundle(copied)$valid)
+})
+
+test_that("Goal 008 bundle reconstructs portably and rejects reclosed source evidence", {
+  root <- tempfile("goal008-output-")
+  run_id <- "20260727T123456Z-0000000000000081"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(
+      root,
+      run_id,
+      include_entity = TRUE,
+      goal008 = TRUE
+    ),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+  source <- jsonlite::read_json(
+    file.path(final, manifest$source_inventory),
+    simplifyVector = FALSE
+  )
+  roles <- vapply(source$files, `[[`, character(1), "role")
+  lineage <- read_entity_csv(file.path(
+    final,
+    manifest$entity_resolution$deployment_lineage
+  ))
+
+  expect_equal(
+    sort(roles[grepl("^deployment_", roles)]),
+    c("deployment_ledger_input", "deployment_service_input")
+  )
+  expect_equal(nrow(lineage), 13L)
+  expect_equal(
+    unique(lineage$deployment_record_schema),
+    "camtrap-deployment-lineage/1.1"
+  )
+  expect_true(verify_run_bundle(final)$valid)
+
+  portable_root <- tempfile("goal008-portable-")
+  dir.create(portable_root)
+  copied <- file.path(portable_root, run_id)
+  fs::dir_copy(final, copied)
+  expect_true(verify_run_bundle(copied)$valid)
+  if (!any(roles == "deployment_service_input")) {
+    return(invisible(NULL))
+  }
+
+  service_path <- file.path(
+    copied,
+    source$files[[which(roles == "deployment_service_input")]]$path
+  )
+  service_text <- readLines(service_path)
+  service_text[[2]] <- sub(
+    "14/10/2019",
+    "13/10/2019",
+    service_text[[2]],
+    fixed = TRUE
+  )
+  writeLines(service_text, service_path)
+  source_path <- file.path(copied, manifest$source_inventory)
+  copied_source <- jsonlite::read_json(source_path, simplifyVector = FALSE)
+  copied_roles <- vapply(copied_source$files, `[[`, character(1), "role")
+  service_index <- which(copied_roles == "deployment_service_input")
+  copied_source$files[[service_index]] <- file_fixity_record(
+    service_path,
+    copied,
+    role = "deployment_service_input",
+    consumed = FALSE
+  )
+  jsonlite::write_json(
+    copied_source,
+    source_path,
+    pretty = TRUE,
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null",
+    digits = NA
+  )
+  goal007_reclose_source_identity(copied)
+  expect_error(
+    verify_run_bundle(copied),
+    "deployment service.*authority|approved SHA-256"
+  )
+})
+
+test_that("checksum-reclosed Goal 008 event digest fails semantic reconstruction", {
+  root <- tempfile("goal008-lineage-output-")
+  run_id <- "20260727T123456Z-0000000000000082"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(
+      root,
+      run_id,
+      include_entity = TRUE,
+      goal008 = TRUE
+    ),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(
+    manifest_path(final),
+    simplifyVector = FALSE
+  )
+  paths <- lapply(manifest$entity_resolution, function(path) {
+    file.path(final, path)
+  })
+  lineage <- read_entity_csv(paths$deployment_lineage)
+  expect_equal(nrow(lineage), 13L)
+  if (nrow(lineage) == 0L) {
+    return(invisible(NULL))
+  }
+  lineage$service_event_digest[[1]] <- paste(rep("0", 64L), collapse = "")
+  content <- as.list(
+    lineage[1, setdiff(names(lineage), "record_digest"), drop = FALSE]
+  )
+  content <- lapply(content, function(value) {
+    if (length(value) == 1L && is.na(value)) NA_character_ else as.character(value)
+  })
+  lineage$record_digest[[1]] <- sha256_text(canonical_json(content))
+  unlink(paths$deployment_lineage)
+  readr::write_csv(lineage, paths$deployment_lineage, na = "")
+
+  records <- read_entity_csv(paths$entity_resolution)
+  links <- read_entity_csv(paths$entity_links)
+  entity_digest <- sha256_text(canonical_json(list(
+    records = records,
+    links = links,
+    deployment_lineage = lineage
+  )))
+  summary <- jsonlite::read_json(
+    paths$entity_resolution_summary,
+    simplifyVector = FALSE
+  )
+  summary$ledger_content_sha256 <- entity_digest
+  summary$ledger_sha256$deployment_lineage <-
+    sha256_file(paths$deployment_lineage)
+  unlink(paths$entity_resolution_summary)
+  atomic_write_json(summary, paths$entity_resolution_summary)
+  readiness <- jsonlite::read_json(paths$join_readiness, simplifyVector = FALSE)
+  readiness$entity_ledger_digest <- entity_digest
+  unlink(paths$join_readiness)
+  atomic_write_json(readiness, paths$join_readiness)
+  goal005_reclose_bundle(final)
+
+  expect_error(
+    verify_run_bundle(final),
+    "does not reproduce from immutable source"
+  )
 })
 
 test_that("reclosed undeclared sidecar and entity namespace extra fail", {

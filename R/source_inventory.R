@@ -261,6 +261,110 @@ snapshot_entity_resolution <- function(config, snapshot_root, project_root) {
   destination
 }
 
+configured_local_evidence_path <- function(path, project_root, label) {
+  candidate <- if (fs::is_absolute_path(path)) {
+    path
+  } else {
+    file.path(project_root, path)
+  }
+  if (nzchar(Sys.readlink(candidate))) {
+    stop(label, " may not be a symlink.")
+  }
+  resolved <- resolve_project_path(path, project_root)
+  root <- normalizePath(project_root, winslash = "/", mustWork = TRUE)
+  if (!startsWith(resolved, paste0(root, "/"))) {
+    stop(label, " escapes the project root.")
+  }
+  if (!file.exists(resolved) || isTRUE(file.info(resolved)$isdir)) {
+    stop(label, " is missing or not a file.")
+  }
+  resolved
+}
+
+deployment_snapshot_selection <- function(config) {
+  if (exists("deployment_evidence_selection", mode = "function")) {
+    return(deployment_evidence_selection(
+      config,
+      require_explicit = FALSE
+    ))
+  }
+  selection <- config$deployment_evidence
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  fields <- c(
+    "profile_id",
+    "service_sidecar_path",
+    "service_sidecar_sha256",
+    "deployment_ledger_path",
+    "deployment_ledger_sha256",
+    "authority_reference"
+  )
+  if (is.list(selection) &&
+        identical(sort(names(selection)), sort(fields)) &&
+        all(vapply(selection[fields], is.null, logical(1)))) {
+    return(selection)
+  }
+  stop(
+    "A selected deployment-evidence profile requires the entity-resolution ",
+    "authority helpers."
+  )
+}
+
+snapshot_deployment_evidence <- function(
+    config,
+    snapshot_root,
+    project_root) {
+  selection <- deployment_snapshot_selection(config)
+  selected <- !is.null(selection) && !is.null(selection$profile_id)
+  if (!selected) {
+    return(list(service = NULL, ledger = NULL))
+  }
+  specifications <- list(
+    service = list(
+      configured_path = selection$service_sidecar_path,
+      expected_sha256 = selection$service_sidecar_sha256,
+      label = "Deployment service sidecar",
+      destination = file.path(
+        snapshot_root,
+        "deployment_evidence",
+        "service",
+        basename(selection$service_sidecar_path)
+      )
+    ),
+    ledger = list(
+      configured_path = selection$deployment_ledger_path,
+      expected_sha256 = selection$deployment_ledger_sha256,
+      label = "Deployment evidence ledger",
+      destination = file.path(
+        snapshot_root,
+        "deployment_evidence",
+        "ledger",
+        basename(selection$deployment_ledger_path)
+      )
+    )
+  )
+  paths <- lapply(specifications, function(specification) {
+    source <- configured_local_evidence_path(
+      specification$configured_path,
+      project_root,
+      specification$label
+    )
+    if (!identical(sha256_file(source), specification$expected_sha256)) {
+      stop(specification$label, " SHA-256 does not match approved authority.")
+    }
+    copy_snapshot_file(source, specification$destination)
+    if (!identical(
+      sha256_file(specification$destination),
+      specification$expected_sha256
+    )) {
+      stop(specification$label, " changed during snapshotting.")
+    }
+    specification$destination
+  })
+  paths
+}
+
 materialize_source_snapshot <- function(
     config,
     staging_dir,
@@ -282,6 +386,11 @@ materialize_source_snapshot <- function(
     snapshot_root,
     project_root
   )
+  deployment_evidence_paths <- snapshot_deployment_evidence(
+    config,
+    snapshot_root,
+    project_root
+  )
 
   records <- lapply(snapshot$parser_files, function(path) {
     role <- if (identical(path, snapshot$parser_paths$schema_version)) "schema" else "parser_input"
@@ -295,14 +404,38 @@ materialize_source_snapshot <- function(
       consumed = FALSE
     )
   }
+  if (!is.null(deployment_evidence_paths$service)) {
+    records[[length(records) + 1L]] <- file_fixity_record(
+      deployment_evidence_paths$service,
+      staging_dir,
+      role = "deployment_service_input",
+      consumed = FALSE
+    )
+  }
+  if (!is.null(deployment_evidence_paths$ledger)) {
+    records[[length(records) + 1L]] <- file_fixity_record(
+      deployment_evidence_paths$ledger,
+      staging_dir,
+      role = "deployment_ledger_input",
+      consumed = FALSE
+    )
+  }
   records <- records[order(vapply(records, `[[`, character(1), "path"), method = "radix")]
   snapshot$inventory <- records
   snapshot$source_sha256 <- fixity_identity(records)
   snapshot$snapshot_root <- snapshot_root
   snapshot$entity_resolution_path <- entity_resolution_path
+  snapshot$deployment_evidence_paths <- deployment_evidence_paths
   if (exists("validate_entity_source", mode = "function")) {
     selection <- entity_resolution_selection(config, require_explicit = FALSE)
     validate_entity_source(config, snapshot, selection)
+  }
+  if (exists("validate_deployment_evidence_source", mode = "function")) {
+    selection <- deployment_evidence_selection(
+      config,
+      require_explicit = FALSE
+    )
+    validate_deployment_evidence_source(config, snapshot, selection)
   }
   snapshot
 }

@@ -14,6 +14,14 @@ entity_resolution:
   sidecar_sha256: null
   authority_reference: null
 
+deployment_evidence:
+  profile_id: null
+  service_sidecar_path: null
+  service_sidecar_sha256: null
+  deployment_ledger_path: null
+  deployment_ledger_sha256: null
+  authority_reference: null
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

@@ -48,6 +48,14 @@ goal006_validation_config <- function(root, outputs = tempfile("goal006-validati
   )
   config$paths$outputs <- outputs
   config$entity_resolution <- entity_null_selection()
+  config$deployment_evidence <- list(
+    profile_id = NULL,
+    service_sidecar_path = NULL,
+    service_sidecar_sha256 = NULL,
+    deployment_ledger_path = NULL,
+    deployment_ledger_sha256 = NULL,
+    authority_reference = NULL
+  )
   validate_config(config)
 }
 
@@ -527,4 +535,110 @@ test_that("failure after preflight preserves prior preview and latest bytes", {
   expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
   expect_false(dir.exists(file.path(output_root, "runs", failed_id)))
   expect_false(dir.exists(file.path(output_root, "preflight", failed_id)))
+})
+
+goal008_validation_selection <- function() {
+  list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 =
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+    deployment_ledger_path =
+      "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
+    deployment_ledger_sha256 =
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
+      "ledger-sha256-",
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+    )
+  )
+}
+
+test_that("supported runner requires explicit deployment selected or null configuration", {
+  config <- goal006_validation_config(goal006_validation_fixture())
+  config$deployment_evidence <- NULL
+  config_path <- tempfile("goal008-omitted-config-", fileext = ".yml")
+  yaml::write_yaml(config, config_path)
+
+  expect_error(
+    run_full_evidence_run(
+      config_path = config_path,
+      run_id = "20260727T123456Z-0000000000000080",
+      validation_only = TRUE,
+      project_root = here()
+    ),
+    "Supported Goal 008 runs require an explicit deployment_evidence"
+  )
+})
+
+test_that("selected validation preview adds only Goal 008 audit evidence", {
+  selected_outputs <- tempfile("goal008-selected-output-")
+  null_outputs <- tempfile("goal008-null-output-")
+  selected <- read_config(here("config.yml"), attach_runtime = FALSE)
+  selected$paths$outputs <- selected_outputs
+  selected$deployment_evidence <- goal008_validation_selection()
+  null <- selected
+  null$paths$outputs <- null_outputs
+  null$deployment_evidence <- list(
+    profile_id = NULL,
+    service_sidecar_path = NULL,
+    service_sidecar_sha256 = NULL,
+    deployment_ledger_path = NULL,
+    deployment_ledger_sha256 = NULL,
+    authority_reference = NULL
+  )
+  selected_path <- tempfile("goal008-selected-config-", fileext = ".yml")
+  null_path <- tempfile("goal008-null-config-", fileext = ".yml")
+  yaml::write_yaml(selected, selected_path)
+  yaml::write_yaml(null, null_path)
+  selected_id <- "20260727T123456Z-0000000000000081"
+  null_id <- "20260727T123456Z-0000000000000082"
+
+  selected_result <- run_full_evidence_run(
+    config_path = selected_path,
+    run_id = selected_id,
+    validation_only = TRUE,
+    project_root = here()
+  )
+  null_result <- run_full_evidence_run(
+    config_path = null_path,
+    run_id = null_id,
+    validation_only = TRUE,
+    project_root = here()
+  )
+  selected_record <- jsonlite::read_json(
+    preflight_record_path(selected_result$preview),
+    simplifyVector = FALSE
+  )
+  null_record <- jsonlite::read_json(
+    preflight_record_path(null_result$preview),
+    simplifyVector = FALSE
+  )
+  selected_inputs <- readRDS(file.path(
+    selected_result$preview,
+    selected_record$phase2$validated_inputs
+  ))
+  null_inputs <- readRDS(file.path(
+    null_result$preview,
+    null_record$phase2$validated_inputs
+  ))
+  selected_lineage <- read_entity_csv(file.path(
+    selected_result$preview,
+    selected_record$entity_resolution$deployment_lineage
+  ))
+
+  expect_equal(
+    analytical_inputs_fingerprint(selected_inputs),
+    analytical_inputs_fingerprint(null_inputs)
+  )
+  expect_equal(names(selected_inputs), c("site", "op", "obs", "taxa"))
+  expect_equal(nrow(selected_lineage), 13L)
+  expect_equal(
+    unique(selected_lineage$deployment_record_schema),
+    "camtrap-deployment-lineage/1.1"
+  )
+  expect_false(file.exists(file.path(selected_outputs, "latest")))
+  expect_false(file.exists(file.path(null_outputs, "latest")))
 })

@@ -4,9 +4,9 @@ Accepted boundaries are deliberately not reopened here: the simple
 versioned-CSV entry with CamtrapDP compatibility, immutable inputs and audited
 repair concept, fail-soft analytical omission, one engine, four distinct
 entities, three output layers, and independent LocalMap manifest boundary are
-already part of the contract. This table retains the resolved Phase 2 repair
-and Goal 007 entity authority beside choices still needing authority or
-evidence.
+already part of the contract. This table retains the resolved Phase 2 repair,
+Goal 007 entity authority, and Goal 008 deployment authority beside choices
+still needing authority or evidence.
 
 | ID | Decision | Rationale/evidence | Owner/authority | Dependency | Reversibility | Status | Next evidence | Blocks next goal |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -19,4 +19,4 @@ evidence.
 | D004-08 | Select stakeholder platform, local interface, deployment and lifecycle posture | Goal 003 found operating-system, managed-desktop, network, procurement and licence evidence missing | Barry | C24-C25 / Phase 7 | moderate | defer_until_gate | Stakeholder requirements sample and bounded interface comparison | no |
 | D004-09 | Decide whether ALA/regional-context or AI interpretation spikes proceed | Both are downstream optional extensions with scientific, privacy, egress, review and governance risks | Barry | C27 / Phase 8 | high while deferred | defer_until_gate | Approved scientific extent/filters or egress/review policy and pilot evidence | no |
 | D004-10 | Set software-note claim, journal, release, and maintenance bar | Goal 003 rejects first/only and universal claims; venue and support obligations remain evidence-dependent | Barry | C26-C27 / Phase 8 | high before submission | defer_until_gate | Reproducibility, maintenance, documentation, independent-case and release evidence | no |
-| D004-11 | Approve exact Judbury deployment and service evidence separately from the frozen Goal 007 crosswalk and analytical routing | Proposed 2026-07-27: Barry supplied the service-date and daily-operation meanings. The LF-normalized service source is proposed at SHA-256 `f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a` and the 13-row deployment ledger at `0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf`. `jc_op` remains daily operation authority; `sN.run_days` is audit-only metadata. Independent packet review returned `PASS_PACKET`; neither exact file nor implementation is approved by this proposal | Barry | C07 / Phase 3 | moderate | pending_exact_approval | Barry approval of the complete packet, exact source and ledger hashes, packet commit, and combined authority reference | yes |
+| D004-11 | Approve exact Judbury deployment and service evidence separately from the frozen Goal 007 crosswalk and analytical routing | Accepted 2026-07-27: Barry approved packet commit `478832240e77388da299e55871bdeb6e386c90c5`, LF-normalized service SHA-256 `f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a`, 13-row ledger SHA-256 `0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf`, and the combined authority reference. `jc_op` remains daily-operation authority; `sN.run_days` is audit-only metadata; `analysis_site` and analytical routing remain forbidden. Local acceptance and independent review passed with one non-blocking direct-reader note: blank-token rejection is required before a different source, generalized reader reuse, or new deployment profile | Barry | C07 / Phase 3 | moderate | resolved_accepted | Exact-path publication and exact-SHA CI; literal-`NA`-only rejection before broader reader use | yes |

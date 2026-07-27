@@ -3,7 +3,8 @@
 entity_resolver_version <- "camtrap-entity-resolver/1.0"
 entity_record_schema <- "camtrap-entity-resolution/1.0"
 entity_link_schema <- "camtrap-entity-links/1.0"
-deployment_lineage_schema <- "camtrap-deployment-lineage/1.0"
+deployment_lineage_legacy_schema <- "camtrap-deployment-lineage/1.0" # nolint: object_length_linter.
+deployment_lineage_schema <- "camtrap-deployment-lineage/1.1"
 entity_summary_schema <- "camtrap-entity-resolution-summary/1.0"
 join_readiness_schema <- "camtrap-join-readiness/1.0"
 
@@ -92,6 +93,107 @@ entity_resolution_selection <- function(config, require_explicit = FALSE) {
 }
 
 entity_resolution_is_selected <- function(selection) {
+  !is.null(selection) && !is.null(selection$profile_id)
+}
+
+deployment_evidence_null_selection <- function() { # nolint: object_length_linter.
+  list(
+    profile_id = NULL,
+    service_sidecar_path = NULL,
+    service_sidecar_sha256 = NULL,
+    deployment_ledger_path = NULL,
+    deployment_ledger_sha256 = NULL,
+    authority_reference = NULL
+  )
+}
+
+judbury_deployment_profile <- function() {
+  service_sha256 <-
+    "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a"
+  ledger_sha256 <-
+    "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+  list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 = service_sha256,
+    deployment_ledger_path = paste0(
+      "docs/goals/008-judbury-deployment-evidence/",
+      "judbury_deployment_ledger.csv"
+    ),
+    deployment_ledger_sha256 = ledger_sha256,
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      service_sha256,
+      "-ledger-sha256-",
+      ledger_sha256
+    ),
+    service_source_schema = "judbury-camera-service-history/1.0",
+    service_source_version = "judbury-jc-services/1.0.0-proposed",
+    deployment_ledger_schema = "camtrap-deployment-evidence-ledger/1.0",
+    deployment_ledger_version =
+      "judbury-deployment-evidence-ledger/1.0.0-proposed",
+    operation_authority_path = "data/jc_op.csv",
+    operation_authority_sha256 =
+      "28222586fa232fccc46bfab5e8c07e0c453f07387ebe4eb95b9a90e4687033a3"
+  )
+}
+
+deployment_evidence_selection <- function(config, require_explicit = FALSE) {
+  selection <- config$deployment_evidence
+  if (is.null(selection)) {
+    if (isTRUE(require_explicit)) {
+      stop(
+        "Supported Goal 008 runs require an explicit deployment_evidence ",
+        "selection or explicit null selection."
+      )
+    }
+    return(NULL)
+  }
+  fields <- names(deployment_evidence_null_selection())
+  if (!is.list(selection) ||
+        !identical(sort(names(selection)), sort(fields))) {
+    stop(
+      "deployment_evidence must contain exactly profile_id, ",
+      "service_sidecar_path, service_sidecar_sha256, ",
+      "deployment_ledger_path, deployment_ledger_sha256, and ",
+      "authority_reference."
+    )
+  }
+  values <- selection[fields]
+  nulls <- vapply(values, is.null, logical(1))
+  if (all(nulls)) {
+    return(deployment_evidence_null_selection())
+  }
+  if (any(nulls) ||
+    !all(vapply(values, function(value) {
+      is.character(value) && length(value) == 1L && nzchar(value)
+    }, logical(1)))) {
+    stop(
+      "deployment_evidence must be either an exact null selection or a ",
+      "complete selected profile."
+    )
+  }
+  expected <- judbury_deployment_profile()[fields]
+  if (!identical(selection[fields], expected)) {
+    stop("Selected deployment-evidence profile has no exact approved authority.")
+  }
+  if (!identical(config$input_mode, "four_table")) {
+    stop(
+      "The approved Judbury deployment-evidence profile is only valid ",
+      "when input_mode = 'four_table'."
+    )
+  }
+  entity_selection <- entity_resolution_selection(config, require_explicit = TRUE)
+  if (!entity_resolution_is_selected(entity_selection)) {
+    stop(
+      "Selected Goal 008 evidence requires the exact Goal 007 ",
+      "entity-resolution selection."
+    )
+  }
+  selection
+}
+
+deployment_evidence_is_selected <- function(selection) { # nolint: object_length_linter.
   !is.null(selection) && !is.null(selection$profile_id)
 }
 
@@ -196,9 +298,41 @@ deployment_lineage_record <- function(
     resolution_state,
     evidence_basis,
     source_inventory_path = NA_character_,
-    source_row_id = NA_character_) {
+    source_row_id = NA_character_,
+    record_schema = deployment_lineage_schema,
+    physical_location_identifier = NA_character_,
+    date_precision = NA_character_,
+    endpoint_semantics = NA_character_,
+    start_service_label = NA_character_,
+    end_service_label = NA_character_,
+    service_event_count = NA_character_,
+    service_event_digest = NA_character_,
+    predecessor_deployment_id = NA_character_,
+    successor_deployment_id = NA_character_,
+    service_source_schema = NA_character_,
+    service_source_version = NA_character_,
+    service_source_inventory_path = NA_character_,
+    service_source_sha256 = NA_character_,
+    service_source_row_ordinal = NA_character_,
+    service_source_row_id = NA_character_,
+    deployment_ledger_schema = NA_character_,
+    deployment_ledger_version = NA_character_,
+    deployment_ledger_inventory_path = NA_character_, # nolint: object_length_linter.
+    deployment_ledger_sha256 = NA_character_,
+    deployment_ledger_row_ordinal = NA_character_,
+    deployment_ledger_row_id = NA_character_,
+    approval_reference = NA_character_,
+    operation_authority_inventory_path = NA_character_, # nolint: object_length_linter.
+    operation_authority_sha256 = NA_character_,
+    run_days_disposition = NA_character_) {
+  if (!record_schema %in% c(
+    deployment_lineage_legacy_schema,
+    deployment_lineage_schema
+  )) {
+    stop("Unsupported deployment-lineage record schema.")
+  }
   record <- list(
-    deployment_record_schema = deployment_lineage_schema,
+    deployment_record_schema = record_schema,
     resolver_version = entity_resolver_version,
     deployment_identifier = deployment_identifier,
     deployment_entity_id = deployment_entity_id,
@@ -212,6 +346,43 @@ deployment_lineage_record <- function(
     source_inventory_path = source_inventory_path,
     source_row_id = source_row_id
   )
+  if (identical(record_schema, deployment_lineage_schema)) {
+    record <- c(record, list(
+      physical_location_identifier = physical_location_identifier,
+      date_precision = date_precision,
+      endpoint_semantics = endpoint_semantics,
+      start_service_label = start_service_label,
+      end_service_label = end_service_label,
+      service_event_count = service_event_count,
+      service_event_digest = service_event_digest,
+      predecessor_deployment_id = predecessor_deployment_id,
+      successor_deployment_id = successor_deployment_id,
+      service_source_schema = service_source_schema,
+      service_source_version = service_source_version,
+      service_source_inventory_path = service_source_inventory_path,
+      service_source_sha256 = service_source_sha256,
+      service_source_row_ordinal = service_source_row_ordinal,
+      service_source_row_id = service_source_row_id,
+      deployment_ledger_schema = deployment_ledger_schema,
+      deployment_ledger_version = deployment_ledger_version,
+      deployment_ledger_inventory_path = deployment_ledger_inventory_path,
+      deployment_ledger_sha256 = deployment_ledger_sha256,
+      deployment_ledger_row_ordinal = deployment_ledger_row_ordinal,
+      deployment_ledger_row_id = deployment_ledger_row_id,
+      approval_reference = approval_reference,
+      operation_authority_inventory_path =
+        operation_authority_inventory_path,
+      operation_authority_sha256 = operation_authority_sha256,
+      run_days_disposition = run_days_disposition
+    ))
+  }
+  record <- lapply(record, function(value) {
+    if (is.null(value) || length(value) == 0L || is.na(value)) {
+      NA_character_
+    } else {
+      as.character(value)
+    }
+  })
   record$record_digest <- sha256_text(canonical_json(record))
   record
 }
@@ -291,8 +462,10 @@ entity_links_frame <- function(records) {
   result
 }
 
-deployment_lineage_frame <- function(records) {
-  result <- records_frame(records, c(
+deployment_lineage_frame <- function(
+    records,
+    record_schema = deployment_lineage_schema) {
+  columns <- c(
     "deployment_record_schema",
     "resolver_version",
     "deployment_identifier",
@@ -305,9 +478,40 @@ deployment_lineage_frame <- function(records) {
     "resolution_state",
     "evidence_basis",
     "source_inventory_path",
-    "source_row_id",
-    "record_digest"
-  ))
+    "source_row_id"
+  )
+  if (identical(record_schema, deployment_lineage_schema)) {
+    columns <- c(columns, c(
+      "physical_location_identifier",
+      "date_precision",
+      "endpoint_semantics",
+      "start_service_label",
+      "end_service_label",
+      "service_event_count",
+      "service_event_digest",
+      "predecessor_deployment_id",
+      "successor_deployment_id",
+      "service_source_schema",
+      "service_source_version",
+      "service_source_inventory_path",
+      "service_source_sha256",
+      "service_source_row_ordinal",
+      "service_source_row_id",
+      "deployment_ledger_schema",
+      "deployment_ledger_version",
+      "deployment_ledger_inventory_path",
+      "deployment_ledger_sha256",
+      "deployment_ledger_row_ordinal",
+      "deployment_ledger_row_id",
+      "approval_reference",
+      "operation_authority_inventory_path",
+      "operation_authority_sha256",
+      "run_days_disposition"
+    ))
+  } else if (!identical(record_schema, deployment_lineage_legacy_schema)) {
+    stop("Unsupported deployment-lineage frame schema.")
+  }
+  result <- records_frame(records, c(columns, "record_digest"))
   if (nrow(result) > 0L) {
     result <- result[order(
       result$deployment_identifier,
@@ -427,10 +631,222 @@ validate_entity_source <- function(config, snapshot, selection) {
   source_sha256
 }
 
+validate_deployment_evidence_source <- function( # nolint: object_length_linter.
+    config,
+    snapshot,
+    selection) {
+  inventory <- snapshot$inventory
+  if (!is.list(inventory) || length(inventory) == 0L) {
+    stop("Deployment evidence requires a non-empty immutable source inventory.")
+  }
+  roles <- vapply(inventory, `[[`, character(1), "role")
+  service_matches <- which(roles == "deployment_service_input")
+  ledger_matches <- which(roles == "deployment_ledger_input")
+  inventory_paths <- vapply(inventory, `[[`, character(1), "path")
+  namespace_matches <- grep(
+    "^source_snapshot/deployment_evidence/",
+    inventory_paths
+  )
+  paths <- snapshot$deployment_evidence_paths
+  if (is.null(paths)) {
+    paths <- list(service = NULL, ledger = NULL)
+  }
+  if (!is.list(paths) ||
+        !identical(sort(names(paths)), c("ledger", "service"))) {
+    stop("Deployment-evidence snapshot paths have an invalid shape.")
+  }
+
+  selected <- deployment_evidence_is_selected(selection)
+  if (!selected) {
+    if (length(service_matches) != 0L ||
+          length(ledger_matches) != 0L ||
+          length(namespace_matches) != 0L) {
+      stop(
+        "An unselected deployment_evidence profile requires zero ",
+        "deployment-evidence sidecars in the source inventory."
+      )
+    }
+    if (!is.null(paths$service) || !is.null(paths$ledger)) {
+      stop(
+        "An unselected deployment_evidence profile may not expose dedicated ",
+        "deployment-evidence paths."
+      )
+    }
+  } else {
+    if (!identical(config$input_mode, "four_table")) {
+      stop(
+        "The approved Judbury deployment-evidence profile is only valid ",
+        "when input_mode = 'four_table'."
+      )
+    }
+    if (length(service_matches) != 1L) {
+      stop(
+        "A selected deployment-evidence profile requires exactly one ",
+        "deployment service sidecar in the source inventory."
+      )
+    }
+    if (length(ledger_matches) != 1L) {
+      stop(
+        "A selected deployment-evidence profile requires exactly one ",
+        "deployment ledger in the source inventory."
+      )
+    }
+    expected_indices <- sort(c(service_matches, ledger_matches))
+    if (!identical(sort(namespace_matches), expected_indices)) {
+      stop(
+        "The deployment-evidence source namespace contains an extra or ",
+        "misclassified file."
+      )
+    }
+    if (!is.character(snapshot$snapshot_root) ||
+          length(snapshot$snapshot_root) != 1L ||
+          !dir.exists(snapshot$snapshot_root)) {
+      stop("Deployment-evidence snapshot root is unavailable.")
+    }
+    staging_root <- dirname(snapshot$snapshot_root)
+    specifications <- list(
+      service = list(
+        index = service_matches,
+        role = "deployment_service_input",
+        path_pattern =
+          "^source_snapshot/deployment_evidence/service/[^/]+$",
+        sha256 = selection$service_sidecar_sha256
+      ),
+      ledger = list(
+        index = ledger_matches,
+        role = "deployment_ledger_input",
+        path_pattern =
+          "^source_snapshot/deployment_evidence/ledger/[^/]+$",
+        sha256 = selection$deployment_ledger_sha256
+      )
+    )
+    for (name in names(specifications)) {
+      specification <- specifications[[name]]
+      record <- inventory[[specification$index]]
+      path <- paths[[name]]
+      assert_safe_relative_path(
+        record$path,
+        paste("Deployment", name, "source inventory path")
+      )
+      if (!identical(record$role, specification$role) ||
+            !grepl(specification$path_pattern, record$path) ||
+            !identical(record$consumed_by_parser, FALSE) ||
+            !identical(record$sha256, specification$sha256)) {
+        stop(
+          "The selected deployment ", name,
+          " does not match its exact non-parser source-inventory authority."
+        )
+      }
+      if (!is.character(path) ||
+            length(path) != 1L ||
+            is.na(path) ||
+            !nzchar(path)) {
+        stop(
+          "A selected deployment-evidence profile requires one dedicated ",
+          name, " snapshot path."
+        )
+      }
+      expected_path <- file.path(staging_root, record$path)
+      assert_path_within_root(
+        expected_path,
+        staging_root,
+        paste("Deployment", name, "source inventory path")
+      )
+      assert_path_within_root(
+        path,
+        staging_root,
+        paste("Deployment", name, "snapshot path")
+      )
+      if (nzchar(Sys.readlink(path)) ||
+        !identical(
+          normalizePath(expected_path, winslash = "/", mustWork = TRUE),
+          normalizePath(path, winslash = "/", mustWork = TRUE)
+        ) ||
+        !identical(sha256_file(path), record$sha256)) {
+        stop(
+          "The selected deployment ", name,
+          " path and source-inventory record do not reconcile."
+        )
+      }
+    }
+    evidence_root <- file.path(snapshot$snapshot_root, "deployment_evidence")
+    actual_files <- if (dir.exists(evidence_root)) {
+      sort(
+        normalizePath(
+          list.files(
+            evidence_root,
+            recursive = TRUE,
+            full.names = TRUE,
+            all.files = TRUE,
+            include.dirs = FALSE,
+            no.. = TRUE
+          ),
+          winslash = "/",
+          mustWork = TRUE
+        ),
+        method = "radix"
+      )
+    } else {
+      character()
+    }
+    expected_files <- sort(
+      normalizePath(
+        unlist(paths, use.names = FALSE),
+        winslash = "/",
+        mustWork = TRUE
+      ),
+      method = "radix"
+    )
+    if (!identical(actual_files, expected_files)) {
+      stop(
+        "The deployment-evidence snapshot namespace contains an extra, ",
+        "missing, or duplicate file."
+      )
+    }
+  }
+
+  source_sha256 <- fixity_identity(inventory)
+  if (!is.character(snapshot$source_sha256) ||
+        length(snapshot$source_sha256) != 1L ||
+        !grepl("^[a-f0-9]{64}$", snapshot$source_sha256) ||
+        !identical(source_sha256, snapshot$source_sha256)) {
+    stop(
+      "Deployment evidence cannot reproduce the immutable source identity."
+    )
+  }
+  source_sha256
+}
+
 parser_inventory_path <- function(snapshot, pattern) {
   paths <- vapply(snapshot$inventory, `[[`, character(1), "path")
   matches <- grep(pattern, paths)
   if (length(matches) == 1L) paths[[matches]] else NA_character_
+}
+
+deployment_operation_inventory_record <- function(snapshot) { # nolint: object_length_linter.
+  profile <- judbury_deployment_profile()
+  matches <- vapply(snapshot$inventory, function(record) {
+    identical(record$role, "parser_input") &&
+      isTRUE(record$consumed_by_parser) &&
+      grepl("^source_snapshot/four_table/op(\\.[^/]*)?$", record$path)
+  }, logical(1))
+  if (sum(matches) != 1L) {
+    stop(
+      "Approved deployment evidence requires exactly one immutable daily ",
+      "operation authority."
+    )
+  }
+  record <- snapshot$inventory[[which(matches)]]
+  if (!identical(record$sha256, profile$operation_authority_sha256)) {
+    stop("Daily operation authority SHA-256 does not match approved evidence.")
+  }
+  staging_root <- dirname(snapshot$snapshot_root)
+  path <- file.path(staging_root, record$path)
+  assert_path_within_root(path, staging_root, "Daily operation authority path")
+  if (!identical(sha256_file(path), profile$operation_authority_sha256)) {
+    stop("Daily operation authority changed after immutable snapshotting.")
+  }
+  record
 }
 
 entity_source_row_id <- function(validation_state, logical_name, record_ordinal) {
@@ -526,6 +942,541 @@ read_entity_crosswalk <- function(path, selection) {
   crosswalk
 }
 
+judbury_service_aliases <- function() {
+  c(
+    jc_cen = "jc_cen",
+    jc_co_1 = "jc_co1",
+    jc_co_1_s1 = "jc_co1_s1",
+    jc_co_2 = "jc_co2",
+    jc_co_3 = "jc_co3",
+    `jc_co_3_s1-6` = "jc_co3_s16",
+    `jc-co-4` = "jc_co4",
+    `jc-pm-12` = "jc_pm12",
+    `jc-pm-14` = "jc_pm14",
+    `jc-pm-14_s1` = "jc_pm14_s1",
+    `jc-pm-23` = "jc_pm23",
+    `jc-pm-34` = "jc_pm34",
+    `jc-pm-34_s1-5` = "jc_pm34_s15"
+  )
+}
+
+judbury_service_header <- function() {
+  c(
+    "site",
+    "s0.date",
+    "s1.run_days",
+    "s1.date",
+    "s2.run_days",
+    "s2.date",
+    "s3.run_days",
+    "s3.date",
+    "s4.run_days",
+    "s4.date",
+    "s5.run_days",
+    "s5.date",
+    "s6.run_days",
+    "s6.date",
+    "s7.run_days",
+    "s7.date"
+  )
+}
+
+deployment_evidence_row_identity <- function( # nolint: object_length_linter.
+    source_kind,
+    source_sha256,
+    row_ordinal) {
+  sha256_text(canonical_json(list(
+    identity_schema = "camtrap-deployment-evidence-row-id/1.0",
+    source_kind = as.character(source_kind),
+    source_sha256 = as.character(source_sha256),
+    row_ordinal = as.character(row_ordinal)
+  )))
+}
+
+parse_judbury_service_date <- function(value) {
+  if (!is.character(value) ||
+        length(value) != 1L ||
+        is.na(value) ||
+        !grepl("^[0-9]{1,2}/[0-9]{2}/[0-9]{4}$", value)) {
+    stop("Service source contains a malformed service date.")
+  }
+  parts <- strsplit(value, "/", fixed = TRUE)[[1]]
+  normalized <- sprintf(
+    "%02d/%02d/%04d",
+    as.integer(parts[[1]]),
+    as.integer(parts[[2]]),
+    as.integer(parts[[3]])
+  )
+  parsed <- suppressWarnings(as.Date(normalized, format = "%d/%m/%Y"))
+  if (is.na(parsed) ||
+        !identical(format(parsed, "%d/%m/%Y"), normalized)) {
+    stop("Service source contains a malformed service date.")
+  }
+  format(parsed, "%Y-%m-%d")
+}
+
+read_judbury_service_events <- function(path) {
+  if (!file.exists(path) || isTRUE(file.info(path)$isdir)) {
+    stop("Judbury service source is missing or not a file.")
+  }
+  if (nzchar(Sys.readlink(path))) {
+    stop("Judbury service source may not be a symlink.")
+  }
+  source <- utils::read.csv(
+    path,
+    stringsAsFactors = FALSE,
+    colClasses = "character",
+    na.strings = "NA",
+    check.names = FALSE
+  )
+  if (anyDuplicated(names(source))) {
+    stop("Service source contains a duplicate service label.")
+  }
+  if (!identical(names(source), judbury_service_header())) {
+    stop("Judbury service source fields do not match the closed 16-column schema.")
+  }
+  aliases <- judbury_service_aliases()
+  if (nrow(source) != 13L ||
+        any(is.na(source$site) | !nzchar(source$site)) ||
+        anyDuplicated(source$site)) {
+    stop("Judbury service source must contain 13 exact unique rows.")
+  }
+  if (any(!source$site %in% names(aliases))) {
+    stop("Judbury service source contains an unlisted raw alias.")
+  }
+  if (!identical(source$site, names(aliases))) {
+    stop("Judbury service source rows do not match the exact approved order.")
+  }
+
+  source_sha256 <- sha256_file(path)
+  row_records <- vector("list", nrow(source))
+  event_records <- list()
+  for (row_index in seq_len(nrow(source))) {
+    raw_id <- source$site[[row_index]]
+    physical_id <- unname(aliases[[raw_id]])
+    date_values <- vapply(0:7, function(label_index) {
+      source[[paste0("s", label_index, ".date")]][[row_index]]
+    }, character(1))
+    populated <- which(!is.na(date_values) & nzchar(date_values))
+    if (length(populated) < 2L) {
+      stop("Judbury service row has fewer than two deployment-boundary events.")
+    }
+    expected_populated <- seq.int(min(populated), max(populated))
+    if (!identical(populated, expected_populated)) {
+      stop("Judbury service row has a missing service label.")
+    }
+
+    row_events <- vector("list", length(populated))
+    parsed_dates <- character(length(populated))
+    for (event_index in seq_along(populated)) {
+      label_index <- populated[[event_index]] - 1L
+      service_label <- paste0("S", label_index)
+      iso_date <- parse_judbury_service_date(date_values[[populated[[event_index]]]])
+      parsed_dates[[event_index]] <- iso_date
+      run_days <- if (label_index == 0L) {
+        NA_character_
+      } else {
+        source[[paste0("s", label_index, ".run_days")]][[row_index]]
+      }
+      if (!is.na(run_days) &&
+            (!nzchar(run_days) || !grepl("^[0-9]+$", run_days))) {
+        stop("Judbury service source contains a malformed run_days literal.")
+      }
+      role <- if (event_index == 1L) {
+        "deployment_start"
+      } else if (event_index == length(populated)) {
+        "deployment_end"
+      } else {
+        "service"
+      }
+      row_events[[event_index]] <- list(
+        event_schema = "camtrap-deployment-service-event/1.0",
+        raw_service_site_id = raw_id,
+        physical_location_id = physical_id,
+        service_source_row_ordinal = as.character(row_index),
+        service_label = service_label,
+        service_date = iso_date,
+        event_role = role,
+        run_days_literal = if (is.na(run_days)) NA_character_ else run_days,
+        run_days_state = if (is.na(run_days)) "missing" else "present"
+      )
+    }
+    if (is.unsorted(as.Date(parsed_dates), strictly = FALSE)) {
+      stop("Judbury service row has reversed service chronology.")
+    }
+    missing_date_indices <- setdiff(seq_along(date_values), populated)
+    for (date_index in missing_date_indices) {
+      label_index <- date_index - 1L
+      if (label_index == 0L) {
+        next
+      }
+      run_days <- source[[paste0("s", label_index, ".run_days")]][[row_index]]
+      if (!is.na(run_days) && nzchar(run_days)) {
+        stop("Judbury service row has run_days for a missing service label.")
+      }
+    }
+    service_source_row_id <- deployment_evidence_row_identity(
+      "deployment_service_input",
+      source_sha256,
+      row_index
+    )
+    row_digest <- sha256_text(canonical_json(row_events))
+    row_records[[row_index]] <- list(
+      raw_service_site_id = raw_id,
+      physical_location_id = physical_id,
+      service_source_row_ordinal = as.character(row_index),
+      service_source_row_id = service_source_row_id,
+      start_service_label = row_events[[1L]]$service_label,
+      start_date = row_events[[1L]]$service_date,
+      end_service_label = row_events[[length(row_events)]]$service_label,
+      end_date = row_events[[length(row_events)]]$service_date,
+      service_event_count = as.character(length(row_events)),
+      service_event_digest = row_digest
+    )
+    event_records <- c(event_records, row_events)
+  }
+
+  rows <- do.call(rbind, lapply(row_records, function(record) {
+    as.data.frame(record, stringsAsFactors = FALSE)
+  }))
+  events <- do.call(rbind, lapply(event_records, function(record) {
+    as.data.frame(record, stringsAsFactors = FALSE)
+  }))
+  rownames(rows) <- NULL
+  rownames(events) <- NULL
+  if (nrow(events) != 75L ||
+        sum(events$run_days_state == "present") != 62L) {
+    stop("Judbury service source event or run_days count is invalid.")
+  }
+  list(
+    source_sha256 = source_sha256,
+    rows = rows,
+    events = events
+  )
+}
+
+judbury_deployment_ledger_header <- function() { # nolint: object_length_linter.
+  c(
+    "deployment_ledger_schema",
+    "deployment_ledger_version",
+    "authority_state",
+    "deployment_id",
+    "service_source_schema",
+    "service_source_version",
+    "service_source_path",
+    "service_source_sha256",
+    "service_source_row_ordinal",
+    "raw_service_site_id",
+    "alias_basis",
+    "physical_location_id",
+    "nominal_grid_station_id",
+    "move_pair_id",
+    "predecessor_deployment_id",
+    "successor_deployment_id",
+    "start_service_label",
+    "start_date",
+    "end_service_label",
+    "end_date",
+    "date_precision",
+    "endpoint_semantics",
+    "service_event_count",
+    "operation_authority_path",
+    "operation_authority_sha256",
+    "run_days_disposition",
+    "pair_boundary_semantics"
+  )
+}
+
+read_judbury_deployment_ledger <- function(path) {
+  if (!file.exists(path) || isTRUE(file.info(path)$isdir)) {
+    stop("Judbury deployment ledger is missing or not a file.")
+  }
+  if (nzchar(Sys.readlink(path))) {
+    stop("Judbury deployment ledger may not be a symlink.")
+  }
+  ledger <- utils::read.csv(
+    path,
+    stringsAsFactors = FALSE,
+    colClasses = "character",
+    na.strings = "",
+    check.names = FALSE
+  )
+  if (!identical(names(ledger), judbury_deployment_ledger_header())) {
+    stop("Judbury deployment ledger fields do not match the closed schema.")
+  }
+  if (nrow(ledger) != 13L) {
+    stop("Judbury deployment ledger must contain exactly 13 rows.")
+  }
+  required_text <- setdiff(
+    names(ledger),
+    c(
+      "move_pair_id",
+      "predecessor_deployment_id",
+      "successor_deployment_id"
+    )
+  )
+  if (any(vapply(ledger[required_text], function(column) {
+    any(is.na(column) | !nzchar(column))
+  }, logical(1)))) {
+    stop("Judbury deployment ledger contains an empty required field.")
+  }
+  if (anyDuplicated(ledger$deployment_id)) {
+    stop("Judbury deployment ledger contains a duplicate deployment ID.")
+  }
+  if (anyDuplicated(ledger$physical_location_id)) {
+    stop("Judbury deployment ledger contains a duplicate physical location.")
+  }
+  if (anyDuplicated(ledger$raw_service_site_id)) {
+    stop("Judbury deployment ledger contains a duplicate raw service row.")
+  }
+
+  profile <- judbury_deployment_profile()
+  fixed <- list(
+    deployment_ledger_schema = profile$deployment_ledger_schema,
+    deployment_ledger_version = profile$deployment_ledger_version,
+    authority_state = "proposed_for_barry_exact_approval",
+    service_source_schema = profile$service_source_schema,
+    service_source_version = profile$service_source_version,
+    service_source_path = profile$service_sidecar_path,
+    service_source_sha256 = profile$service_sidecar_sha256,
+    alias_basis = "exact_judbury_alias_no_parser_rule",
+    date_precision = "day",
+    endpoint_semantics = "inclusive_at_day_precision_unknown_time",
+    operation_authority_path = profile$operation_authority_path,
+    operation_authority_sha256 = profile$operation_authority_sha256,
+    run_days_disposition = "audit_only_not_effort_authority"
+  )
+  if (any(vapply(names(fixed), function(field) {
+    !all(ledger[[field]] == fixed[[field]])
+  }, logical(1)))) {
+    stop("Judbury deployment ledger schema, version, or authority field is invalid.")
+  }
+  aliases <- judbury_service_aliases()
+  if (!identical(ledger$raw_service_site_id, names(aliases)) ||
+    !identical(ledger$physical_location_id, unname(aliases)) ||
+    !identical(
+      ledger$service_source_row_ordinal,
+      as.character(seq_len(nrow(ledger)))
+    )) {
+    stop("Judbury deployment ledger aliases or source-row ordinals are invalid.")
+  }
+  if (!identical(
+    ledger$deployment_id,
+    paste0("judbury_dep_", ledger$physical_location_id)
+  )) {
+    stop("Judbury deployment ledger contains an invalid stable deployment ID.")
+  }
+  if (any(!grepl("^S[0-7]$", ledger$start_service_label)) ||
+        any(!grepl("^S[0-7]$", ledger$end_service_label)) ||
+        any(!grepl("^[0-9]+$", ledger$service_event_count)) ||
+        any(as.integer(ledger$service_event_count) < 2L)) {
+    stop("Judbury deployment ledger service labels or counts are invalid.")
+  }
+  invalid_start <- vapply(ledger$start_date, function(value) {
+    is.na(suppressWarnings(as.Date(value, format = "%Y-%m-%d"))) ||
+      !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", value)
+  }, logical(1))
+  invalid_end <- vapply(ledger$end_date, function(value) {
+    is.na(suppressWarnings(as.Date(value, format = "%Y-%m-%d"))) ||
+      !grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$", value)
+  }, logical(1))
+  if (any(invalid_start) ||
+        any(invalid_end) ||
+        any(as.Date(ledger$start_date) > as.Date(ledger$end_date))) {
+    stop("Judbury deployment ledger contains a malformed or reversed interval.")
+  }
+  if (length(unique(ledger$nominal_grid_station_id)) != 9L ||
+        length(unique(stats::na.omit(ledger$move_pair_id))) != 4L) {
+    stop("Judbury deployment ledger aggregate counts are invalid.")
+  }
+  if (sum(as.integer(ledger$service_event_count)) != 75L) {
+    stop("Judbury deployment ledger has a service-count disagreement.")
+  }
+  ledger_sha256 <- sha256_file(path)
+  ledger$deployment_ledger_row_ordinal <- as.character(seq_len(nrow(ledger)))
+  ledger$deployment_ledger_row_id <- vapply(
+    seq_len(nrow(ledger)),
+    deployment_evidence_row_identity,
+    character(1),
+    source_kind = "deployment_ledger_input",
+    source_sha256 = ledger_sha256
+  )
+  list(
+    source_sha256 = ledger_sha256,
+    rows = ledger
+  )
+}
+
+equal_nullable_character <- function(left, right) {
+  (is.na(left) & is.na(right)) |
+    (!is.na(left) & !is.na(right) & left == right)
+}
+
+reconcile_judbury_deployment_evidence <- function( # nolint: object_length_linter.
+    service,
+    ledger,
+    crosswalk) {
+  service_rows <- service$rows
+  ledger_rows <- ledger$rows
+  if (!is.data.frame(service_rows) || !is.data.frame(ledger_rows) ||
+    nrow(service_rows) != 13L || nrow(ledger_rows) != 13L ||
+    !identical(
+      ledger_rows$raw_service_site_id,
+      service_rows$raw_service_site_id
+    )) {
+    stop("Judbury deployment evidence has an orphan, missing, or extra row.")
+  }
+  endpoint_fields <- c(
+    "start_service_label",
+    "start_date",
+    "end_service_label",
+    "end_date"
+  )
+  if (any(vapply(endpoint_fields, function(field) {
+    !identical(ledger_rows[[field]], service_rows[[field]])
+  }, logical(1)))) {
+    stop("Judbury service and deployment ledger have an endpoint disagreement.")
+  }
+  if (!identical(
+    ledger_rows$service_event_count,
+    service_rows$service_event_count
+  )) {
+    stop("Judbury service and deployment ledger have a service-count disagreement.")
+  }
+  if (!identical(
+    ledger_rows$physical_location_id,
+    service_rows$physical_location_id
+  ) ||
+    !identical(
+      ledger_rows$service_source_row_ordinal,
+      service_rows$service_source_row_ordinal
+    )) {
+    stop("Judbury service aliases disagree with the deployment ledger.")
+  }
+
+  crosswalk_matches <- match(
+    ledger_rows$physical_location_id,
+    crosswalk$proposed_physical_location_id
+  )
+  if (anyNA(crosswalk_matches) ||
+    !setequal(
+      ledger_rows$physical_location_id,
+      crosswalk$proposed_physical_location_id
+    )) {
+    stop("Judbury deployment ledger has an orphan physical location.")
+  }
+  matched_crosswalk <- crosswalk[crosswalk_matches, , drop = FALSE]
+  if (!identical(
+    ledger_rows$physical_location_id,
+    matched_crosswalk$source_physical_id
+  ) ||
+    !identical(
+      ledger_rows$nominal_grid_station_id,
+      matched_crosswalk$proposed_nominal_grid_station_id
+    ) ||
+    !all(equal_nullable_character(
+      ledger_rows$move_pair_id,
+      matched_crosswalk$move_pair_id
+    ))) {
+    stop("Judbury deployment ledger conflicts with the approved entity crosswalk.")
+  }
+
+  ids <- ledger_rows$deployment_id
+  successor_rows <- which(!is.na(ledger_rows$successor_deployment_id))
+  predecessor_rows <- which(!is.na(ledger_rows$predecessor_deployment_id))
+  if (any(!ledger_rows$successor_deployment_id[successor_rows] %in% ids)) {
+    stop("Judbury deployment ledger contains an orphan successor.")
+  }
+  if (any(!ledger_rows$predecessor_deployment_id[predecessor_rows] %in% ids)) {
+    stop("Judbury deployment ledger contains an orphan predecessor.")
+  }
+  if (length(successor_rows) != 4L ||
+        length(predecessor_rows) != 4L ||
+        anyDuplicated(ledger_rows$successor_deployment_id[successor_rows]) ||
+        anyDuplicated(ledger_rows$predecessor_deployment_id[predecessor_rows])) {
+    stop("Judbury deployment ledger has conflicting lineage edges.")
+  }
+
+  edge_semantics <- character(length(successor_rows))
+  for (edge_index in seq_along(successor_rows)) {
+    predecessor_index <- successor_rows[[edge_index]]
+    successor_id <-
+      ledger_rows$successor_deployment_id[[predecessor_index]]
+    successor_index <- match(successor_id, ids)
+    if (!identical(
+      ledger_rows$predecessor_deployment_id[[successor_index]],
+      ids[[predecessor_index]]
+    )) {
+      stop("Judbury deployment ledger has a non-reciprocal lineage edge.")
+    }
+    if (is.na(ledger_rows$move_pair_id[[predecessor_index]]) ||
+      !identical(
+        ledger_rows$move_pair_id[[predecessor_index]],
+        ledger_rows$move_pair_id[[successor_index]]
+      ) ||
+      !identical(
+        ledger_rows$nominal_grid_station_id[[predecessor_index]],
+        ledger_rows$nominal_grid_station_id[[successor_index]]
+      )) {
+      stop("Judbury deployment lineage edge conflicts with its physical pair.")
+    }
+    predecessor_end <- as.Date(ledger_rows$end_date[[predecessor_index]])
+    successor_start <- as.Date(ledger_rows$start_date[[successor_index]])
+    if (predecessor_end > successor_start) {
+      stop("Judbury deployment ledger has reversed service chronology.")
+    }
+    expected_semantics <- if (identical(predecessor_end, successor_start)) {
+      "same_date_boundary_not_full_day_overlap_or_routing_claim"
+    } else {
+      "documented_no_pair_deployment_between_2019-10-14_and_2020-02-26"
+    }
+    if (!identical(
+      ledger_rows$pair_boundary_semantics[[predecessor_index]],
+      expected_semantics
+    ) ||
+      !identical(
+        ledger_rows$pair_boundary_semantics[[successor_index]],
+        expected_semantics
+      )) {
+      stop("Judbury deployment ledger pair-boundary semantics are invalid.")
+    }
+    edge_semantics[[edge_index]] <- expected_semantics
+  }
+  unpaired <- which(is.na(ledger_rows$move_pair_id))
+  same_day_count <- sum(
+    edge_semantics ==
+      "same_date_boundary_not_full_day_overlap_or_routing_claim"
+  )
+  declared_gap_count <- sum(
+    edge_semantics ==
+      "documented_no_pair_deployment_between_2019-10-14_and_2020-02-26"
+  )
+  if (any(!is.na(ledger_rows$predecessor_deployment_id[unpaired])) ||
+        any(!is.na(ledger_rows$successor_deployment_id[unpaired])) ||
+        any(ledger_rows$pair_boundary_semantics[unpaired] != "not_applicable") ||
+        same_day_count != 3L ||
+        declared_gap_count != 1L) {
+    stop("Judbury deployment ledger has conflicting pair-boundary evidence.")
+  }
+
+  rows <- ledger_rows
+  rows$service_event_digest <- service_rows$service_event_digest
+  rows$service_source_row_id <- service_rows$service_source_row_id
+  list(
+    rows = rows,
+    events = service$events,
+    directed_relation_count = as.integer(length(successor_rows)),
+    service_event_count = as.integer(nrow(service$events)),
+    run_days_value_count = as.integer(sum(
+      service$events$run_days_state == "present"
+    )),
+    run_days_diagnostic_total = as.integer(sum(
+      as.integer(service$events$run_days_literal),
+      na.rm = TRUE
+    ))
+  )
+}
+
 unresolved_scope_record <- function(entity_type, namespace, basis) {
   entity_record(
     entity_type = entity_type,
@@ -563,13 +1514,17 @@ resolve_four_table_entities <- function(
     config,
     snapshot,
     validation_state,
-    selection) {
+    selection,
+    deployment_selection) {
   sites <- as.character(validation_state$inputs$site$site)
   records <- list()
   links <- list()
+  lineage <- list()
   findings <- list()
   crosswalk <- NULL
+  deployment_evidence <- NULL
   selected <- entity_resolution_is_selected(selection)
+  deployment_selected <- deployment_evidence_is_selected(deployment_selection)
 
   if (any(is.na(sites) | !nzchar(sites)) || anyDuplicated(sites)) {
     findings <- add_integrity_finding(
@@ -684,6 +1639,100 @@ resolve_four_table_entities <- function(
         source_inventory_path = inventory_path
       )
     }
+    if (deployment_selected) {
+      service_inventory_path <- inventory_path_for_role(
+        snapshot,
+        "deployment_service_input"
+      )
+      ledger_inventory_path <- inventory_path_for_role(
+        snapshot,
+        "deployment_ledger_input"
+      )
+      operation_record <- deployment_operation_inventory_record(snapshot)
+      service <- read_judbury_service_events(
+        snapshot$deployment_evidence_paths$service
+      )
+      ledger <- read_judbury_deployment_ledger(
+        snapshot$deployment_evidence_paths$ledger
+      )
+      deployment_evidence <- reconcile_judbury_deployment_evidence(
+        service,
+        ledger,
+        crosswalk
+      )
+      for (row_index in seq_len(nrow(deployment_evidence$rows))) {
+        row <- deployment_evidence$rows[row_index, , drop = FALSE]
+        deployment_id <- entity_identity(
+          "deployment",
+          "judbury_deployment_evidence:deployment",
+          row$deployment_id
+        )
+        physical_id <- physical_ids[[row$physical_location_id]]
+        records[[length(records) + 1L]] <- entity_record(
+          entity_type = "deployment",
+          entity_id = deployment_id,
+          source_namespace = "judbury_deployment_evidence:deployment",
+          source_identifier = row$deployment_id,
+          resolution_state = "resolved",
+          evidence_state = "approved_sidecar",
+          evidence_basis = "exact_approved_deployment_ledger",
+          source_inventory_path = ledger_inventory_path,
+          source_row_id = row$deployment_ledger_row_id
+        )
+        links[[length(links) + 1L]] <- entity_link_record(
+          link_type = "deployment_to_physical_location",
+          source_entity_type = "deployment",
+          source_entity_id = deployment_id,
+          target_entity_type = "physical_location",
+          target_entity_id = physical_id,
+          evidence_state = "approved_sidecar",
+          evidence_basis = "exact_approved_deployment_physical_link",
+          source_inventory_path = ledger_inventory_path,
+          source_row_id = row$deployment_ledger_row_id
+        )
+        lineage[[length(lineage) + 1L]] <- deployment_lineage_record(
+          deployment_identifier = row$deployment_id,
+          deployment_entity_id = deployment_id,
+          physical_location_entity_id = physical_id,
+          interval_start = row$start_date,
+          interval_end = row$end_date,
+          interval_evidence_state = "approved_service_endpoints",
+          chronology_state = row$pair_boundary_semantics,
+          resolution_state = "resolved",
+          evidence_basis = "exact_approved_deployment_service_reconciliation",
+          source_inventory_path = ledger_inventory_path,
+          source_row_id = row$deployment_ledger_row_id,
+          record_schema = deployment_lineage_schema,
+          physical_location_identifier = row$physical_location_id,
+          date_precision = row$date_precision,
+          endpoint_semantics = row$endpoint_semantics,
+          start_service_label = row$start_service_label,
+          end_service_label = row$end_service_label,
+          service_event_count = row$service_event_count,
+          service_event_digest = row$service_event_digest,
+          predecessor_deployment_id = row$predecessor_deployment_id,
+          successor_deployment_id = row$successor_deployment_id,
+          service_source_schema = row$service_source_schema,
+          service_source_version = row$service_source_version,
+          service_source_inventory_path = service_inventory_path,
+          service_source_sha256 = row$service_source_sha256,
+          service_source_row_ordinal = row$service_source_row_ordinal,
+          service_source_row_id = row$service_source_row_id,
+          deployment_ledger_schema = row$deployment_ledger_schema,
+          deployment_ledger_version = row$deployment_ledger_version,
+          deployment_ledger_inventory_path = ledger_inventory_path,
+          deployment_ledger_sha256 =
+            deployment_selection$deployment_ledger_sha256,
+          deployment_ledger_row_ordinal =
+            row$deployment_ledger_row_ordinal,
+          deployment_ledger_row_id = row$deployment_ledger_row_id,
+          approval_reference = deployment_selection$authority_reference,
+          operation_authority_inventory_path = operation_record$path,
+          operation_authority_sha256 = operation_record$sha256,
+          run_days_disposition = row$run_days_disposition
+        )
+      }
+    }
   } else {
     inventory_path <- parser_inventory_path(
       snapshot,
@@ -711,11 +1760,13 @@ resolve_four_table_entities <- function(
       "no_explicit_nominal_station_evidence"
     )
   }
-  records[[length(records) + 1L]] <- unresolved_scope_record(
-    "deployment",
-    "four_table:deployment",
-    "no_authoritative_deployment_identity_or_interval"
-  )
+  if (!deployment_selected) {
+    records[[length(records) + 1L]] <- unresolved_scope_record(
+      "deployment",
+      "four_table:deployment",
+      "no_authoritative_deployment_identity_or_interval"
+    )
+  }
   records[[length(records) + 1L]] <- unresolved_scope_record(
     "analysis_site",
     "analysis:site",
@@ -724,9 +1775,10 @@ resolve_four_table_entities <- function(
   list(
     records = records,
     links = links,
-    deployment_lineage = list(),
+    deployment_lineage = lineage,
     integrity_findings = findings,
-    crosswalk = crosswalk
+    crosswalk = crosswalk,
+    deployment_evidence = deployment_evidence
   )
 }
 
@@ -738,6 +1790,11 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
   links <- list()
   lineage <- list()
   findings <- list()
+  lineage_schema <- if ("deployment_evidence" %in% names(config)) {
+    deployment_lineage_schema
+  } else {
+    deployment_lineage_legacy_schema
+  }
   inventory_path <- parser_inventory_path(
     snapshot,
     "^source_snapshot/camtrapdp/.*deployments.*"
@@ -987,7 +2044,8 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
             validation_state,
             "deployments",
             evidence_index
-          )
+          ),
+          record_schema = lineage_schema
         )
       }
     }
@@ -1027,7 +2085,8 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
     links = links,
     deployment_lineage = lineage,
     integrity_findings = findings,
-    crosswalk = NULL
+    crosswalk = NULL,
+    deployment_evidence = NULL
   )
 }
 
@@ -1076,6 +2135,7 @@ build_join_readiness <- function(
     config,
     validation_state,
     selected,
+    deployment_selected,
     links,
     deployment_lineage,
     entity_digest,
@@ -1126,7 +2186,13 @@ build_join_readiness <- function(
       } else {
         character()
       },
-      deployment = character()
+      deployment = if (deployment_selected) {
+        unique(deployment_lineage$physical_location_identifier[
+          deployment_lineage$resolution_state == "resolved"
+        ])
+      } else {
+        character()
+      }
     )
     ambiguous <- list(
       physical_location = character(),
@@ -1165,7 +2231,7 @@ build_join_readiness <- function(
       )
     }
   }
-  list(
+  readiness <- list(
     join_readiness_schema = join_readiness_schema,
     rule_version = "camtrap-entity-join-readiness/1.0",
     classification_values = c("unique", "unresolved", "ambiguous"),
@@ -1173,6 +2239,11 @@ build_join_readiness <- function(
     entity_ledger_digest = entity_digest,
     results = results
   )
+  if (deployment_selected) {
+    readiness$analytical_routing_permitted <- FALSE
+    readiness$joined_analytical_row_count <- 0L
+  }
+  readiness
 }
 
 #' Resolve versioned entity evidence without changing analytical inputs
@@ -1183,11 +2254,23 @@ build_join_readiness <- function(
 #' @return Entity-resolution evidence state.
 resolve_entity_evidence <- function(config, snapshot, validation_state) {
   selection <- entity_resolution_selection(config, require_explicit = TRUE)
+  deployment_selection <- deployment_evidence_selection(
+    config,
+    require_explicit = FALSE
+  )
   source_sha256 <- validate_entity_source(
     config,
     snapshot,
     selection
   )
+  deployment_source_sha256 <- validate_deployment_evidence_source(
+    config,
+    snapshot,
+    deployment_selection
+  )
+  if (!identical(source_sha256, deployment_source_sha256)) {
+    stop("Entity and deployment evidence disagree on immutable source identity.")
+  }
   if (!is.list(validation_state$inputs) ||
         !all(c("site", "op", "obs", "taxa") %in% names(validation_state$inputs))) {
     stop("Entity resolver requires the four validated analytical inputs.")
@@ -1199,13 +2282,25 @@ resolve_entity_evidence <- function(config, snapshot, validation_state) {
       config,
       snapshot,
       validation_state,
-      selection
+      selection,
+      deployment_selection
     )
   }
   records <- entity_records_frame(result$records)
   links <- entity_links_frame(result$links)
-  deployment_lineage <- deployment_lineage_frame(result$deployment_lineage)
+  lineage_schema <- if ("deployment_evidence" %in% names(config)) {
+    deployment_lineage_schema
+  } else {
+    deployment_lineage_legacy_schema
+  }
+  deployment_lineage <- deployment_lineage_frame(
+    result$deployment_lineage,
+    record_schema = lineage_schema
+  )
   selected <- entity_resolution_is_selected(selection)
+  deployment_selected <- deployment_evidence_is_selected(
+    deployment_selection
+  )
   inventory_path <- if (selected) {
     inventory_path_for_role(snapshot, "entity_resolution_input")
   } else {
@@ -1244,10 +2339,55 @@ resolve_entity_evidence <- function(config, snapshot, validation_state) {
     analysis_site_status = "unselected",
     analysis_site_membership_count = 0L
   )
+  if (deployment_selected) {
+    profile <- judbury_deployment_profile()
+    operation_record <- deployment_operation_inventory_record(snapshot)
+    summary$deployment_evidence <- list(
+      profile_id = deployment_selection$profile_id,
+      authority_reference = deployment_selection$authority_reference,
+      deployment_row_count = as.integer(nrow(
+        result$deployment_evidence$rows
+      )),
+      service_event_count =
+        result$deployment_evidence$service_event_count,
+      run_days_value_count =
+        result$deployment_evidence$run_days_value_count,
+      run_days_diagnostic_total =
+        result$deployment_evidence$run_days_diagnostic_total,
+      directed_relation_count =
+        result$deployment_evidence$directed_relation_count,
+      service_source = list(
+        schema = profile$service_source_schema,
+        version = profile$service_source_version,
+        source_inventory_path = inventory_path_for_role(
+          snapshot,
+          "deployment_service_input"
+        ),
+        sha256 = deployment_selection$service_sidecar_sha256
+      ),
+      deployment_ledger = list(
+        schema = profile$deployment_ledger_schema,
+        version = profile$deployment_ledger_version,
+        source_inventory_path = inventory_path_for_role(
+          snapshot,
+          "deployment_ledger_input"
+        ),
+        sha256 = deployment_selection$deployment_ledger_sha256
+      ),
+      daily_operation_authority = list(
+        source_inventory_path = operation_record$path,
+        sha256 = operation_record$sha256
+      ),
+      run_days_disposition = "audit_only_not_effort_authority",
+      analytical_routing_permitted = FALSE,
+      joined_analytical_row_count = 0L
+    )
+  }
   join_readiness <- build_join_readiness(
     config,
     validation_state,
     selected,
+    deployment_selected,
     links,
     deployment_lineage,
     entity_digest,

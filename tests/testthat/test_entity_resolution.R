@@ -626,3 +626,322 @@ test_that("missing optional deployment evidence and active runs remain unresolve
       resolved$records$resolution_state == "unresolved"
   ))
 })
+
+goal008_profile <- function() {
+  list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 =
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+    deployment_ledger_path =
+      "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
+    deployment_ledger_sha256 =
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
+      "ledger-sha256-",
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+    )
+  )
+}
+
+goal008_entity_snapshot <- function() {
+  root <- tempfile("goal008-entity-snapshot-")
+  source_root <- file.path(root, "source_snapshot")
+  paths <- list(
+    site = file.path(source_root, "four_table", "site.csv"),
+    op = file.path(source_root, "four_table", "op.csv"),
+    entity = file.path(
+      source_root,
+      "entity_resolution",
+      "judbury_entity_crosswalk.csv"
+    ),
+    service = file.path(
+      source_root,
+      "deployment_evidence",
+      "service",
+      "jc_services.csv"
+    ),
+    ledger = file.path(
+      source_root,
+      "deployment_evidence",
+      "ledger",
+      "judbury_deployment_ledger.csv"
+    )
+  )
+  for (path in paths) {
+    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  }
+  writeLines("site", paths$site)
+  file.copy(here("data", "jc_op.csv"), paths$op)
+  file.copy(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal007",
+      "judbury_entity_crosswalk.csv"
+    ),
+    paths$entity
+  )
+  file.copy(
+    here("tests", "testthat", "fixtures", "goal008", "jc_services.csv"),
+    paths$service
+  )
+  file.copy(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal008",
+      "judbury_deployment_ledger.csv"
+    ),
+    paths$ledger
+  )
+  inventory <- list(
+    file_fixity_record(paths$site, root, "parser_input", TRUE),
+    file_fixity_record(paths$op, root, "parser_input", TRUE),
+    file_fixity_record(paths$entity, root, "entity_resolution_input", FALSE),
+    file_fixity_record(paths$service, root, "deployment_service_input", FALSE),
+    file_fixity_record(paths$ledger, root, "deployment_ledger_input", FALSE)
+  )
+  inventory <- inventory[order(
+    vapply(inventory, `[[`, character(1), "path"),
+    method = "radix"
+  )]
+  list(
+    staging_dir = root,
+    snapshot_root = source_root,
+    entity_resolution_path = paths$entity,
+    deployment_evidence_paths = paths[c("service", "ledger")],
+    inventory = inventory,
+    source_sha256 = fixity_identity(inventory)
+  )
+}
+
+goal008_entity_config <- function(sidecar) {
+  list(
+    input_mode = "four_table",
+    entity_resolution = goal007_profile(sidecar),
+    deployment_evidence = goal008_profile()
+  )
+}
+
+goal008_csv_copy <- function(path, na = "", mutator) {
+  value <- utils::read.csv(
+    path,
+    stringsAsFactors = FALSE,
+    colClasses = "character",
+    na.strings = if (identical(na, "NA")) "NA" else "",
+    check.names = FALSE
+  )
+  value <- mutator(value)
+  output <- tempfile("goal008-mutated-", fileext = ".csv")
+  utils::write.csv(value, output, row.names = FALSE, quote = FALSE, na = na)
+  output
+}
+
+test_that("approved deployment evidence resolves exact audit-only Goal 008 state", {
+  sidecar <- here(
+    "tests", "testthat", "fixtures", "goal007",
+    "judbury_entity_crosswalk.csv"
+  )
+  crosswalk <- read.csv(sidecar, stringsAsFactors = FALSE, na.strings = "")
+  validation_state <- goal007_four_table_state(crosswalk$source_physical_id)
+  inputs_before <- canonical_json(validation_state$inputs)
+  state <- resolve_entity_evidence(
+    goal008_entity_config(sidecar),
+    goal008_entity_snapshot(),
+    validation_state
+  )
+  lineage <- state$deployment_lineage
+
+  expect_equal(
+    sum(state$records$entity_type == "deployment" &
+      state$records$resolution_state == "resolved"),
+    13L
+  )
+  expect_equal(
+    sum(state$links$link_type == "deployment_to_physical_location"),
+    13L
+  )
+  expect_equal(nrow(lineage), 13L)
+  expect_true(all(
+    lineage$deployment_record_schema == "camtrap-deployment-lineage/1.1"
+  ))
+  expect_equal(
+    lineage$service_event_count,
+    as.character(c(8, 7, 2, 8, 2, 7, 8, 8, 6, 2, 8, 3, 6))
+  )
+  expect_equal(sum(as.integer(lineage$service_event_count)), 75L)
+  expect_equal(
+    sum(!is.na(lineage$predecessor_deployment_id) |
+      !is.na(lineage$successor_deployment_id)),
+    8L
+  )
+  expect_equal(state$summary$deployment_evidence$service_event_count, 75L)
+  expect_equal(state$summary$deployment_evidence$run_days_value_count, 62L)
+  expect_equal(state$summary$deployment_evidence$run_days_diagnostic_total, 7842L)
+  expect_equal(state$summary$deployment_evidence$directed_relation_count, 4L)
+  expect_equal(state$summary$analysis_site_membership_count, 0L)
+  expect_equal(state$join_readiness$joined_analytical_row_count, 0L)
+  expect_false(state$join_readiness$analytical_routing_permitted)
+  deployment_readiness <- Filter(
+    function(record) {
+      identical(record$requested_entity_level, "deployment")
+    },
+    state$join_readiness$results
+  )
+  expect_true(all(vapply(
+    deployment_readiness,
+    function(record) identical(record$unresolved, 0L),
+    logical(1)
+  )))
+  expect_equal(canonical_json(validation_state$inputs), inputs_before)
+})
+
+test_that("service normalization is closed, strict, ordered, and retains run-days state", {
+  expect_true(exists("read_judbury_service_events", mode = "function"))
+  if (!exists("read_judbury_service_events", mode = "function")) {
+    return(invisible(NULL))
+  }
+  fixture <- here(
+    "tests",
+    "testthat",
+    "fixtures",
+    "goal008",
+    "jc_services.csv"
+  )
+  evidence <- read_judbury_service_events(fixture)
+  expect_equal(nrow(evidence$rows), 13L)
+  expect_equal(nrow(evidence$events), 75L)
+  expect_equal(sum(evidence$events$run_days_state == "present"), 62L)
+  expect_equal(
+    sum(as.integer(evidence$events$run_days_literal), na.rm = TRUE),
+    7842L
+  )
+  expect_equal(evidence$events$event_role[[1]], "deployment_start")
+  expect_true(all(nchar(evidence$rows$service_event_digest) == 64L))
+
+  duplicate <- goal008_csv_copy(fixture, "NA", function(value) {
+    rbind(value, value[1, , drop = FALSE])
+  })
+  expect_error(read_judbury_service_events(duplicate), "duplicate|13 exact")
+
+  unknown <- goal008_csv_copy(fixture, "NA", function(value) {
+    value$site[[1]] <- "jc_unknown"
+    value
+  })
+  expect_error(read_judbury_service_events(unknown), "unlisted raw alias")
+
+  missing_label <- goal008_csv_copy(fixture, "NA", function(value) {
+    value$s2.date[[1]] <- NA_character_
+    value
+  })
+  expect_error(read_judbury_service_events(missing_label), "missing service label")
+
+  malformed <- goal008_csv_copy(fixture, "NA", function(value) {
+    value$s1.date[[1]] <- "2019-10-14"
+    value
+  })
+  expect_error(read_judbury_service_events(malformed), "malformed service date")
+
+  reversed <- goal008_csv_copy(fixture, "NA", function(value) {
+    value$s1.date[[1]] <- "4/06/2019"
+    value
+  })
+  expect_error(read_judbury_service_events(reversed), "reversed service chronology")
+})
+
+test_that("ledger reconciliation rejects duplicates, orphans, and source disagreements", {
+  expected_functions <- c(
+    "read_judbury_service_events",
+    "read_judbury_deployment_ledger",
+    "reconcile_judbury_deployment_evidence"
+  )
+  available <- vapply(expected_functions, exists, logical(1), mode = "function")
+  expect_true(all(available))
+  if (!all(available)) {
+    return(invisible(NULL))
+  }
+  fixture_root <- here("tests", "testthat", "fixtures", "goal008")
+  service <- read_judbury_service_events(file.path(fixture_root, "jc_services.csv"))
+  ledger_path <- file.path(fixture_root, "judbury_deployment_ledger.csv")
+  ledger <- read_judbury_deployment_ledger(ledger_path)
+  crosswalk_path <- here(
+    "tests",
+    "testthat",
+    "fixtures",
+    "goal007",
+    "judbury_entity_crosswalk.csv"
+  )
+  crosswalk <- read_entity_crosswalk(
+    crosswalk_path,
+    goal007_profile(crosswalk_path)
+  )
+  reconciled <- reconcile_judbury_deployment_evidence(
+    service,
+    ledger,
+    crosswalk
+  )
+  expect_equal(nrow(reconciled$rows), 13L)
+  expect_equal(reconciled$directed_relation_count, 4L)
+
+  duplicate <- goal008_csv_copy(ledger_path, "", function(value) {
+    value$deployment_id[[2]] <- value$deployment_id[[1]]
+    value
+  })
+  expect_error(
+    read_judbury_deployment_ledger(duplicate),
+    "duplicate deployment"
+  )
+
+  endpoint <- goal008_csv_copy(ledger_path, "", function(value) {
+    value$end_date[[1]] <- "2022-05-09"
+    value
+  })
+  expect_error(
+    reconcile_judbury_deployment_evidence(
+      service,
+      read_judbury_deployment_ledger(endpoint),
+      crosswalk
+    ),
+    "endpoint disagreement"
+  )
+
+  count <- goal008_csv_copy(ledger_path, "", function(value) {
+    value$service_event_count[[1]] <- "7"
+    value
+  })
+  expect_error(
+    reconcile_judbury_deployment_evidence(
+      service,
+      read_judbury_deployment_ledger(count),
+      crosswalk
+    ),
+    "service-count disagreement"
+  )
+
+  orphan <- goal008_csv_copy(ledger_path, "", function(value) {
+    value$predecessor_deployment_id[[2]] <- "judbury_dep_missing"
+    value
+  })
+  expect_error(
+    reconcile_judbury_deployment_evidence(
+      service,
+      read_judbury_deployment_ledger(orphan),
+      crosswalk
+    ),
+    "orphan predecessor"
+  )
+
+  conflict <- goal008_csv_copy(ledger_path, "", function(value) {
+    value$physical_location_id[[2]] <- value$physical_location_id[[1]]
+    value
+  })
+  expect_error(
+    read_judbury_deployment_ledger(conflict),
+    "duplicate physical"
+  )
+})

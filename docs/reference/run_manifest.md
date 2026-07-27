@@ -116,15 +116,22 @@ exact links under `provenance/entity_resolution/` for:
 - `join_readiness.json`.
 
 The verifier reconstructs all five from the immutable parser evidence, raw
-configuration, and selected snapshotted sidecar. It rejects altered records
-even after payload hashes are reclosed, and it requires the configured
-approved sidecar SHA-256, source inventory, summary, and reconstructed bytes
-to agree. The link values and directory entries are a closed canonical
-five-file namespace; missing, renamed, redirected, symlinked, nested, or extra
-entries fail even after payload and completion hashes are reclosed.
+configuration, the selected Goal 007 crosswalk, and, when selected, the Goal
+008 service source and deployment ledger. The latter two use distinct
+non-parser inventory roles, must occupy their closed
+`source_snapshot/deployment_evidence/` paths, and must match their separately
+configured approved SHA-256 values. It rejects altered source, ledger, entity,
+link, lineage, summary, or readiness records even after payload hashes are
+reclosed. A selected Goal 008 run reconstructs 13 deployment records, 13
+physical links, 13 deployment-lineage 1.1 rows, 75 ordered service events, and
+four directed predecessor/successor relations. The link values and directory
+entries remain a closed canonical five-file namespace; missing, renamed,
+redirected, symlinked, nested, or extra entries fail even after payload and
+completion hashes are reclosed.
 `join_readiness.json` also records the exact source-inventory SHA-256 used for
-semantic reconstruction. Manifest 1.1 and 1.0 continue to dispatch under their
-original contracts and do not require Goal 007 records.
+semantic reconstruction. Goal 008 does not change manifest 1.2 or preview 1.1
+schema identifiers. Manifest 1.1 and 1.0 continue to dispatch under their
+original contracts and do not require Goal 007 or Goal 008 records.
 
 ## Validation preview
 

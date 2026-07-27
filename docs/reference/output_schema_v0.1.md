@@ -109,10 +109,12 @@ Expected (current MVP):
 
 ## Provenance
 
-- `source_snapshot/` — immutable bytes consumed by parsers, including schema
-  files and materialised CamtrapDP resources.
+- `source_snapshot/` — immutable parser bytes plus explicitly selected
+  non-parser audit evidence, including schema files, materialised CamtrapDP
+  resources, the Goal 007 crosswalk, and the Goal 008 service source and
+  deployment ledger when selected.
 - `provenance/source_inventory.json` — sorted SHA-256 inventory of
-  parser-consumed bytes.
+  immutable source bytes, with parser-consumption and evidence-role state.
 - `provenance/config.raw.yml` — byte-exact YAML snapshot consumed by the
   supported target invocation.
 - `provenance/effective_config.json` — canonical effective configuration with
@@ -147,12 +149,20 @@ Expected (current MVP):
   identity, location, interval, chronology, and readiness evidence. Duplicate
   or competing CamtrapDP evidence retains one attributable row per
   participating source row while remaining integrity-stopped or ambiguous.
+  Explicit Goal 008 configurations use
+  `camtrap-deployment-lineage/1.1`; its nullable additions carry the canonical
+  physical identifier, date precision, endpoint semantics, start/end service
+  labels, ordered event count and digest, predecessor/successor IDs, service
+  and ledger row/fixity evidence, approval reference, daily-operation
+  authority, and audit-only `run_days` disposition. Legacy omitted-block
+  evidence retains the lineage 1.0 column contract.
 - `provenance/entity_resolution/entity_resolution_summary.json` — profile,
-  authority, counts, integrity findings, and the explicit unselected
-  `analysis_site` state.
+  authority, counts, integrity findings, selected deployment evidence totals,
+  and the explicit unselected `analysis_site` state.
 - `provenance/entity_resolution/join_readiness.json` — audit-only
   unique/unresolved/ambiguous counts, bound to both the entity-ledger digest
-  and the immutable source SHA-256. It is not an analytical join.
+  and the immutable source SHA-256. Goal 008 records zero joined analytical
+  rows and forbids analytical routing. It is not an analytical join.
 - `run_manifest.json` — exact relative payload inventory with byte sizes and
   SHA-256 values plus source/config/engine/composite fingerprints.
 - `COMPLETED.json` — terminal record written last; binds the run ID, manifest
@@ -171,6 +181,12 @@ no missing, renamed, redirected, symlinked, nested, or extra entry.
 - `camtrapdp_export/media.csv` — media metadata (one row per observation by default).
 - `camtrapdp_export/observations.csv` — observation records with eventStart/eventEnd.
 - `camtrapdp_export/validation.txt` — validation log from `camtrapdp`/`frictionless`.
+
+The current exporter still derives its deployment envelope from the first and
+last `jc_op == 1` dates. Goal 008 does not substitute its declared deployment
+spans into export output. Reconciling those distinct operational and
+deployment meanings is deferred to a separate compatibility decision and
+implementation packet.
 
 ## Notes
 

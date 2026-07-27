@@ -90,6 +90,7 @@ run_full_evidence_run <- function(
 
   resolved_config <- read_config(bootstrap_config_path, attach_runtime = FALSE)
   entity_resolution_selection(resolved_config, require_explicit = TRUE)
+  deployment_evidence_selection(resolved_config, require_explicit = TRUE)
   output_root_path <- resolve_project_path(resolved_config$paths$outputs, project_root)
   run_id <- if (is.null(run_id)) allocate_run_id(clock = clock, token = token) else run_id
   assert_safe_run_id(run_id)

@@ -94,3 +94,41 @@ test_that("direct partial target calls cannot complete or advance latest", {
     expect_equal(completion, character())
   })
 })
+
+test_that("Goal 008 selection adds no scientific target or analytical route", {
+  with_dir(here(), {
+    local_envvar(c(
+      CAMTRAP_CONFIG = here("config.yml"),
+      CAMTRAP_EVIDENCE_CONTEXT = NA
+    ))
+    manifest <- tar_manifest(
+      script = here("_targets.R"),
+      fields = c("name", "command"),
+      callr_function = NULL
+    )
+    target_text <- paste(manifest$name, manifest$command, collapse = "\n")
+
+    expect_false(any(grepl(
+      "deployment_evidence|deployment_service|deployment_ledger|jc_services",
+      manifest$name
+    )))
+    expect_false(grepl(
+      "deployment_to_physical_location|service_event_digest",
+      target_text
+    ))
+
+    suppressWarnings(
+      tar_make(
+        names = "config",
+        callr_function = NULL,
+        script = here("_targets.R"),
+        reporter = "silent"
+      )
+    )
+    config <- tar_read_raw("config", store = here("_targets"))
+    expect_equal(
+      config$deployment_evidence$profile_id,
+      "judbury-deployment-evidence/1.0.0-proposed"
+    )
+  })
+})

@@ -1136,15 +1136,27 @@ full adapter/profile work remain deferred.
 - [x] Define a separate immutable Goal 008 selection, deployment-lineage 1.1,
   five-artefact parity, semantic reconstruction, and manifest 1.2 retention.
 - [x] Complete one independent packet review with at most one focused repair.
-- [ ] Obtain Barry's exact approval of the complete packet, source and ledger
+- [x] Obtain Barry's exact approval of the complete packet, source and ledger
   hashes, packet commit, and combined authority reference.
-- [ ] Implement, verify, independently review, publish, and confirm exact-SHA
-  CI within the closed Goal 008 allowlist.
+- [x] Implement the closed configuration, immutable acquisition, normalization,
+  lineage 1.1, non-routing, and portable-reconstruction core.
+- [x] Complete post-implementation local acceptance and one independent review,
+  accepted as `PASS_WITH_NON_BLOCKING_NOTES`.
+- [ ] Complete exact-path publication and exact-SHA CI within the closed Goal
+  008 allowlist.
 
-Goal 008 is a proposed audit-evidence slice only. It does not select
-`analysis_site`, perform a nine-station analysis, route effort or events,
-diagnose malfunction, change CamtrapDP adapter/export behaviour, or alter a
-scientific output.
+Goal 008 is an approved audit-evidence slice with local acceptance and
+independent review. It does not select `analysis_site`, perform a nine-station
+analysis, route effort or events, diagnose malfunction, change CamtrapDP
+adapter/export behaviour, or alter a scientific output.
+
+The independent review found one non-blocking defence-in-depth debt: the
+standalone service reader accepts blank missing tokens in some unused or
+initial positions, while the exact approved source uses and the packet requires
+literal `NA`. Exact SHA and portable-reconstruction gates protect the approved
+profile. Explicit blank rejection and negative tests are required before a
+different source, generalized reader reuse, or another deployment-evidence
+profile may be approved.
 
 ---
 

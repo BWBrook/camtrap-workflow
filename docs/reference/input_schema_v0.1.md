@@ -109,6 +109,18 @@ audit evidence. Nominal station, deployment, and `analysis_site` are never
 inferred from suffixes, coordinates, proximity, effort runs, or observation
 dates.
 
+Goal 008 also leaves the public v0.1 input contract unchanged. Its approved
+Judbury service history and deployment ledger are immutable non-parser
+evidence, not fifth and sixth analytical tables. The closed service reader
+normalizes 75 ordered date cells from 13 exact raw aliases, retains all 62
+supplied `run_days` literals and their missing states in row digests, and
+reconciles them with 13 approved deployment records. `data/jc_op.csv` remains
+the daily-operation authority; `run_days` is audit-only metadata and cannot
+generate or validate effort. The resulting deployment identity, spans, and
+four directed chronology relations are provenance only. The same 13 legacy
+physical `site` keys remain the scientific inputs, and `analysis_site`
+remains unselected.
+
 ## Validation failures
 
 Validation fails early with explicit table/column messages and suggested fixes.

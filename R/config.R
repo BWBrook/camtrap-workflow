@@ -160,6 +160,78 @@ validate_entity_config <- function(selection) {
   invisible(TRUE)
 }
 
+deployment_evidence_fields <- function() {
+  c(
+    "profile_id",
+    "service_sidecar_path",
+    "service_sidecar_sha256",
+    "deployment_ledger_path",
+    "deployment_ledger_sha256",
+    "authority_reference"
+  )
+}
+
+approved_deployment_evidence_config <- function() { # nolint: object_length_linter.
+  service_sha256 <-
+    "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a"
+  ledger_sha256 <-
+    "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+  list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 = service_sha256,
+    deployment_ledger_path = paste0(
+      "docs/goals/008-judbury-deployment-evidence/",
+      "judbury_deployment_ledger.csv"
+    ),
+    deployment_ledger_sha256 = ledger_sha256,
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      service_sha256,
+      "-ledger-sha256-",
+      ledger_sha256
+    )
+  )
+}
+
+validate_deployment_evidence_config <- function(selection) { # nolint: object_length_linter.
+  fields <- deployment_evidence_fields()
+  if (!is.list(selection) ||
+        !identical(sort(names(selection)), sort(fields))) {
+    stop(
+      "config.yml deployment_evidence must contain exactly profile_id, ",
+      "service_sidecar_path, service_sidecar_sha256, ",
+      "deployment_ledger_path, deployment_ledger_sha256, and ",
+      "authority_reference."
+    )
+  }
+  values <- selection[fields]
+  nulls <- vapply(values, is.null, logical(1))
+  if (all(nulls)) {
+    return(invisible(TRUE))
+  }
+  if (any(nulls) ||
+    !all(vapply(values, function(value) {
+      is.character(value) && length(value) == 1L && nzchar(value)
+    }, logical(1)))) {
+    stop(
+      "config.yml deployment_evidence must be an exact null selection or a ",
+      "complete selected profile."
+    )
+  }
+  digests <- c(
+    selection$service_sidecar_sha256,
+    selection$deployment_ledger_sha256
+  )
+  if (!all(grepl("^[a-f0-9]{64}$", digests)) ||
+        !identical(selection[fields], approved_deployment_evidence_config())) {
+    stop(
+      "config.yml deployment_evidence selection has no exact approved authority."
+    )
+  }
+  invisible(TRUE)
+}
+
 #' Validate configuration values
 #'
 #' @param config List of configuration values.
@@ -458,6 +530,29 @@ validate_config <- function(config) {
         "when input_mode = 'four_table'; CamtrapDP requires an explicit ",
         "null entity_resolution selection."
       )
+    }
+  }
+
+  if (!is.null(config$deployment_evidence)) {
+    validate_deployment_evidence_config(config$deployment_evidence)
+    selected_deployment_evidence <- !is.null(
+      config$deployment_evidence$profile_id
+    )
+    if (selected_deployment_evidence) {
+      if (!identical(config$input_mode, "four_table")) {
+        stop(
+          "The approved Judbury deployment-evidence profile is only valid ",
+          "when input_mode = 'four_table'."
+        )
+      }
+      if (is.null(config$entity_resolution) ||
+            is.null(config$entity_resolution$profile_id)) {
+        stop(
+          "Selected Goal 008 evidence requires the exact Goal 007 ",
+          "entity-resolution selection."
+        )
+      }
+      validate_entity_config(config$entity_resolution)
     }
   }
 

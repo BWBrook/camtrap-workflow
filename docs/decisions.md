@@ -662,3 +662,48 @@ Consequences / follow-ups:
 - Purpose-specific grouping, deployment chronology, effort/event routing,
   public fields/API/migration, and full Phase 3 adapter/profile work require
   separate authority and evidence.
+
+---
+
+## 2026-07-27 - Bind approved Judbury deployment evidence as audit-only lineage
+
+Decision:
+- Accept the exact Goal 008 packet at commit
+  `478832240e77388da299e55871bdeb6e386c90c5`, normalized service SHA-256
+  `f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a`,
+  deployment-ledger SHA-256
+  `0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf`,
+  and the recorded combined authority reference.
+- Represent the 13 approved Judbury deployments, 75 ordered service events,
+  and four directed predecessor/successor relations only in versioned entity
+  provenance. Keep the Goal 007 crosswalk unchanged and keep direction out of
+  the typed-link namespace.
+- Retain `data/jc_op.csv` as daily-operation authority and `sN.run_days` as
+  audit-only metadata. Forbid analytical routing and keep `analysis_site`
+  unselected.
+
+Rationale:
+- Exact immutable source and ledger evidence can resolve deployment identity
+  and declared day-precision spans without turning service metadata into
+  effort or inventing within-day routing.
+- Separate source, ledger, operation, and approval identities make the
+  deployment evidence reconstructable and reject checksum-reclosed changes.
+
+Consequences / follow-ups:
+- Goal 008 uses deployment-lineage 1.1 within the unchanged five-file entity
+  namespace, validation preview 1.1, and manifest 1.2.
+- Local acceptance and independent implementation review passed for the exact
+  SHA-pinned profile, with one non-blocking defence-in-depth note. The
+  standalone service reader also accepts blank cells as missing in unused or
+  initial service-date and corresponding `run_days` positions, although the
+  packet requires literal `NA`. Exact authority and reconstruction gates make
+  altered bytes unreachable for this approved source.
+- Literal-`NA`-only rejection and negative blank-token tests are a hard gate
+  before any different service source, generalized reader reuse, or new
+  deployment-evidence profile is approved.
+- The CamtrapDP exporter continues to derive its operational envelope from
+  first/last active `jc_op` dates. Any substitution of declared deployment
+  spans requires a separate compatibility decision and packet.
+- Purpose-specific grouping, effort/event routing, public fields, profile
+  precedence, and the remaining Phase 3 work stay deferred.
+- Exact-path publication and exact-SHA CI remain pending.

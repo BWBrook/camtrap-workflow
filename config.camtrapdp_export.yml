@@ -14,6 +14,14 @@ entity_resolution:
   sidecar_sha256: "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
   authority_reference: "goal007-judbury-crosswalk-sha256-553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
 
+deployment_evidence:
+  profile_id: "judbury-deployment-evidence/1.0.0-proposed"
+  service_sidecar_path: "data/jc_services.csv"
+  service_sidecar_sha256: "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a"
+  deployment_ledger_path: "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv"
+  deployment_ledger_sha256: "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+  authority_reference: "goal008-judbury-deployment-evidence-source-sha256-f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-ledger-sha256-0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

@@ -172,3 +172,165 @@ test_that("sidecar authority and post-snapshot mutation fail fixity", {
     "Source snapshot integrity mismatch"
   )
 })
+
+goal008_deployment_selection <- function() {
+  list(
+    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
+    service_sidecar_path = "data/jc_services.csv",
+    service_sidecar_sha256 =
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
+    deployment_ledger_path =
+      "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
+    deployment_ledger_sha256 =
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
+    authority_reference = paste0(
+      "goal008-judbury-deployment-evidence-source-sha256-",
+      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
+      "ledger-sha256-",
+      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
+    )
+  )
+}
+
+goal008_selected_source_config <- function(input_root) {
+  config <- goal005_four_table_config(input_root)
+  config$entity_resolution <- list(
+    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
+    sidecar_path =
+      "docs/goals/007-entity-resolution/judbury_entity_crosswalk.csv",
+    sidecar_sha256 =
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec",
+    authority_reference = paste0(
+      "goal007-judbury-crosswalk-sha256-",
+      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
+    )
+  )
+  config$deployment_evidence <- goal008_deployment_selection()
+  validate_config(config)
+}
+
+test_that("deployment service and ledger use two immutable non-parser roles", {
+  input_root <- copy_goal005_inputs(tempfile("goal008-input-"))
+  stage <- tempfile("goal008-stage-")
+  dir.create(stage)
+  config <- goal008_selected_source_config(input_root)
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  roles <- vapply(snapshot$inventory, `[[`, character(1), "role")
+  deployment_roles <- c("deployment_service_input", "deployment_ledger_input")
+
+  expect_equal(sum(roles %in% deployment_roles), 2L)
+  expect_equal(length(snapshot$parser_files), 5L)
+  expect_false(any(vapply(
+    snapshot$inventory[roles %in% deployment_roles],
+    function(record) isTRUE(record$consumed_by_parser),
+    logical(1)
+  )))
+  expect_equal(
+    sort(vapply(
+      snapshot$inventory[roles %in% deployment_roles],
+      `[[`,
+      character(1),
+      "sha256"
+    )),
+    sort(c(
+      config$deployment_evidence$service_sidecar_sha256,
+      config$deployment_evidence$deployment_ledger_sha256
+    ))
+  )
+  expect_false(any(unlist(snapshot$deployment_evidence_paths) %in% snapshot$parser_files))
+  expect_true(verify_source_snapshot(snapshot, stage))
+})
+
+test_that("deployment snapshot mutation, duplicate role, and configured symlink fail", {
+  input_root <- copy_goal005_inputs(tempfile("goal008-input-"))
+  config <- goal008_selected_source_config(input_root)
+  stage <- tempfile("goal008-stage-")
+  dir.create(stage)
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  expect_true(is.list(snapshot$deployment_evidence_paths))
+  if (!is.list(snapshot$deployment_evidence_paths)) {
+    return(invisible(NULL))
+  }
+  write("tamper", snapshot$deployment_evidence_paths$service, append = TRUE)
+  expect_error(
+    verify_source_snapshot(snapshot, stage),
+    "Source snapshot integrity mismatch"
+  )
+
+  stage <- tempfile("goal008-stage-")
+  dir.create(stage)
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  service_index <- which(vapply(
+    snapshot$inventory,
+    function(record) identical(record$role, "deployment_service_input"),
+    logical(1)
+  ))
+  snapshot$inventory[[length(snapshot$inventory) + 1L]] <-
+    snapshot$inventory[[service_index]]
+  snapshot$source_sha256 <- fixity_identity(snapshot$inventory)
+  expect_error(
+    validate_deployment_evidence_source(
+      config,
+      snapshot,
+      deployment_evidence_selection(config)
+    ),
+    "exactly one deployment service"
+  )
+
+  project_root <- tempfile("goal008-symlink-root-")
+  dir.create(file.path(project_root, "data"), recursive = TRUE)
+  dir.create(
+    file.path(project_root, "docs", "goals", "007-entity-resolution"),
+    recursive = TRUE
+  )
+  dir.create(
+    file.path(
+      project_root,
+      "docs",
+      "goals",
+      "008-judbury-deployment-evidence"
+    ),
+    recursive = TRUE
+  )
+  file.copy(
+    here(
+      "docs",
+      "goals",
+      "007-entity-resolution",
+      "judbury_entity_crosswalk.csv"
+    ),
+    file.path(
+      project_root,
+      "docs",
+      "goals",
+      "007-entity-resolution",
+      "judbury_entity_crosswalk.csv"
+    )
+  )
+  file.copy(
+    here(
+      "tests",
+      "testthat",
+      "fixtures",
+      "goal008",
+      "judbury_deployment_ledger.csv"
+    ),
+    file.path(
+      project_root,
+      "docs",
+      "goals",
+      "008-judbury-deployment-evidence",
+      "judbury_deployment_ledger.csv"
+    )
+  )
+  expect_true(file.symlink(
+    here("tests", "testthat", "fixtures", "goal008", "jc_services.csv"),
+    file.path(project_root, "data", "jc_services.csv")
+  ))
+  symlink_stage <- tempfile("goal008-symlink-stage-")
+  dir.create(symlink_stage)
+  expect_error(
+    materialize_source_snapshot(config, symlink_stage, project_root = project_root),
+    "may not be a symlink"
+  )
+})

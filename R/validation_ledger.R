@@ -903,6 +903,22 @@ portable_validation_snapshot <- function(root, config) {
   if (length(entity) > 1L) {
     stop("Portable validation reconstruction has multiple entity sidecars.")
   }
+  service <- which(vapply(
+    inventory,
+    function(record) identical(record$role, "deployment_service_input"),
+    logical(1)
+  ))
+  ledger <- which(vapply(
+    inventory,
+    function(record) identical(record$role, "deployment_ledger_input"),
+    logical(1)
+  ))
+  if (length(service) > 1L) {
+    stop("Portable validation reconstruction has multiple deployment services.")
+  }
+  if (length(ledger) > 1L) {
+    stop("Portable validation reconstruction has multiple deployment ledgers.")
+  }
 
   snapshot <- list(
     parser_paths = parser_paths,
@@ -915,11 +931,34 @@ portable_validation_snapshot <- function(root, config) {
       file.path(root, inventory_paths[[entity]])
     } else {
       NULL
-    }
+    },
+    deployment_evidence_paths = list(
+      service = if (length(service) == 1L) {
+        file.path(root, inventory_paths[[service]])
+      } else {
+        NULL
+      },
+      ledger = if (length(ledger) == 1L) {
+        file.path(root, inventory_paths[[ledger]])
+      } else {
+        NULL
+      }
+    )
   )
   if (exists("validate_entity_source", mode = "function")) {
     selection <- entity_resolution_selection(config, require_explicit = FALSE)
     validate_entity_source(config, snapshot, selection)
+  }
+  if (exists("validate_deployment_evidence_source", mode = "function")) {
+    deployment_selection <- deployment_evidence_selection(
+      config,
+      require_explicit = FALSE
+    )
+    validate_deployment_evidence_source(
+      config,
+      snapshot,
+      deployment_selection
+    )
   }
   snapshot
 }

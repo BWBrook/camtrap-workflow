@@ -76,6 +76,28 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   sidecars are rejected. The selected sidecar changes source identity but
   never becomes a fifth analytical table.
 
+- `deployment_evidence`
+  Provisional internal deployment/service audit selection, separate from
+  `entity_resolution` and not a public v0.1 input field. The block contains
+  exactly `profile_id`, `service_sidecar_path`, `service_sidecar_sha256`,
+  `deployment_ledger_path`, `deployment_ledger_sha256`, and
+  `authority_reference`. All six values must be explicit `null`, or they must
+  bind the exact approved Judbury profile
+  `judbury-deployment-evidence/1.0.0-proposed`. The approved service and
+  ledger SHA-256 values are
+  `f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a`
+  and
+  `0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf`.
+  Selection is valid only for `input_mode = four_table` with the exact
+  selected Goal 007 crosswalk. The supported runner requires either this
+  complete selection or the explicit null block. Selected files are
+  snapshotted and inventoried separately as non-parser
+  `deployment_service_input` and `deployment_ledger_input` evidence. They do
+  not become analytical tables and cannot route observations, effort, events,
+  denominators, or modules. `config.yml` and
+  `config.camtrapdp_export.yml` select this audit profile; generic and
+  CamtrapDP-ingestion examples use explicit nulls.
+
 - `analysis.rarefaction`  
   Toggle rarefaction/species accumulation outputs (TRUE/FALSE).
 
