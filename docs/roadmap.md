@@ -1116,12 +1116,35 @@ The PI review ZIP must include:
   retaining legacy 1.0/1.1 verification.
 - [x] Preserve the four validated inputs, all Phase 2 evidence, event
   membership, effort, methods, and 13 scientific comparator tables exactly.
-- [ ] Complete independent implementation review, exact-path publication, and
+- [x] Complete independent implementation review, exact-path publication, and
   exact-SHA CI confirmation.
 
 Goal 007 does not complete Phase 3. Judbury deployment identity/chronology,
 purpose-specific `analysis_site`, effort/event routing, public fields, and
 full adapter/profile work remain deferred.
+
+---
+
+## Goal 008 - Authoritative Judbury deployment and service evidence
+
+- [x] Record Barry-supplied service-date and daily-operation semantics with
+  exact LF-normalized source fixity.
+- [x] Propose 13 stable deployment IDs, physical links, day-precision spans,
+  75 source-derived service events, and four directed chronology relations.
+- [x] Keep `jc_op` as daily operation authority and `sN.run_days` as audit-only
+  metadata with no effort reconciliation or scientific routing.
+- [x] Define a separate immutable Goal 008 selection, deployment-lineage 1.1,
+  five-artefact parity, semantic reconstruction, and manifest 1.2 retention.
+- [x] Complete one independent packet review with at most one focused repair.
+- [ ] Obtain Barry's exact approval of the complete packet, source and ledger
+  hashes, packet commit, and combined authority reference.
+- [ ] Implement, verify, independently review, publish, and confirm exact-SHA
+  CI within the closed Goal 008 allowlist.
+
+Goal 008 is a proposed audit-evidence slice only. It does not select
+`analysis_site`, perform a nine-station analysis, route effort or events,
+diagnose malfunction, change CamtrapDP adapter/export behaviour, or alter a
+scientific output.
 
 ---
 

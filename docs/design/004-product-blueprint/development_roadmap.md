@@ -48,10 +48,12 @@ phase.
 - **Dependencies:** Phases 1–2 and compatibility boundaries; public fields
   and ecological grouping remain unselected.
 - **Delivery state:** Phase 3 is not complete. Goal 007, its first bounded
-  vertical slice, completed local acceptance on 2026-07-26: versioned entity
-  records, typed links, explicit unresolved states, immutable bundle evidence,
-  and audit-only join readiness now run in both supported paths. Current
-  effort/event routing and all scientific outputs are preserved.
+  vertical slice, is accepted and published: versioned entity records, typed
+  links, explicit unresolved states, immutable bundle evidence, and audit-only
+  join readiness run in both supported paths. Independent review passed and
+  exact-SHA CI confirmed implementation
+  `bbe5c36f4b6f138f7ae5cdf2bd947e1bf42b0c30`. Current effort/event routing
+  and all scientific outputs are preserved.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
@@ -60,9 +62,12 @@ phase.
   or removing the strict compatibility profile.
 - **Decision gate:** Barry approved the exact factual
   13-physical-to-nine-nominal Judbury crosswalk for Goal 007. Authoritative
-  deployment chronology, analysis_site grouping, effort/event routing, full
-  resolved profiles, adapter completion, and public schema/API commitments
-  remain later Phase 3 work with their own evidence and authority gates.
+  deployment/service evidence is now proposed in Goal 008 under separate exact
+  source, ledger, packet, and authority-reference gates. Independent packet
+  review returned `PASS_PACKET`, but the packet is not yet published, approved,
+  or implemented. `analysis_site` grouping, effort/event routing, full resolved
+  profiles, adapter completion, and public schema/API commitments remain later
+  Phase 3 work with their own evidence and authority gates.
 
 ## Phase 4 — Capability planner and module-status envelope
 
@@ -138,13 +143,18 @@ phase.
 
 ## Recommended next implementation goal
 
-Phases 1 and 2 are complete, and Goal 007 has completed local implementation
-acceptance as the first bounded Phase 3 slice. Publication remains gated by
-independent review and exact-SHA CI.
+Phases 1 and 2 are complete, and Goal 007 is accepted and published as the
+first bounded Phase 3 slice.
 
-The next Phase 3 slice should be selected only after that review. Goal 007
-leaves deployment chronology and intervals unresolved for Judbury, keeps
-analysis_site unselected with zero memberships, and does not reroute effort,
-observations, operational events, or analytical modules. Resolved profile
-precedence, conservative effort/event routing, and full CamtrapDP adapter
-completion remain candidates with their own authority and evidence gates.
+Goal 008 is the proposed next slice. It binds Barry-supplied Judbury service
+dates to 13 explicit day-precision deployments and four directed chronology
+relations while keeping daily operation separate. Implementation remains
+gated by packet publication and Barry's exact approval of the complete packet,
+normalized service source, deployment ledger, packet commit, and combined
+authority reference. The independent packet review has passed.
+
+Goal 008 keeps `analysis_site` unselected with zero memberships and does not
+reroute effort, observations, operational events, denominators, or analytical
+modules. Resolved profile precedence, conservative scientific routing, the
+CamtrapDP exporter envelope, full adapter completion, and purpose-specific
+grouping remain later work with their own authority and evidence gates.
