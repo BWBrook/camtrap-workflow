@@ -59,12 +59,18 @@ phase.
   as implementation `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`;
   independent review passed with non-blocking notes and exact-SHA workflow
   `ci` run `30253764770` concluded `success`.
+  Goal 009 is now an approved but unpublished third bounded slice. It proposes
+  an explicit 13-physical-to-nine-analysis-site Judbury scheme and only four
+  descriptive selected-resolution outputs after physical event construction.
+  Execution authority remains conditional on exact eight-path packet
+  publication with the approved parent, subject, and mapping hash.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
   overrideable.
-- **Non-goals:** Selecting final public fields, Judbury grouping, thresholds,
-  or removing the strict compatibility profile.
+- **Non-goals:** Selecting final public fields, extending Judbury grouping
+  beyond the exact bounded Goal 009 proposal, selecting inferential
+  thresholds, or removing the strict compatibility profile.
 - **Decision gate:** Barry approved the exact factual
   13-physical-to-nine-nominal Judbury crosswalk for Goal 007 and the separate
   exact Judbury deployment/service packet for Goal 008. Goal 008 keeps
@@ -74,6 +80,9 @@ phase.
   rejection and blank-token negative tests are required before approving a
   different service source, generalized reader reuse, or another deployment
   profile.
+  Barry approved the exact Goal 009 mapping, packet, allowlist, subjects, and
+  boundaries on 2026-08-01. Analytical routing begins only after the exact
+  packet-publication gate activates that conditional authority.
 
 ## Phase 4 — Capability planner and module-status envelope
 
@@ -169,5 +178,16 @@ grouping remain later work with their own authority and evidence gates.
 Before any different deployment source or broader reader reuse, the service
 reader must reject blank missing tokens and test literal-`NA`-only behavior.
 
-Goal 008 is closed. This closeout neither defines nor authorizes a subsequent
-Phase 3 implementation slice.
+Goal 008 is closed.
+
+The recommended next implementation goal is Goal 009. Barry approved its
+exact mapping SHA-256
+`6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`,
+packet, authority reference, closed allowlist, subjects, and boundaries on
+2026-08-01. Execution remains conditional on publishing the exact eight-path
+packet with parent `c0ed40377af4aa0162098913e2c097da65eadc42`, the approved
+subject, and unchanged mapping hash. The slice preserves the legacy physical
+graph and adds a parallel post-event route for confirmed effort/coverage,
+observed richness, presence composition, and descriptive Jaccard turnover. It
+separates non-waivable evidence integrity from fail-soft route eligibility and
+does not claim implementation or Phase 3 completion.

@@ -1162,6 +1162,46 @@ profile may be approved.
 
 ---
 
+## Goal 009 - Analysis-site ecological vertical slice
+
+- [x] Define `analysis_site` as a named purpose-specific analytical unit,
+  distinct from physical location, nominal station, and deployment.
+- [x] Propose an exact immutable 13-physical-to-nine-analysis-site Judbury
+  mapping with four fixed midpoint coordinates and no synthetic covariates.
+- [x] Specify physical operation and event construction before selected-unit
+  aggregation, with event identity and source-row membership conserved.
+- [x] Specify confirmed-day operation union, unknown-state preservation,
+  approved same-day handover handling, and the retained `jc_pm14` gap.
+- [x] Bound the ecological slice to effort/coverage, observed richness,
+  presence composition, and descriptive Jaccard turnover.
+- [x] Preserve every excluded module on its existing physical-location route.
+- [x] Separate non-waivable mapping/provenance integrity from fail-soft
+  selected-route ineligibility for genuine concurrent member operation.
+- [x] Define a closed implementation plan, validation ladder, portable
+  provenance contract, independent reconstruction, and one-review stopping
+  rule.
+- [x] Obtain Barry's exact conditional approval of the reviewed packet,
+  mapping bytes and SHA-256, scheme/version/authority, closed allowlist,
+  subjects, and publication boundary.
+- [ ] Publish one exact eight-path packet commit with parent
+  `c0ed40377af4aa0162098913e2c097da65eadc42`, the approved subject, and
+  unchanged mapping SHA-256 to activate execution authority.
+- [ ] Implement, locally accept, independently review, publish, and confirm
+  the exact implementation SHA in CI.
+
+Goal 009 is an approved but unpublished packet, not an implemented feature.
+Its approved mapping SHA-256 is
+`6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
+Execution authority is conditional on the exact packet-publication gate above.
+Implementation must preserve the legacy physical-location graph, use full
+preflight event lineage rather than compact event summaries, and omit only the
+selected route when scientifically ineligible. No implementation, runtime
+output, test, or CI evidence exists yet. Goal 009 does not generalize repeated
+deployments, aggregate concurrent cameras, pool environmental covariates,
+alter excluded modules, define a public mapping API, or complete Phase 3.
+
+---
+
 ## References (for context; not requirements)
 
 - WildObsR (Camtrap DP support, matrix generation for occupancy, schema validation): https://github.com/WildObs/WildObsR

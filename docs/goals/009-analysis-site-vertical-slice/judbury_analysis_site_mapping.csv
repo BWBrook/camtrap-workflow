@@ -1,0 +1,14 @@
+analysis_site_mapping_schema,scheme_id,scheme_version,authority_state,analysis_site_id,physical_location_id,representative_latitude,representative_longitude,coordinate_basis
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_cen,jc_cen,-42.9988300,146.9434100,actual_physical_location_coordinates
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co1,jc_co1,-42.9974400,146.9394450,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co1,jc_co1_s1,-42.9974400,146.9394450,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co2,jc_co2,-42.9960100,146.9455000,actual_physical_location_coordinates
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co3,jc_co3,-43.0004650,146.9477700,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co3,jc_co3_s16,-43.0004650,146.9477700,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_co4,jc_co4,-43.0016300,146.9409200,actual_physical_location_coordinates
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm12,jc_pm12,-42.9966700,146.9424200,actual_physical_location_coordinates
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm14,jc_pm14,-42.9996600,146.9401500,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm14,jc_pm14_s1,-42.9996600,146.9401500,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm23,jc_pm23,-42.9984400,146.9462600,actual_physical_location_coordinates
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm34,jc_pm34,-43.0012590,146.9447415,synthetic_fixed_midpoint_of_two_approved_physical_locations
+camtrap-analysis-site-mapping/1.0,judbury-analysis-site,1.0.0-proposed,proposed_for_barry_exact_approval,jc_pm34,jc_pm34_s15,-43.0012590,146.9447415,synthetic_fixed_midpoint_of_two_approved_physical_locations
