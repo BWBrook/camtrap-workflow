@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+if (!exists("resolve_selected_resolution", mode = "function")) {
+  selected_resolution_file <- file.path(here::here(), "R", "selected_resolution.R")
+  if (file.exists(selected_resolution_file)) source(selected_resolution_file, local = .GlobalEnv)
+}
+
 load_evidence_helpers <- function(project_root) {
   files <- c(
     "R/config_identity.R",
@@ -15,6 +20,7 @@ load_evidence_helpers <- function(project_root) {
     "R/source_row_lineage.R",
     "R/repair_ledger.R",
     "R/event_outputs.R",
+    "R/selected_resolution.R",
     "R/validation_ledger.R",
     "R/run_bundle.R"
   )
@@ -196,8 +202,23 @@ run_full_evidence_run <- function(
     entity_state,
     staging_dir
   )
+  selected_state <- NULL
+  selected_artifacts <- NULL
+  if (!is.null(analysis_unit_selection(resolved_config))) {
+    selected_state <- resolve_selected_resolution(
+      resolved_config,
+      snapshot,
+      validation_state,
+      entity_state
+    )
+    selected_artifacts <- write_selected_resolution_artifacts(
+      selected_state,
+      staging_dir
+    )
+  }
   analysis_ready <- isTRUE(validation_state$can_analyze) &&
-    isTRUE(entity_state$can_analyze)
+    isTRUE(entity_state$can_analyze) &&
+    (is.null(selected_state) || isTRUE(selected_state$integrity_ok))
   context$validation <- list(
     validation_schema = "camtrap-validation-context/1.0",
     can_analyze = analysis_ready,
@@ -212,6 +233,14 @@ run_full_evidence_run <- function(
     can_analyze = entity_state$can_analyze,
     artifacts = entity_artifacts
   )
+  if (!is.null(selected_state)) {
+    context$selected_resolution <- list(
+      selected_resolution_context_schema = "camtrap-selected-resolution-context/1.0",
+      integrity_ok = selected_state$integrity_ok,
+      route_eligible = selected_state$route_eligible,
+      artifacts = as.list(selected_artifacts)
+    )
+  }
   dir.create(dirname(runtime_path), recursive = TRUE, showWarnings = FALSE)
   atomic_write_json(context, runtime_path)
 

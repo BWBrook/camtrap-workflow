@@ -98,6 +98,35 @@ The pipeline is configured via a single YAML file at the project root: `config.y
   `config.camtrapdp_export.yml` select this audit profile; generic and
   CamtrapDP-ingestion examples use explicit nulls.
 
+- `analysis_unit`
+  Provisional internal selection for the one Goal 009 ecological branch; it
+  is not a public v0.1 field or a general migration API. A present block must
+  contain exactly `resolution`, `mapping_profile_id`, `mapping_path`,
+  `mapping_sha256`, and `authority_reference`. Supported resolutions are
+  `analysis_site`, `physical_location`, and `nominal_station`. The four
+  mapping fields must be either all selected or all explicit nulls.
+
+  The approved mapped selection is
+  `judbury-analysis-site/1.0.0-proposed`, fixed to
+  `docs/goals/009-analysis-site-vertical-slice/judbury_analysis_site_mapping.csv`
+  at SHA-256
+  `6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
+  Its 13 physical-location memberships, nine analysis sites, and four fixed
+  synthetic midpoint coordinates are immutable evidence for this profile.
+  Midpoints are for mapping and separation only; physical covariates are not
+  pooled. A null-mapping `analysis_site` or `physical_location` selection uses
+  the built-in physical-location identity. A null-mapping `nominal_station`
+  selection requires authoritative runtime membership and is ineligible when
+  that authority is unavailable. Grouping is never inferred from suffixes,
+  proximity, or nominal station labels.
+
+  Every explicit mode publishes preview schema 1.2 and completed manifest
+  schema 1.3, with a status record even when the ecological route is
+  ineligible. A genuinely omitted `analysis_unit` block retains the legacy
+  preview/manifest path and creates no selected status or tables. A YAML null
+  block is invalid. Public profile registration, precedence, and migration of
+  older configurations remain deferred.
+
 - `analysis.rarefaction`  
   Toggle rarefaction/species accumulation outputs (TRUE/FALSE).
 

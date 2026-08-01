@@ -707,3 +707,66 @@ Consequences / follow-ups:
 - Purpose-specific grouping, effort/event routing, public fields, profile
   precedence, and the remaining Phase 3 work stay deferred.
 - Exact-path publication and exact-SHA CI remain pending.
+
+---
+
+## 2026-08-01 - Integrate one explicit selected-resolution ecological branch
+
+Decision:
+- Keep all legacy physical-location analyses unchanged and add one post-event
+  branch selected explicitly by `analysis_unit`.
+- Accept the fixed Judbury 13-physical-location to nine-analysis-site mapping
+  only under its exact profile, authority, and SHA-256. Treat its four
+  synthetic midpoints as mapping/separation coordinates only; do not pool or
+  re-extract physical covariates.
+- Define selected effort as confirmed active site-days after conservative
+  member-location union. Report only observed, detection-limited richness and
+  presence. Treat Jaccard as a descriptive observed-presence comparison, not
+  standardized for unequal confirmed effort, completeness, or detectability.
+- Publish explicit modes with preview 1.2, manifest 1.3, the closed four-file
+  selected provenance namespace, an always-present status record, and four
+  eligible paths or four explicit nulls. Retain manifest 1.0-1.2 and preview
+  1.0-1.1 verification for their original contracts.
+
+Rationale:
+- Assigning already-defined events preserves source-row and event identity
+  while allowing the reviewed analysis unit to support a small, interpretable
+  ecological summary.
+- Reconstructing status and outputs from bundled evidence prevents checksum
+  reclosure from manufacturing eligibility or ecological results.
+
+Consequences / follow-ups:
+- Candidate content HEAD `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`
+  passed local acceptance under packet
+  `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` and the approved mapping SHA-256.
+  Independent reconstruction passed 26/26; final review returned `I1_CLOSED`,
+  `SPEC_PASS`, `SCIENCE_PASS`, `QUALITY_PASS`, and `PUBLISH`.
+- RAI, diel, occupancy, traits, functional diversity, rarefaction, exports,
+  physical community outputs, and the broad site map remain on their existing
+  physical-location inputs.
+- The selected branch does not estimate unseen richness, standardise coverage,
+  make abundance/density claims, pool covariates, generalize concurrency or
+  grouping, or support inferential turnover conclusions.
+- A public analysis-unit API, profile precedence, and migration policy remain
+  deferred.
+- Exact-path squash/publication and exact-SHA CI remain pending.
+
+---
+
+## 2026-08-02 - Audit test value and runtime before further feature work
+
+Decision:
+- Goal 010 will ruthlessly audit the test suite before further feature work.
+  No test is presumed necessary because it exists.
+- Retain a test only when it identifies the real failure prevented, beneficiary,
+  run occasion, understandable purpose, and runtime/resource trade-off. Remove,
+  combine, simplify, or demote tests wherever practical; distinguish fast
+  everyday and slower release-grade integration only when value warrants it.
+- Require concrete current-project justification for compatibility,
+  provenance, bundle, tamper, and publication tests while preserving
+  proportionate safeguards for scientific correctness, data integrity,
+  destructive or irreversible publication, and reproducibility.
+
+Consequences / follow-ups:
+- This is approved next-goal direction only. A separate Goal 010 packet is
+  required before execution; no test change is authorized or implemented here.

@@ -1183,22 +1183,30 @@ profile may be approved.
 - [x] Obtain Barry's exact conditional approval of the reviewed packet,
   mapping bytes and SHA-256, scheme/version/authority, closed allowlist,
   subjects, and publication boundary.
-- [ ] Publish one exact eight-path packet commit with parent
+- [x] Publish one exact eight-path packet commit with parent
   `c0ed40377af4aa0162098913e2c097da65eadc42`, the approved subject, and
-  unchanged mapping SHA-256 to activate execution authority.
-- [ ] Implement, locally accept, independently review, publish, and confirm
-  the exact implementation SHA in CI.
+  unchanged mapping SHA-256 as
+  `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4`.
+- [x] Implement and locally accept candidate content HEAD
+  `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`.
+- [x] Complete independent scientific reconstruction and final review after
+  claim repair with `I1_CLOSED`, `SPEC_PASS`, `SCIENCE_PASS`, `QUALITY_PASS`,
+  and `PUBLISH`.
+- [ ] Squash and publish the exact locally accepted candidate content, then
+  confirm GitHub Actions against that exact published SHA.
 
-Goal 009 is an approved but unpublished packet, not an implemented feature.
-Its approved mapping SHA-256 is
-`6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
-Execution authority is conditional on the exact packet-publication gate above.
-Implementation must preserve the legacy physical-location graph, use full
-preflight event lineage rather than compact event summaries, and omit only the
-selected route when scientifically ineligible. No implementation, runtime
-output, test, or CI evidence exists yet. Goal 009 does not generalize repeated
-deployments, aggregate concurrent cameras, pool environmental covariates,
-alter excluded modules, define a public mapping API, or complete Phase 3.
+Goal 009 is locally accepted at candidate content HEAD
+`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f` and awaits exact squash,
+publication, and exact-SHA CI. The detailed local evidence and the bounded
+confirmed-effort, observed-presence, and descriptive-turnover claim limits are
+recorded in the Goal log and `docs/log/670_goal009_analysis_site_vertical_slice.md`.
+
+**Approved next-goal direction:** Goal 010 must ruthlessly audit test value and
+runtime before further feature work. Retain tests only for concrete current
+failures and beneficiaries at justified run cadence and cost; remove, combine,
+simplify, or demote the rest, while preserving proportionate scientific, data
+integrity, irreversible-publication, and reproducibility safeguards. This is
+direction only: no Goal 010 packet or test change is authorized here.
 
 ---
 

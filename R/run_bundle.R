@@ -57,8 +57,18 @@ write_preflight_record <- function(staging_dir, context) {
     bundle_relative_path,
     root = staging_dir
   )
+  selected <- if (!is.null(context$selected_resolution)) {
+    lapply(context$selected_resolution$artifacts, bundle_relative_path,
+           root = staging_dir)
+  } else {
+    NULL
+  }
   record <- list(
-    preview_schema = "camtrap-validation-preview/1.1",
+    preview_schema = if (is.null(selected)) {
+      "camtrap-validation-preview/1.1"
+    } else {
+      "camtrap-validation-preview/1.2"
+    },
     run_id = context$run_id,
     status = if (isTRUE(context$validation$can_analyze)) "ready" else "blocked",
     created_utc = context$created_utc,
@@ -78,6 +88,7 @@ write_preflight_record <- function(staging_dir, context) {
     engine = context$engine,
     phase2 = phase2,
     entity_resolution = entity,
+    selected_resolution = selected,
     payload = preflight_payload_inventory(staging_dir)
   )
   atomic_write_json(record, path)
@@ -92,7 +103,8 @@ validate_preflight_payload <- function(preflight_dir) {
   record <- jsonlite::read_json(path, simplifyVector = FALSE)
   supported <- c(
     "camtrap-validation-preview/1.0",
-    "camtrap-validation-preview/1.1"
+    "camtrap-validation-preview/1.1",
+    "camtrap-validation-preview/1.2"
   )
   if (!record$preview_schema %in% supported) {
     stop("Unsupported validation preview schema.")
@@ -139,6 +151,7 @@ verify_preflight_record <- function(preflight_dir) {
   }
   validate_source_identity(preflight_dir, record)
   validate_config_identity(preflight_dir, record)
+  validate_analysis_unit_record_schema(preflight_dir, record)
   validate_engine_identity(record)
   validate_composite_identity(record)
   phase2 <- phase2_bundle_paths(preflight_dir, record$phase2)
@@ -147,12 +160,31 @@ verify_preflight_record <- function(preflight_dir) {
     phase2,
     require_analysis_ready = identical(record$status, "ready")
   )
-  if (identical(record$preview_schema, "camtrap-validation-preview/1.1")) {
+  if (record$preview_schema %in% c(
+    "camtrap-validation-preview/1.1",
+    "camtrap-validation-preview/1.2"
+  )) {
     entity <- entity_bundle_paths(preflight_dir, record$entity_resolution)
     validate_entity_artifacts(
       preflight_dir,
       entity,
       require_analysis_ready = identical(record$status, "ready")
+    )
+  }
+  if (identical(record$preview_schema, "camtrap-validation-preview/1.2")) {
+    if (!is.list(record$selected_resolution) ||
+          !setequal(names(record$selected_resolution),
+                    c("membership", "operation", "event_map", "summary"))) {
+      stop("Selected-resolution preview links are incomplete.")
+    }
+    selected <- vapply(record$selected_resolution, function(path) {
+      bundle_identity_path(preflight_dir, path, "Selected-resolution artifact path")
+    }, character(1))
+    selected <- selected[c("membership", "operation", "event_map", "summary")]
+    validate_selected_resolution_artifacts(
+      preflight_dir,
+      selected,
+      require_integrity = FALSE
     )
   }
   forbidden <- c("COMPLETED.json", "run_manifest.json")
@@ -209,7 +241,8 @@ validate_manifest_payload <- function(bundle_dir) {
   supported_schemas <- c(
     "camtrap-evidence-manifest/1.0",
     "camtrap-evidence-manifest/1.1",
-    "camtrap-evidence-manifest/1.2"
+    "camtrap-evidence-manifest/1.2",
+    "camtrap-evidence-manifest/1.3"
   )
   if (!is.character(manifest$manifest_schema) ||
         length(manifest$manifest_schema) != 1L ||
@@ -280,8 +313,14 @@ validate_source_identity <- function(bundle_dir, manifest) {
     manifest$preview_schema,
     "camtrap-validation-preview/1.1"
   ) || identical(
+    manifest$preview_schema,
+    "camtrap-validation-preview/1.2"
+  ) || identical(
     manifest$manifest_schema,
     "camtrap-evidence-manifest/1.2"
+  ) || identical(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.3"
   )
   for (record in records) {
     allowed_entity_input <- goal007 &&
@@ -293,9 +332,18 @@ validate_source_identity <- function(bundle_dir, manifest) {
         "deployment_ledger_input"
       ) &&
       identical(record$consumed_by_parser, FALSE)
+    allowed_selected_mapping <- (identical(
+      manifest$preview_schema,
+      "camtrap-validation-preview/1.2"
+    ) || identical(
+      manifest$manifest_schema,
+      "camtrap-evidence-manifest/1.3"
+    )) && identical(record$role, "analysis_site_mapping_input") &&
+      identical(record$consumed_by_parser, FALSE)
     if (!isTRUE(record$consumed_by_parser) &&
           !allowed_entity_input &&
-          !allowed_deployment_input) {
+          !allowed_deployment_input &&
+          !allowed_selected_mapping) {
       stop("Source inventory contains an unauthorized non-parser input: ", record$path)
     }
     path <- bundle_identity_path(
@@ -372,6 +420,42 @@ validate_config_identity <- function(bundle_dir, manifest) {
   invisible(resolved_hash)
 }
 
+validate_analysis_unit_record_schema <- function(bundle_dir, record) { # nolint: object_length_linter.
+  raw_path <- bundle_identity_path(
+    bundle_dir,
+    record$config$raw,
+    "Raw configuration path"
+  )
+  config <- read_config(raw_path, attach_runtime = FALSE)
+  explicit <- !is.null(analysis_unit_selection(config))
+
+  if (!is.null(record$preview_schema)) {
+    selected_schema <- identical(
+      record$preview_schema,
+      "camtrap-validation-preview/1.2"
+    )
+    if (explicit && !selected_schema) {
+      stop("Explicit analysis_unit selection requires validation preview 1.2.")
+    }
+    if (!explicit && selected_schema) {
+      stop("Validation preview 1.2 requires an explicit analysis_unit selection.")
+    }
+    return(invisible(TRUE))
+  }
+
+  selected_schema <- identical(
+    record$manifest_schema,
+    "camtrap-evidence-manifest/1.3"
+  )
+  if (explicit && !selected_schema) {
+    stop("Explicit analysis_unit selection requires run manifest 1.3.")
+  }
+  if (!explicit && selected_schema) {
+    stop("Run manifest 1.3 requires an explicit analysis_unit selection.")
+  }
+  invisible(TRUE)
+}
+
 validate_engine_identity <- function(manifest) {
   engine <- manifest$engine
   if (!identical(engine$engine_schema, "camtrap-engine-identity/1.0")) {
@@ -428,7 +512,8 @@ validate_composite_identity <- function(manifest) {
 validate_phase2_manifest <- function(bundle_dir, manifest) {
   if (!manifest$manifest_schema %in% c(
     "camtrap-evidence-manifest/1.1",
-    "camtrap-evidence-manifest/1.2"
+    "camtrap-evidence-manifest/1.2",
+    "camtrap-evidence-manifest/1.3"
   )) {
     return(invisible(TRUE))
   }
@@ -487,9 +572,9 @@ validate_phase2_manifest <- function(bundle_dir, manifest) {
 }
 
 validate_entity_manifest <- function(bundle_dir, manifest) {
-  if (!identical(
-    manifest$manifest_schema,
-    "camtrap-evidence-manifest/1.2"
+  if (!manifest$manifest_schema %in% c(
+    "camtrap-evidence-manifest/1.2",
+    "camtrap-evidence-manifest/1.3"
   )) {
     return(invisible(TRUE))
   }
@@ -513,6 +598,519 @@ validate_entity_manifest <- function(bundle_dir, manifest) {
   invisible(TRUE)
 }
 
+selected_manifest_provenance_links <- function() { # nolint: object_length_linter.
+  c(
+    membership = "provenance/selected_resolution/membership.csv",
+    operation = "provenance/selected_resolution/operation.csv",
+    event_map = "provenance/selected_resolution/event_map.csv",
+    summary = "provenance/selected_resolution/summary.json"
+  )
+}
+
+selected_manifest_output_links <- function() {
+  c(
+    selected_effort_coverage = "tables/selected_effort_coverage.csv",
+    selected_community_presence = "tables/selected_community_presence.csv",
+    selected_observed_richness = "tables/selected_observed_richness.csv",
+    selected_jaccard = "tables/selected_jaccard.csv"
+  )
+}
+
+selected_manifest_frames_equal <- function(observed, expected) {
+  if (!is.data.frame(observed) || !is.data.frame(expected) ||
+        !identical(names(observed), names(expected)) ||
+        nrow(observed) != nrow(expected)) {
+    return(FALSE)
+  }
+  all(vapply(names(expected), function(field) {
+    left <- observed[[field]]
+    right <- expected[[field]]
+    if (is.numeric(left) && is.numeric(right)) {
+      return(isTRUE(all.equal(
+        as.numeric(left),
+        as.numeric(right),
+        tolerance = .Machine$double.eps,
+        check.attributes = FALSE
+      )))
+    }
+    identical(as.character(left), as.character(right))
+  }, logical(1)))
+}
+
+selected_manifest_common_metadata <- function( # nolint: object_length_linter.
+    state,
+    n,
+    claim_limit,
+    temporal_scope) {
+  data.frame(
+    resolution = rep(state$summary$resolution, n),
+    scheme_id = rep(state$summary$scheme_id, n),
+    scheme_version = rep(state$summary$scheme_version, n),
+    authority_reference = rep(state$summary$authority_reference, n),
+    analysis_unit_count = rep(as.integer(state$summary$analysis_unit_count), n),
+    temporal_scope_start = rep(temporal_scope[[1L]], n),
+    temporal_scope_end = rep(temporal_scope[[2L]], n),
+    effort_definition = rep(paste(
+      "one confirmed active selected analysis-unit calendar day after",
+      "conservative member-location union; unknown periods are not effort"
+    ), n),
+    claim_limit = rep(claim_limit, n),
+    metadata_reference = rep("tables/selected_resolution_status.json", n),
+    stringsAsFactors = FALSE
+  )
+}
+
+selected_manifest_attach_metadata <- function( # nolint: object_length_linter.
+    table,
+    state,
+    claim_limit,
+    temporal_scope) {
+  cbind(
+    table["analysis_unit_id"],
+    selected_manifest_common_metadata(
+      state,
+      nrow(table),
+      claim_limit,
+      temporal_scope
+    ),
+    table[setdiff(names(table), "analysis_unit_id")]
+  )
+}
+
+selected_manifest_expected_tables <- function(state) { # nolint: object_length_linter.
+  analysis_units <- sort(unique(as.character(stats::na.omit(
+    state$membership$analysis_unit_id
+  ))), method = "radix")
+  operation_dates <- as.Date(state$operation$date)
+  temporal_scope <- if (!length(operation_dates) || all(is.na(operation_dates))) {
+    c(NA_character_, NA_character_)
+  } else {
+    as.character(c(
+      min(operation_dates, na.rm = TRUE),
+      max(operation_dates, na.rm = TRUE)
+    ))
+  }
+
+  effort_rows <- lapply(analysis_units, function(id) {
+    rows <- state$operation[
+      state$operation$analysis_unit_id == id,
+      ,
+      drop = FALSE
+    ]
+    dates <- as.Date(rows$date)
+    values <- suppressWarnings(as.numeric(rows$operation))
+    data.frame(
+      analysis_unit_id = id,
+      confirmed_active_days = as.integer(sum(values == 1, na.rm = TRUE)),
+      confirmed_inactive_days = as.integer(sum(values == 0, na.rm = TRUE)),
+      unknown_days = as.integer(sum(is.na(values))),
+      observed_date_count = as.integer(nrow(rows)),
+      first_observed_date = if (nrow(rows)) {
+        as.character(min(dates))
+      } else {
+        NA_character_
+      },
+      last_observed_date = if (nrow(rows)) {
+        as.character(max(dates))
+      } else {
+        NA_character_
+      },
+      stringsAsFactors = FALSE
+    )
+  })
+  effort <- if (length(effort_rows)) {
+    do.call(rbind, effort_rows)
+  } else {
+    data.frame(
+      analysis_unit_id = character(),
+      confirmed_active_days = integer(),
+      confirmed_inactive_days = integer(),
+      unknown_days = integer(),
+      observed_date_count = integer(),
+      first_observed_date = character(),
+      last_observed_date = character(),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  species <- sort(unique(as.character(state$event_map$species)), method = "radix")
+  species <- species[!is.na(species) & nzchar(species)]
+  presence_values <- matrix(
+    0L,
+    nrow = length(analysis_units),
+    ncol = length(species),
+    dimnames = list(NULL, species)
+  )
+  if (nrow(state$event_map) > 0L && length(species) > 0L) {
+    pairs <- unique(data.frame(
+      analysis_unit_id = as.character(state$event_map$analysis_unit_id),
+      species = as.character(state$event_map$species),
+      stringsAsFactors = FALSE
+    ))
+    presence_values[cbind(
+      match(pairs$analysis_unit_id, analysis_units),
+      match(pairs$species, species)
+    )] <- 1L
+  }
+  presence <- data.frame(
+    analysis_unit_id = analysis_units,
+    as.data.frame(
+      presence_values,
+      check.names = FALSE,
+      stringsAsFactors = FALSE
+    ),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  richness <- data.frame(
+    analysis_unit_id = analysis_units,
+    observed_richness = as.integer(rowSums(presence_values)),
+    stringsAsFactors = FALSE
+  )
+
+  jaccard_rows <- vector("list", length(analysis_units)^2)
+  index <- 0L
+  for (first_index in seq_along(analysis_units)) {
+    first <- presence_values[first_index, ] == 1
+    for (second_index in seq_along(analysis_units)) {
+      second <- presence_values[second_index, ] == 1
+      union_count <- sum(first | second)
+      index <- index + 1L
+      jaccard_rows[[index]] <- data.frame(
+        analysis_unit_id_1 = analysis_units[[first_index]],
+        analysis_unit_id_2 = analysis_units[[second_index]],
+        jaccard_dissimilarity = if (union_count == 0L) {
+          NA_real_
+        } else {
+          1 - sum(first & second) / union_count
+        },
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  jaccard <- if (length(jaccard_rows)) {
+    do.call(rbind, jaccard_rows)
+  } else {
+    data.frame(
+      analysis_unit_id_1 = character(),
+      analysis_unit_id_2 = character(),
+      jaccard_dissimilarity = numeric(),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  list(
+    effort_coverage = selected_manifest_attach_metadata(
+      effort,
+      state,
+      "confirmed-active-days-only-no-downtime-filling",
+      temporal_scope
+    ),
+    community_presence = selected_manifest_attach_metadata(
+      presence,
+      state,
+      "observed-presence-detection-effort-bounded",
+      temporal_scope
+    ),
+    observed_richness = selected_manifest_attach_metadata(
+      richness,
+      state,
+      "observed-richness-detection-effort-bounded",
+      temporal_scope
+    ),
+    jaccard = cbind(
+      jaccard[1:2],
+      selected_manifest_common_metadata(
+        state,
+        nrow(jaccard),
+        "jaccard-descriptive-observed-presence-effort-completeness-detectability-limited",
+        temporal_scope
+      ),
+      jaccard["jaccard_dissimilarity"]
+    )
+  )
+}
+
+selected_manifest_contributors <- function(state, analysis_units) {
+  lapply(analysis_units, function(id) {
+    deployments <- character()
+    if (all(c("analysis_unit_id", "deployment_states_json") %in%
+              names(state$operation))) {
+      evidence <- state$operation$deployment_states_json[
+        state$operation$analysis_unit_id == id
+      ]
+      deployments <- unlist(lapply(evidence, function(value) {
+        parsed <- tryCatch(
+          jsonlite::fromJSON(value),
+          error = function(e) NULL
+        )
+        unname(unlist(parsed, use.names = FALSE))
+      }), use.names = FALSE)
+    }
+    if ("deployment_id" %in% names(state$event_map)) {
+      deployments <- c(
+        deployments,
+        state$event_map$deployment_id[
+          state$event_map$analysis_unit_id == id
+        ]
+      )
+    }
+    physical <- sort(unique(as.character(
+      state$membership$physical_location_id[
+        state$membership$analysis_unit_id == id
+      ]
+    )), method = "radix")
+    deployments <- sort(unique(as.character(deployments)), method = "radix")
+    list(
+      analysis_unit_id = id,
+      contributing_physical_locations = as.list(physical[
+        !is.na(physical) & nzchar(physical)
+      ]),
+      contributing_deployments = as.list(deployments[
+        !is.na(deployments) & nzchar(deployments)
+      ])
+    )
+  })
+}
+
+selected_manifest_expected_status <- function(state) { # nolint: object_length_linter.
+  analysis_units <- sort(unique(as.character(stats::na.omit(
+    state$membership$analysis_unit_id
+  ))), method = "radix")
+  operation_dates <- as.Date(state$operation$date)
+  temporal_scope <- if (!length(operation_dates) || all(is.na(operation_dates))) {
+    c(NA_character_, NA_character_)
+  } else {
+    as.character(c(
+      min(operation_dates, na.rm = TRUE),
+      max(operation_dates, na.rm = TRUE)
+    ))
+  }
+  event_conservation <- if (!isTRUE(state$integrity_ok)) {
+    list(
+      checked = FALSE,
+      exact = FALSE,
+      reason = "selected_resolution_integrity_failure"
+    )
+  } else {
+    counts <- table(state$event_map$species)
+    list(
+      checked = TRUE,
+      exact = TRUE,
+      preflight_event_count = as.integer(nrow(state$event_map)),
+      runtime_event_count = as.integer(nrow(state$event_map)),
+      per_species_event_count = stats::setNames(
+        as.integer(counts),
+        names(counts)
+      )
+    )
+  }
+  eligible <- isTRUE(state$integrity_ok) && isTRUE(state$route_eligible)
+  output_links <- c(
+    effort_coverage = "tables/selected_effort_coverage.csv",
+    community_presence = "tables/selected_community_presence.csv",
+    observed_richness = "tables/selected_observed_richness.csv",
+    jaccard = "tables/selected_jaccard.csv"
+  )
+
+  list(
+    selected_resolution_status_schema =
+      "camtrap-selected-resolution-status/1.0",
+    status = state$summary$status,
+    integrity_ok = isTRUE(state$integrity_ok),
+    route_eligible = isTRUE(state$route_eligible),
+    reasons = as.list(as.character(unlist(
+      state$summary$reasons,
+      use.names = FALSE
+    ))),
+    resolution = state$summary$resolution,
+    scheme_id = state$summary$scheme_id,
+    scheme_version = state$summary$scheme_version,
+    authority_reference = state$summary$authority_reference,
+    membership_count = as.integer(state$summary$membership_count),
+    analysis_unit_count = as.integer(state$summary$analysis_unit_count),
+    physical_location_count = as.integer(state$summary$physical_location_count),
+    temporal_scope = list(start = temporal_scope[[1L]], end = temporal_scope[[2L]]),
+    effort_definition = paste(
+      "one confirmed active selected analysis-unit calendar day after",
+      "conservative member-location union; unknown periods are not effort"
+    ),
+    analysis_units = selected_manifest_contributors(state, analysis_units),
+    claim_limits = list(
+      effort_coverage = "confirmed-active-days-only-no-downtime-filling",
+      community_presence = "observed-presence-detection-effort-bounded",
+      observed_richness = "observed-richness-detection-effort-bounded",
+      jaccard = "jaccard-descriptive-observed-presence-effort-completeness-detectability-limited"
+    ),
+    event_conservation = event_conservation,
+    outputs = lapply(output_links, function(path) {
+      if (eligible) path else NULL
+    })
+  )
+}
+
+validate_selected_report_inputs <- function( # nolint: object_length_linter.
+    report_inputs,
+    state,
+    status,
+    expected_tables) {
+  required <- c(
+    "selected_effort_coverage",
+    "selected_community_presence",
+    "selected_observed_richness",
+    "selected_jaccard",
+    "selected_resolution_status"
+  )
+  if (!is.list(report_inputs) || !all(required %in% names(report_inputs))) {
+    stop("Report inputs omit parsed selected-resolution evidence.")
+  }
+  if (!identical(
+    canonical_json(report_inputs$selected_resolution_status),
+    canonical_json(status)
+  )) {
+    stop("Report inputs do not contain the parsed selected status.")
+  }
+
+  eligible <- isTRUE(state$integrity_ok) && isTRUE(state$route_eligible)
+  table_names <- c(
+    selected_effort_coverage = "effort_coverage",
+    selected_community_presence = "community_presence",
+    selected_observed_richness = "observed_richness",
+    selected_jaccard = "jaccard"
+  )
+  for (report_name in names(table_names)) {
+    value <- report_inputs[[report_name]]
+    expected <- expected_tables[[table_names[[report_name]]]]
+    if (eligible && !selected_manifest_frames_equal(value, expected)) {
+      stop("Report inputs do not contain parsed selected table: ", report_name)
+    }
+    if (!eligible && !is.null(value)) {
+      stop("Ineligible report inputs contain a selected ecological table.")
+    }
+  }
+  invisible(TRUE)
+}
+
+validate_selected_manifest <- function(bundle_dir, manifest) {
+  if (!identical(
+    manifest$manifest_schema,
+    "camtrap-evidence-manifest/1.3"
+  )) {
+    return(invisible(TRUE))
+  }
+
+  expected_provenance <- selected_manifest_provenance_links()
+  if (!is.list(manifest$selected_resolution) ||
+    !identical(names(manifest$selected_resolution), names(expected_provenance)) ||
+    !identical(
+      unlist(manifest$selected_resolution, use.names = TRUE),
+      expected_provenance
+    )) {
+    stop("Manifest 1.3 selected-resolution links are not canonical.")
+  }
+  provenance_paths <- vapply(expected_provenance, function(relative) {
+    bundle_identity_path(
+      bundle_dir,
+      relative,
+      "Selected-resolution artifact path"
+    )
+  }, character(1))
+  state <- validate_selected_resolution_artifacts(
+    bundle_dir,
+    provenance_paths,
+    require_integrity = FALSE
+  )
+
+  required_outputs <- c(
+    names(selected_manifest_output_links()),
+    "selected_resolution_status"
+  )
+  tables <- manifest$outputs$tables
+  if (!is.list(tables) || !all(required_outputs %in% names(tables))) {
+    stop("Manifest 1.3 selected output links are incomplete.")
+  }
+  if (!identical(
+    tables$selected_resolution_status,
+    "tables/selected_resolution_status.json"
+  )) {
+    stop("Manifest 1.3 selected status link is not canonical.")
+  }
+
+  expected_outputs <- selected_manifest_output_links()
+  eligible <- isTRUE(state$integrity_ok) && isTRUE(state$route_eligible)
+  observed_outputs <- tables[names(expected_outputs)]
+  links_match <- if (eligible) {
+    all(vapply(observed_outputs, function(path) {
+      is.character(path) && length(path) == 1L
+    }, logical(1))) && identical(
+      unlist(observed_outputs, use.names = TRUE),
+      expected_outputs
+    )
+  } else {
+    all(vapply(observed_outputs, is.null, logical(1)))
+  }
+  if (!links_match) {
+    stop("Selected ecological output links do not match route eligibility.")
+  }
+
+  ecological_paths <- file.path(bundle_dir, unname(expected_outputs))
+  if ((eligible && any(!file.exists(ecological_paths))) ||
+        (!eligible && any(file.exists(ecological_paths)))) {
+    stop("Selected ecological file cardinality does not match route eligibility.")
+  }
+  status_path <- bundle_identity_path(
+    bundle_dir,
+    tables$selected_resolution_status,
+    "Selected-resolution status path"
+  )
+  if (!file.exists(status_path)) {
+    stop("Selected-resolution status file is missing.")
+  }
+  status <- jsonlite::read_json(status_path, simplifyVector = FALSE)
+  expected_status <- selected_manifest_expected_status(state)
+  if (!identical(canonical_json(status), canonical_json(expected_status))) {
+    stop("Selected-resolution status does not reconstruct from bundled evidence.")
+  }
+
+  expected_tables <- selected_manifest_expected_tables(state)
+  if (eligible) {
+    table_names <- c(
+      selected_effort_coverage = "effort_coverage",
+      selected_community_presence = "community_presence",
+      selected_observed_richness = "observed_richness",
+      selected_jaccard = "jaccard"
+    )
+    for (link_name in names(table_names)) {
+      observed <- utils::read.csv(
+        file.path(bundle_dir, tables[[link_name]]),
+        stringsAsFactors = FALSE,
+        check.names = FALSE,
+        na.strings = ""
+      )
+      expected <- expected_tables[[table_names[[link_name]]]]
+      if (!selected_manifest_frames_equal(observed, expected)) {
+        stop(
+          "Selected ecological output does not reconstruct: ",
+          table_names[[link_name]]
+        )
+      }
+    }
+  }
+
+  report_inputs <- readRDS(bundle_identity_path(
+    bundle_dir,
+    "report/report_inputs.rds",
+    "Report inputs path"
+  ))
+  validate_selected_report_inputs(
+    report_inputs,
+    state,
+    status,
+    expected_tables
+  )
+  invisible(TRUE)
+}
+
 bundle_identity_path <- function(bundle_dir, relative_path, label) {
   assert_safe_relative_path(relative_path, label)
   path <- file.path(bundle_dir, relative_path)
@@ -523,10 +1121,12 @@ bundle_identity_path <- function(bundle_dir, relative_path, label) {
 validate_bundle_identities <- function(bundle_dir, manifest) {
   validate_source_identity(bundle_dir, manifest)
   validate_config_identity(bundle_dir, manifest)
+  validate_analysis_unit_record_schema(bundle_dir, manifest)
   validate_engine_identity(manifest)
   validate_composite_identity(manifest)
   validate_phase2_manifest(bundle_dir, manifest)
   validate_entity_manifest(bundle_dir, manifest)
+  validate_selected_manifest(bundle_dir, manifest)
 
   inputs_path <- bundle_identity_path(
     bundle_dir,

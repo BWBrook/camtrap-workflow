@@ -22,6 +22,13 @@ deployment_evidence:
   deployment_ledger_sha256: "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
   authority_reference: "goal008-judbury-deployment-evidence-source-sha256-f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-ledger-sha256-0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
 
+analysis_unit:
+  resolution: "analysis_site"
+  mapping_profile_id: "judbury-analysis-site/1.0.0-proposed"
+  mapping_path: "docs/goals/009-analysis-site-vertical-slice/judbury_analysis_site_mapping.csv"
+  mapping_sha256: "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+  authority_reference: "goal009-judbury-analysis-site-mapping-sha256-6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

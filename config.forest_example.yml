@@ -21,6 +21,13 @@ deployment_evidence:
   deployment_ledger_sha256: null
   authority_reference: null
 
+analysis_unit:
+  resolution: "physical_location"
+  mapping_profile_id: null
+  mapping_path: null
+  mapping_sha256: null
+  authority_reference: null
+
 camtrapdp_acquisition:
   mode: "local"
   cache_dir: "outputs/cache/camtrapdp"

@@ -4,6 +4,7 @@ import::from(
   expect_equal,
   expect_error,
   expect_false,
+  expect_setequal,
   expect_true
 )
 import::from("here", here)
@@ -345,6 +346,18 @@ test_that("supported validation-only runner publishes immutable preview without 
   expect_false(dir.exists(file.path(output_root, "runs", run_id)))
   expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
   expect_true(verify_preflight_record(preview)$valid)
+  legacy_parent <- tempfile("goal009-legacy-preview-")
+  dir.create(legacy_parent)
+  legacy_preview <- file.path(legacy_parent, run_id)
+  fs::dir_copy(preview, legacy_preview)
+  legacy_record <- jsonlite::read_json(
+    preflight_record_path(legacy_preview),
+    simplifyVector = FALSE
+  )
+  legacy_record$preview_schema <- "camtrap-validation-preview/1.0"
+  unlink(preflight_record_path(legacy_preview))
+  atomic_write_json(legacy_record, preflight_record_path(legacy_preview))
+  expect_true(verify_preflight_record(legacy_preview)$valid)
   expect_equal(
     names(readRDS(file.path(
       preview,
@@ -629,6 +642,19 @@ test_that("selected validation preview adds only Goal 008 audit evidence", {
     selected_record$entity_resolution$deployment_lineage
   ))
 
+  expect_equal(selected_record$preview_schema, "camtrap-validation-preview/1.2")
+  expect_setequal(names(selected_record$selected_resolution),
+                  c("membership", "operation", "event_map", "summary"))
+  expect_true(verify_preflight_record(selected_result$preview)$valid)
+  selected_operation <- read.csv(file.path(
+    selected_result$preview,
+    selected_record$selected_resolution$operation
+  ), stringsAsFactors = FALSE, check.names = FALSE)
+  expect_true(any(
+    selected_operation$analysis_unit_id == "jc_pm14" &
+      selected_operation$operation == 0
+  ))
+
   expect_equal(
     analytical_inputs_fingerprint(selected_inputs),
     analytical_inputs_fingerprint(null_inputs)
@@ -641,4 +667,29 @@ test_that("selected validation preview adds only Goal 008 audit evidence", {
   )
   expect_false(file.exists(file.path(selected_outputs, "latest")))
   expect_false(file.exists(file.path(null_outputs, "latest")))
+
+  membership_path <- file.path(
+    selected_result$preview,
+    selected_record$selected_resolution$membership
+  )
+  membership <- read.csv(membership_path, stringsAsFactors = FALSE,
+                         check.names = FALSE)
+  membership$analysis_unit_id[[1L]] <- "tampered_analysis_unit"
+  readr::write_csv(membership, membership_path, na = "")
+  summary_path <- file.path(
+    selected_result$preview,
+    selected_record$selected_resolution$summary
+  )
+  summary <- jsonlite::read_json(summary_path, simplifyVector = FALSE)
+  summary$artifact_sha256$membership <- sha256_file(membership_path)
+  unlink(summary_path)
+  atomic_write_json(summary, summary_path)
+  preview_path <- preflight_record_path(selected_result$preview)
+  selected_record$payload <- preflight_payload_inventory(selected_result$preview)
+  unlink(preview_path)
+  atomic_write_json(selected_record, preview_path)
+  expect_error(
+    verify_preflight_record(selected_result$preview),
+    "reconstruct|membership"
+  )
 })

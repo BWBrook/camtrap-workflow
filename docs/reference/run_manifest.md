@@ -41,8 +41,10 @@ excluded from equivalence fingerprints.
 
 ## Manifest schema
 
-New completed runs use
-`manifest_schema = "camtrap-evidence-manifest/1.2"`. The main fields are:
+Completed runs with an explicit `analysis_unit` selection use
+`manifest_schema = "camtrap-evidence-manifest/1.3"`. Manifest 1.3 inherits
+the complete 1.2 contract. A genuinely omitted selection remains manifest
+1.2. The main fields are:
 
 - `run_id` and `legacy_run_label`;
 - `status`;
@@ -60,6 +62,8 @@ New completed runs use
   below;
 - `entity_resolution`, linking the five entity-evidence records described
   below;
+- `selected_resolution`, linking the exact `membership`, `operation`,
+  `event_map`, and `summary` records for manifest 1.3;
 - `outputs`, the named compatibility map used by reports and readers;
 - `session_info`;
 - `payload`, the exact sorted relative set of every bundle file except
@@ -100,9 +104,9 @@ from the immutable source snapshot plus the exact decisions in the raw
 configuration. A checksum-reclosed change to any scientific value therefore
 fails even when it does not alter operational event membership.
 
-Existing `camtrap-evidence-manifest/1.0` bundles remain supported by the
-portable verifier. They are verified under their original contract and are
-not required to contain Phase 2 records.
+Existing `camtrap-evidence-manifest/1.0`, 1.1, and 1.2 bundles remain supported
+by the portable verifier. They are verified under their original contracts;
+only 1.3 requires selected-resolution evidence and outputs.
 
 ### Entity-resolution records
 
@@ -133,16 +137,50 @@ semantic reconstruction. Goal 008 does not change manifest 1.2 or preview 1.1
 schema identifiers. Manifest 1.1 and 1.0 continue to dispatch under their
 original contracts and do not require Goal 007 or Goal 008 records.
 
+### Selected-resolution records
+
+Manifest 1.3 retains Phase 2 and entity reconstruction, then requires the
+closed `provenance/selected_resolution/` namespace:
+
+- `membership.csv`;
+- `operation.csv`;
+- `event_map.csv`; and
+- `summary.json`.
+
+The exact top-level manifest keys are `membership`, `operation`, `event_map`,
+and `summary`. Under `outputs.tables`, every explicit mode links
+`selected_resolution_status`. An eligible route also links
+`selected_effort_coverage`, `selected_community_presence`,
+`selected_observed_richness`, and `selected_jaccard`; an ineligible route
+retains those four keys as explicit JSON nulls and contains none of the four
+CSV files.
+
+Portable verification reconstructs selected membership, effort union, and
+event assignment from the immutable source snapshot and raw configuration. It
+then reconstructs the status record, eligibility/link cardinality, contributor
+lists, event conservation, claim limits, and all four ecological tables. A
+checksum-reclosed change to provenance, status, or an ecological value remains
+invalid. Richness is observed and detection-limited. Jaccard is descriptive
+and based on observed presences; it is not standardized for unequal confirmed
+effort, sampling completeness, or species detectability. The selected branch
+does not pool physical covariates. Public profile registration, precedence,
+and migration remain deferred.
+
 ## Validation preview
 
-New `PREVIEW.json` records use schema `camtrap-validation-preview/1.1`. They
-retain the complete 1.0 contract and add the required entity-resolution link
-map with the same closed canonical namespace rules as manifest 1.2. Existing
-1.0 previews remain verifiable. A preview records the
+Explicit selected `PREVIEW.json` records use schema
+`camtrap-validation-preview/1.2`. They retain the complete 1.1 contract and add
+the four selected-resolution links. A genuinely omitted selection remains
+preview 1.1; existing 1.0 and 1.1 previews remain verifiable. Preview 1.1 adds
+the required entity-resolution link map with the same closed canonical
+namespace rules as manifests 1.2-1.3. A preview records the
 invocation identity, `ready` or `blocked` status, the same provenance
 fingerprint domains used by a full run, the complete Phase 2 link map, and an
 exact payload inventory. A blocked preflight is still published for review
 before the command exits unsuccessfully.
+
+Only preview 1.2 and manifest 1.3 authorize the non-parser
+`analysis_site_mapping_input` source role.
 
 The preview is evidence of validation and repair state, not a scientific
 completion record. It is immutable, non-overwriting, and deliberately outside

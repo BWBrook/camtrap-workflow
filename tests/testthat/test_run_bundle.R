@@ -4,6 +4,7 @@ import::from(
   expect_equal,
   expect_error,
   expect_false,
+  expect_null,
   expect_true
 )
 import::from("here", here)
@@ -21,7 +22,11 @@ source(here("R", "input_loader.R"))
 source(here("R", "source_row_lineage.R"))
 source(here("R", "repair_ledger.R"))
 source(here("R", "event_outputs.R"))
+source(here("R", "selected_resolution.R"))
 source(here("R", "validation_ledger.R"))
+source(here("R", "alpha_diversity.R"))
+source(here("R", "beta_diversity.R"))
+source(here("R", "community_matrices.R"))
 source(here("R", "run_bundle.R"))
 source(here("R", "run_manifest.R"))
 source(here("scripts", "run_full_evidence_run.R"))
@@ -34,7 +39,9 @@ goal005_bundle_stage <- function(outputs_root, run_id) {
   dir.create(file.path(stage, "source_snapshot", "four_table"), recursive = TRUE)
 
   raw_config <- file.path(stage, "provenance", "config.raw.yml")
-  snapshot_config_file(here("config.template_example.yml"), raw_config)
+  legacy_config <- yaml::read_yaml(here("config.template_example.yml"))
+  legacy_config$analysis_unit <- NULL
+  yaml::write_yaml(legacy_config, raw_config)
   config <- read_config(raw_config, attach_runtime = FALSE)
   source_file <- file.path(stage, "source_snapshot", "four_table", "obs.csv")
   writeLines("site,species\nsite1,sp1", source_file)
@@ -218,9 +225,16 @@ goal006_bundle_stage <- function(
     outputs_root,
     run_id,
     include_entity = FALSE,
-    goal008 = FALSE) {
+    goal008 = FALSE,
+    goal009 = NULL,
+    preview_only = FALSE) {
+  if (!is.null(goal009)) {
+    goal009 <- match.arg(goal009, c("eligible", "ineligible"))
+  }
   if (isTRUE(goal008)) {
     config <- read_config(here("config.yml"), attach_runtime = FALSE)
+    config$analysis_unit <- NULL
+    config$analysis_unit_resolved <- NULL
     config$deployment_evidence <- list(
       profile_id = "judbury-deployment-evidence/1.0.0-proposed",
       service_sidecar_path = "data/jc_services.csv",
@@ -267,6 +281,20 @@ goal006_bundle_stage <- function(
       deployment_ledger_sha256 = NULL,
       authority_reference = NULL
     )
+    if (!is.null(goal009)) {
+      config$analysis_unit <- list(
+        resolution = if (identical(goal009, "eligible")) {
+          "physical_location"
+        } else {
+          "nominal_station"
+        },
+        mapping_profile_id = NULL,
+        mapping_path = NULL,
+        mapping_sha256 = NULL,
+        authority_reference = NULL
+      )
+      include_entity <- TRUE
+    }
   }
   config$paths$outputs <- outputs_root
   config_path <- tempfile("goal006-bundle-config-", fileext = ".yml")
@@ -283,6 +311,9 @@ goal006_bundle_stage <- function(
     preflight_record_path(preview),
     simplifyVector = FALSE
   )
+  if (isTRUE(preview_only)) {
+    return(preview)
+  }
   stage <- file.path(outputs_root, "runs", ".staging", run_id)
   dir.create(dirname(stage), recursive = TRUE, showWarnings = FALSE)
   if (!file.rename(preview, stage)) {
@@ -298,6 +329,13 @@ goal006_bundle_stage <- function(
   entity <- lapply(preview_record$entity_resolution, function(path) {
     file.path(stage, path)
   })
+  selected <- if (is.null(preview_record$selected_resolution)) {
+    NULL
+  } else {
+    lapply(preview_record$selected_resolution, function(path) {
+      file.path(stage, path)
+    })
+  }
   if (!isTRUE(include_entity)) {
     unlink(
       file.path(stage, "provenance", "entity_resolution"),
@@ -321,6 +359,54 @@ goal006_bundle_stage <- function(
       source_inventory = file.path(stage, preview_record$source_inventory)
     )
   )
+  selected_state <- selected_outputs <- NULL
+  if (!is.null(selected)) {
+    selected_state <- validate_selected_resolution_artifacts(
+      stage,
+      unlist(selected, use.names = TRUE),
+      require_integrity = FALSE
+    )
+    event_map <- selected_state$event_map
+    event_timezone <- "Australia/Hobart"
+    event_time_text <- as.character(event_map$event_time)
+    event_time <- as.POSIXct(
+      event_time_text,
+      format = "%Y-%m-%dT%H:%M:%SZ",
+      tz = "UTC"
+    )
+    event_time_round_trip <- format(
+      event_time,
+      format = "%Y-%m-%dT%H:%M:%SZ",
+      tz = "UTC",
+      usetz = FALSE
+    )
+    if (anyNA(event_time) ||
+          !identical(unname(event_time_round_trip), unname(event_time_text))) {
+      stop("Goal006 bundle fixture requires canonical UTC event times.")
+    }
+    event_time_epoch <- as.numeric(event_time)
+    attr(event_time, "tzone") <- event_timezone
+    if (!identical(as.numeric(event_time), event_time_epoch)) {
+      stop("Goal006 bundle fixture display timezone changed event epochs.")
+    }
+    runtime_events <- data.frame(
+      event_id = as.character(event_map$event_id),
+      site = as.character(event_map$physical_location_id),
+      species = as.character(event_map$species),
+      dt = event_time,
+      stringsAsFactors = FALSE
+    )
+    selected_outputs <- write_selected_ecological_outputs(
+      selected_state,
+      runtime_events,
+      stage
+    )
+    context$selected_resolution <- list(
+      artifacts = selected,
+      integrity_ok = selected_state$integrity_ok,
+      route_eligible = selected_state$route_eligible
+    )
+  }
   dir.create(file.path(stage, "report"), recursive = TRUE)
   dir.create(file.path(stage, "exports"), recursive = TRUE)
   report <- file.path(stage, "report", "report.html")
@@ -328,24 +414,65 @@ goal006_bundle_stage <- function(
   export <- file.path(stage, "exports", "data.csv")
   writeLines(paste("report", run_id), report)
   saveRDS(
-    list(params = list(evidence_run = list(id = run_id))),
+    list(
+      params = list(evidence_run = list(id = run_id)),
+      selected_effort_coverage = if (is.null(selected_outputs$effort_coverage)) {
+        NULL
+      } else {
+        readr::read_csv(selected_outputs$effort_coverage, show_col_types = FALSE)
+      },
+      selected_community_presence = if (is.null(selected_outputs$community_presence)) {
+        NULL
+      } else {
+        readr::read_csv(selected_outputs$community_presence, show_col_types = FALSE)
+      },
+      selected_observed_richness = if (is.null(selected_outputs$observed_richness)) {
+        NULL
+      } else {
+        readr::read_csv(selected_outputs$observed_richness, show_col_types = FALSE)
+      },
+      selected_jaccard = if (is.null(selected_outputs$jaccard)) {
+        NULL
+      } else {
+        readr::read_csv(selected_outputs$jaccard, show_col_types = FALSE)
+      },
+      selected_resolution_status = if (is.null(selected_outputs$status)) {
+        NULL
+      } else {
+        jsonlite::read_json(selected_outputs$status, simplifyVector = FALSE)
+      }
+    ),
     report_inputs
   )
   writeLines("export", export)
-  write_run_manifest(
+  outputs <- list(
+    report = list(html = report),
+    exports = list(data = export)
+  )
+  if (!is.null(selected_outputs)) {
+    outputs$tables <- list(
+      selected_effort_coverage = selected_outputs$effort_coverage,
+      selected_community_presence = selected_outputs$community_presence,
+      selected_observed_richness = selected_outputs$observed_richness,
+      selected_jaccard = selected_outputs$jaccard,
+      selected_resolution_status = selected_outputs$status
+    )
+  }
+  manifest_args <- list(
     path = file.path(stage, "run_manifest.json"),
     schema_version = "0.1.0",
     params = resolved,
-    outputs = list(
-      report = list(html = report),
-      exports = list(data = export)
-    ),
+    outputs = outputs,
     session_info_path = report_inputs,
     config_file = raw_config,
     context = context,
     phase2 = phase2,
     entity_resolution = entity
   )
+  if (!is.null(selected)) {
+    manifest_args$selected_resolution <- selected
+  }
+  do.call(write_run_manifest, manifest_args)
   stage
 }
 
@@ -647,6 +774,249 @@ test_that("manifest 1.2 verifies entity links and semantic reconstruction portab
   copied <- file.path(portable_root, run_id)
   fs::dir_copy(final, copied)
   expect_true(verify_run_bundle(copied)$valid)
+})
+
+test_that("selected manifest comparison tolerates CSV round-trip drift only", {
+  expected <- data.frame(
+    analysis_unit_from = "jc_cen",
+    analysis_unit_to = "jc_co2",
+    jaccard_dissimilarity = 1 - 13 / 21
+  )
+  csv_path <- tempfile("goal009-jaccard-", fileext = ".csv")
+  on.exit(unlink(csv_path), add = TRUE)
+  readr::write_csv(expected, csv_path, na = "")
+  observed <- utils::read.csv(
+    csv_path,
+    stringsAsFactors = FALSE,
+    check.names = FALSE,
+    na.strings = ""
+  )
+
+  expect_false(identical(
+    observed$jaccard_dissimilarity,
+    expected$jaccard_dissimilarity
+  ))
+  expect_true(selected_manifest_frames_equal(observed, expected))
+
+  observed$jaccard_dissimilarity <-
+    observed$jaccard_dissimilarity + 0.01
+  expect_false(selected_manifest_frames_equal(observed, expected))
+})
+
+test_that("manifest 1.3 verifies eligible and ineligible selected routes portably", {
+  expected_selected <- c(
+    membership = "provenance/selected_resolution/membership.csv",
+    operation = "provenance/selected_resolution/operation.csv",
+    event_map = "provenance/selected_resolution/event_map.csv",
+    summary = "provenance/selected_resolution/summary.json"
+  )
+  expected_data <- c(
+    selected_effort_coverage = "tables/selected_effort_coverage.csv",
+    selected_community_presence = "tables/selected_community_presence.csv",
+    selected_observed_richness = "tables/selected_observed_richness.csv",
+    selected_jaccard = "tables/selected_jaccard.csv"
+  )
+
+  for (index in seq_along(c("eligible", "ineligible"))) {
+    mode <- c("eligible", "ineligible")[[index]]
+    root <- tempfile(paste0("goal009-", mode, "-"))
+    run_id <- paste0(
+      "20260801T123456Z-000000000000009",
+      index + 2L
+    )
+    final <- publish_run_bundle(
+      goal006_bundle_stage(root, run_id, goal009 = mode),
+      root,
+      run_id
+    )
+    manifest <- jsonlite::read_json(
+      manifest_path(final),
+      simplifyVector = FALSE
+    )
+    status <- jsonlite::read_json(
+      file.path(final, manifest$outputs$tables$selected_resolution_status),
+      simplifyVector = FALSE
+    )
+
+    expect_equal(
+      manifest$manifest_schema,
+      "camtrap-evidence-manifest/1.3",
+      info = mode
+    )
+    expect_equal(
+      unlist(manifest$selected_resolution, use.names = TRUE),
+      expected_selected,
+      info = mode
+    )
+    expect_equal(
+      status$selected_resolution_status_schema,
+      "camtrap-selected-resolution-status/1.0",
+      info = mode
+    )
+    if (identical(mode, "eligible")) {
+      expect_equal(
+        unlist(manifest$outputs$tables[names(expected_data)], use.names = TRUE),
+        expected_data
+      )
+      expect_true(status$route_eligible)
+    } else {
+      for (name in names(expected_data)) {
+        expect_null(manifest$outputs$tables[[name]], info = name)
+        expect_false(file.exists(file.path(final, expected_data[[name]])))
+      }
+      expect_false(status$route_eligible)
+    }
+    expect_true(verify_run_bundle(final)$valid, info = mode)
+
+    portable_root <- tempfile(paste0("goal009-portable-", mode, "-"))
+    dir.create(portable_root)
+    copied <- file.path(portable_root, run_id)
+    fs::dir_copy(final, copied)
+    expect_true(verify_run_bundle(copied)$valid, info = mode)
+  }
+})
+
+test_that("explicit selected modes cannot downgrade preview or manifest schemas", {
+  preview_root <- tempfile("goal009-preview-downgrade-")
+  preview_id <- "20260801T123456Z-0000000000000096"
+  preview <- goal006_bundle_stage(
+    preview_root,
+    preview_id,
+    goal009 = "eligible",
+    preview_only = TRUE
+  )
+  expect_true(verify_preflight_record(preview)$valid)
+  preview_path <- preflight_record_path(preview)
+  record <- jsonlite::read_json(preview_path, simplifyVector = FALSE)
+  record$preview_schema <- "camtrap-validation-preview/1.1"
+  record["selected_resolution"] <- list(NULL)
+  unlink(
+    file.path(preview, "provenance", "selected_resolution"),
+    recursive = TRUE,
+    force = TRUE
+  )
+  record$payload <- preflight_payload_inventory(preview)
+  unlink(preview_path)
+  atomic_write_json(record, preview_path)
+  expect_error(
+    verify_preflight_record(preview),
+    "Explicit analysis_unit selection requires validation preview 1.2"
+  )
+
+  manifest_root <- tempfile("goal009-manifest-downgrade-")
+  manifest_id <- "20260801T123456Z-0000000000000097"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(
+      manifest_root,
+      manifest_id,
+      goal009 = "eligible"
+    ),
+    manifest_root,
+    manifest_id
+  )
+  manifest_file <- manifest_path(final)
+  manifest <- jsonlite::read_json(manifest_file, simplifyVector = FALSE)
+  manifest$manifest_schema <- "camtrap-evidence-manifest/1.2"
+  unlink(manifest_file)
+  atomic_write_json(manifest, manifest_file)
+  completion_file <- completion_path(final)
+  completion <- jsonlite::read_json(completion_file, simplifyVector = FALSE)
+  completion$manifest_schema <- "camtrap-evidence-manifest/1.2"
+  unlink(completion_file)
+  atomic_write_json(completion, completion_file)
+  goal005_reclose_bundle(final)
+  expect_error(
+    verify_run_bundle(final),
+    "Explicit analysis_unit selection requires run manifest 1.3"
+  )
+})
+
+test_that("manifest 1.3 rejects checksum-reclosed selected semantic tampering", {
+  root <- tempfile("goal009-tamper-")
+  run_id <- "20260801T123456Z-0000000000000095"
+  final <- publish_run_bundle(
+    goal006_bundle_stage(root, run_id, goal009 = "eligible"),
+    root,
+    run_id
+  )
+  manifest <- jsonlite::read_json(manifest_path(final), simplifyVector = FALSE)
+
+  provenance_root <- tempfile("goal009-provenance-tamper-")
+  dir.create(provenance_root)
+  provenance_copy <- file.path(provenance_root, run_id)
+  fs::dir_copy(final, provenance_copy)
+  membership_path <- file.path(
+    provenance_copy,
+    manifest$selected_resolution$membership
+  )
+  membership <- readr::read_csv(membership_path, show_col_types = FALSE)
+  membership$representative_latitude[[1]] <-
+    membership$representative_latitude[[1]] + 0.01
+  readr::write_csv(membership, membership_path, na = "")
+  summary_path <- file.path(provenance_copy, manifest$selected_resolution$summary)
+  summary <- jsonlite::read_json(summary_path, simplifyVector = FALSE)
+  summary$artifact_sha256$membership <- sha256_file(membership_path)
+  unlink(summary_path)
+  atomic_write_json(summary, summary_path)
+  goal005_reclose_bundle(provenance_copy)
+  expect_error(
+    verify_run_bundle(provenance_copy),
+    "Selected-resolution artifacts do not reconstruct"
+  )
+
+  status_root <- tempfile("goal009-status-tamper-")
+  dir.create(status_root)
+  status_copy <- file.path(status_root, run_id)
+  fs::dir_copy(final, status_copy)
+  status_path <- file.path(
+    status_copy,
+    manifest$outputs$tables$selected_resolution_status
+  )
+  status <- jsonlite::read_json(status_path, simplifyVector = FALSE)
+  status$status <- "ineligible"
+  status$route_eligible <- FALSE
+  unlink(status_path)
+  atomic_write_json(status, status_path)
+  goal005_reclose_bundle(status_copy)
+  expect_error(
+    verify_run_bundle(status_copy),
+    "Selected-resolution status does not reconstruct"
+  )
+
+  link_root <- tempfile("goal009-link-tamper-")
+  dir.create(link_root)
+  link_copy <- file.path(link_root, run_id)
+  fs::dir_copy(final, link_copy)
+  link_manifest_path <- manifest_path(link_copy)
+  link_manifest <- jsonlite::read_json(
+    link_manifest_path,
+    simplifyVector = FALSE
+  )
+  link_manifest$outputs$tables["selected_jaccard"] <- list(NULL)
+  unlink(link_manifest_path)
+  atomic_write_json(link_manifest, link_manifest_path)
+  goal005_reclose_bundle(link_copy)
+  expect_error(
+    verify_run_bundle(link_copy),
+    "Selected ecological output links do not match route eligibility"
+  )
+
+  output_root <- tempfile("goal009-output-tamper-")
+  dir.create(output_root)
+  output_copy <- file.path(output_root, run_id)
+  fs::dir_copy(final, output_copy)
+  richness_path <- file.path(
+    output_copy,
+    manifest$outputs$tables$selected_observed_richness
+  )
+  richness <- readr::read_csv(richness_path, show_col_types = FALSE)
+  richness$observed_richness[[1]] <- richness$observed_richness[[1]] + 1L
+  readr::write_csv(richness, richness_path, na = "")
+  goal005_reclose_bundle(output_copy)
+  expect_error(
+    verify_run_bundle(output_copy),
+    "Selected ecological output does not reconstruct: observed_richness"
+  )
 })
 
 test_that("Goal 008 bundle reconstructs portably and rejects reclosed source evidence", {

@@ -121,6 +121,18 @@ four directed chronology relations are provenance only. The same 13 legacy
 physical `site` keys remain the scientific inputs, and `analysis_site`
 remains unselected.
 
+Goal 009 also adds no public table or field. Its optional analysis-site mapping
+is immutable non-parser evidence with a separately inventoried source role;
+it never becomes a parser input. The selected branch assigns already-defined
+operational detection events after event construction, so it does not
+recluster observations or change source-row event membership. Explicit
+mapping, built-in physical identity, and authoritative nominal membership are
+the only supported routes; grouping is never inferred. The four Judbury
+synthetic midpoints are for mapping and separation only. Physical-site
+covariates remain attached to physical locations and are not pooled or
+extracted at those midpoint coordinates. A public analysis-unit schema,
+profile API, and migration policy remain deferred.
+
 ## Validation failures
 
 Validation fails early with explicit table/column messages and suggested fixes.

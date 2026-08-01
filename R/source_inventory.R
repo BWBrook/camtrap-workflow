@@ -270,6 +270,11 @@ configured_local_evidence_path <- function(path, project_root, label) {
   if (nzchar(Sys.readlink(candidate))) {
     stop(label, " may not be a symlink.")
   }
+  # Check the lexical path before normalizePath() resolves an intermediate
+  # symlink into an apparently safe destination.
+  if (path_has_symlink(candidate, project_root)) {
+    stop(label, " may not contain a symlink.")
+  }
   resolved <- resolve_project_path(path, project_root)
   root <- normalizePath(project_root, winslash = "/", mustWork = TRUE)
   if (!startsWith(resolved, paste0(root, "/"))) {
@@ -278,8 +283,127 @@ configured_local_evidence_path <- function(path, project_root, label) {
   if (!file.exists(resolved) || isTRUE(file.info(resolved)$isdir)) {
     stop(label, " is missing or not a file.")
   }
+  if (path_has_symlink(resolved, project_root)) {
+    stop(label, " may not contain a symlink.")
+  }
   resolved
 }
+
+analysis_site_mapping_selection <- function(config) { # nolint: object_length_linter.
+  selection <- analysis_unit_selection(config)
+  if (is.null(selection) || is.null(selection$mapping_path)) {
+    return(NULL)
+  }
+  if (!identical(selection$resolution, "analysis_site")) {
+    stop("Only analysis_site selections may acquire a mapping input.")
+  }
+  selection
+}
+
+# Compatibility name for callers that describe this as an analysis-unit source
+# rather than an analysis-site mapping.
+analysis_unit_mapping_selection <- analysis_site_mapping_selection # nolint: object_length_linter.
+
+snapshot_analysis_site_mapping <- function(config, snapshot_root, project_root) {
+  selection <- analysis_site_mapping_selection(config)
+  if (is.null(selection)) {
+    return(NULL)
+  }
+  source <- configured_local_evidence_path(
+    selection$mapping_path,
+    project_root,
+    "Analysis-site mapping input"
+  )
+  if (!identical(sha256_file(source), selection$mapping_sha256)) {
+    stop("Analysis-site mapping input SHA-256 does not match approved authority.")
+  }
+  destination <- file.path(
+    snapshot_root,
+    "analysis_site_mapping",
+    basename(source)
+  )
+  copy_snapshot_file(source, destination)
+  if (!identical(sha256_file(destination), selection$mapping_sha256)) {
+    stop("Analysis-site mapping input changed during snapshotting.")
+  }
+  destination
+}
+
+validate_analysis_site_mapping_source <- function( # nolint: object_length_linter.
+    config = NULL,
+    snapshot,
+    selection = NULL,
+    staging_dir = NULL,
+    project_root = NULL) {
+  if (is.null(selection)) {
+    selection <- if (!is.null(config)) {
+      analysis_site_mapping_selection(config)
+    } else {
+      snapshot$analysis_unit_selection
+    }
+  }
+  if (is.null(staging_dir)) {
+    staging_dir <- snapshot$staging_dir
+  }
+  if (is.null(staging_dir) || !dir.exists(staging_dir)) {
+    stop("Snapshot staging directory is unavailable.")
+  }
+  if (is.null(project_root)) {
+    project_root <- here::here()
+  }
+  records <- Filter(function(record) {
+    identical(record$role, "analysis_site_mapping_input")
+  }, snapshot$inventory)
+  mapped <- !is.null(selection) && !is.null(selection$mapping_path)
+  mapping_root <- file.path(snapshot$snapshot_root, "analysis_site_mapping")
+  namespace_files <- if (dir.exists(mapping_root)) {
+    list.files(mapping_root, recursive = TRUE, all.files = TRUE,
+               no.. = TRUE, full.names = FALSE, include.dirs = FALSE)
+  } else {
+    character()
+  }
+  namespace_files <- normalize_relative_path(namespace_files)
+  if (!mapped) {
+    if (length(records) != 0L || length(namespace_files) != 0L) {
+      stop("Identity or omitted analysis-unit selection must have zero mapping inputs.")
+    }
+    return(invisible(TRUE))
+  }
+  if (length(records) != 1L) {
+    stop("Mapped analysis-site selection requires exactly one mapping input record.")
+  }
+  expected_name <- basename(selection$mapping_path)
+  if (!identical(namespace_files, expected_name)) {
+    stop("Analysis-site mapping snapshot namespace contains extra or missing files.")
+  }
+  record <- records[[1L]]
+  expected_path <- normalize_relative_path(file.path(
+    "source_snapshot", "analysis_site_mapping", expected_name
+  ))
+  path_ok <- identical(as.character(record$path), expected_path)
+  consumed_ok <- identical(record$consumed_by_parser, FALSE)
+  hash_ok <- identical(record$sha256, selection$mapping_sha256)
+  if (!path_ok || !consumed_ok || !hash_ok) {
+    stop(
+      "Analysis-site mapping inventory record is not an exact approved input ",
+      "(path=", path_ok, ", consumed=", consumed_ok, ", hash=", hash_ok, ")."
+    )
+  }
+  snapshot_path <- file.path(staging_dir, record$path)
+  if (!identical(sha256_file(snapshot_path), selection$mapping_sha256)) {
+    stop("Analysis-site mapping snapshot SHA-256 does not match authority.")
+  }
+  repository_path <- resolve_project_path(selection$mapping_path, project_root)
+  if (!identical(sha256_file(repository_path), selection$mapping_sha256)) {
+    stop("Analysis-site mapping repository SHA-256 does not match authority.")
+  }
+  if (!identical(snapshot$source_sha256, fixity_identity(snapshot$inventory))) {
+    stop("Source snapshot identity mismatch.")
+  }
+  invisible(TRUE)
+}
+
+validate_analysis_unit_source <- validate_analysis_site_mapping_source
 
 deployment_snapshot_selection <- function(config) {
   if (exists("deployment_evidence_selection", mode = "function")) {
@@ -391,6 +515,12 @@ materialize_source_snapshot <- function(
     snapshot_root,
     project_root
   )
+  analysis_unit_selection_value <- analysis_unit_selection(config)
+  analysis_site_mapping_path <- snapshot_analysis_site_mapping(
+    config,
+    snapshot_root,
+    project_root
+  )
 
   records <- lapply(snapshot$parser_files, function(path) {
     role <- if (identical(path, snapshot$parser_paths$schema_version)) "schema" else "parser_input"
@@ -420,12 +550,23 @@ materialize_source_snapshot <- function(
       consumed = FALSE
     )
   }
+  if (!is.null(analysis_site_mapping_path)) {
+    records[[length(records) + 1L]] <- file_fixity_record(
+      analysis_site_mapping_path,
+      staging_dir,
+      role = "analysis_site_mapping_input",
+      consumed = FALSE
+    )
+  }
   records <- records[order(vapply(records, `[[`, character(1), "path"), method = "radix")]
   snapshot$inventory <- records
   snapshot$source_sha256 <- fixity_identity(records)
+  snapshot$staging_dir <- staging_dir
   snapshot$snapshot_root <- snapshot_root
   snapshot$entity_resolution_path <- entity_resolution_path
   snapshot$deployment_evidence_paths <- deployment_evidence_paths
+  snapshot$analysis_unit_selection <- analysis_unit_selection_value
+  snapshot$analysis_site_mapping_path <- analysis_site_mapping_path
   if (exists("validate_entity_source", mode = "function")) {
     selection <- entity_resolution_selection(config, require_explicit = FALSE)
     validate_entity_source(config, snapshot, selection)
@@ -437,6 +578,13 @@ materialize_source_snapshot <- function(
     )
     validate_deployment_evidence_source(config, snapshot, selection)
   }
+  validate_analysis_site_mapping_source(
+    config,
+    snapshot,
+    analysis_unit_selection_value,
+    staging_dir,
+    project_root
+  )
   snapshot
 }
 
@@ -447,6 +595,11 @@ verify_source_snapshot <- function(snapshot, staging_dir = NULL) {
   if (is.null(staging_dir) || !dir.exists(staging_dir)) {
     stop("Snapshot staging directory is unavailable.")
   }
+
+  validate_analysis_site_mapping_source(
+    snapshot = snapshot,
+    staging_dir = staging_dir
+  )
 
   for (record in snapshot$inventory) {
     assert_safe_relative_path(record$path, "Source inventory path")

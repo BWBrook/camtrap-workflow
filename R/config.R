@@ -85,6 +85,149 @@ default_config <- function() {
   )
 }
 
+# Fixed Goal 009 analysis-unit authorities. These values are deliberately
+# local to the provisional configuration interface; no public schema is
+# implied by their names.
+analysis_unit_fields <- function() {
+  c(
+    "resolution",
+    "mapping_profile_id",
+    "mapping_path",
+    "mapping_sha256",
+    "authority_reference"
+  )
+}
+
+analysis_unit_mapping_authority <- function() { # nolint: object_length_linter.
+  digest <- "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+  list(
+    mapping_profile_id = "judbury-analysis-site/1.0.0-proposed",
+    mapping_path = paste0(
+      "docs/goals/009-analysis-site-vertical-slice/",
+      "judbury_analysis_site_mapping.csv"
+    ),
+    mapping_sha256 = digest,
+    authority_reference = paste0(
+      "goal009-judbury-analysis-site-mapping-sha256-", digest
+    ),
+    scheme_id = "judbury-analysis-site",
+    scheme_version = "1.0.0-proposed",
+    authority_state = "proposed_for_barry_exact_approval"
+  )
+}
+
+analysis_unit_identity_authority <- function() { # nolint: object_length_linter.
+  list(
+    scheme_id = "camtrap-physical-location-identity",
+    scheme_version = "1.0.0",
+    authority_reference =
+      "camtrap-workflow-built-in-physical-location-identity/1.0.0",
+    authority_state = "built_in_default"
+  )
+}
+
+analysis_unit_selection <- function(config) {
+  if (!is.list(config) || !"analysis_unit" %in% names(config)) {
+    return(NULL)
+  }
+  selection <- config$analysis_unit
+  if (is.null(selection)) {
+    stop("config.yml analysis_unit may not be an explicit null block.")
+  }
+  fields <- analysis_unit_fields()
+  if (!is.list(selection) ||
+        !identical(sort(names(selection)), sort(fields))) {
+    stop(
+      "config.yml analysis_unit must contain exactly resolution, ",
+      "mapping_profile_id, mapping_path, mapping_sha256, and ",
+      "authority_reference."
+    )
+  }
+  selection <- selection[fields]
+  resolution <- selection$resolution
+  if (!is.character(resolution) || length(resolution) != 1L ||
+        !resolution %in% c("analysis_site", "physical_location", "nominal_station")) {
+    stop(
+      "config.yml analysis_unit.resolution must be one of analysis_site, ",
+      "physical_location, or nominal_station."
+    )
+  }
+
+  mapping_fields <- fields[-1L]
+  nulls <- vapply(selection[mapping_fields], is.null, logical(1))
+  if (!all(nulls) && any(nulls)) {
+    stop(
+      "config.yml analysis_unit mapping fields must be all selected or all null."
+    )
+  }
+  if (all(nulls)) {
+    if (identical(resolution, "analysis_site")) {
+      identity <- analysis_unit_identity_authority()
+      return(c(modifyList(selection, identity), state = "built_in_default"))
+    }
+    if (identical(resolution, "physical_location")) {
+      identity <- analysis_unit_identity_authority()
+      return(c(modifyList(selection, identity), state = "built_in_default"))
+    }
+    return(c(
+      selection,
+      list(
+        scheme_id = "camtrap-nominal-station-membership",
+        scheme_version = "goal007-goal008-authority",
+        authority_state = "requires_runtime_authority",
+        state = "requires_runtime_authority"
+      )
+    ))
+  }
+
+  if (!identical(resolution, "analysis_site")) {
+    stop(
+      "config.yml analysis_unit mapping fields are only valid for ",
+      "resolution = 'analysis_site'."
+    )
+  }
+  if (!all(vapply(selection[mapping_fields], function(value) {
+    is.character(value) && length(value) == 1L && nzchar(value)
+  }, logical(1)))) {
+    stop("config.yml analysis_unit mapping fields must be non-empty strings.")
+  }
+  if (!grepl("^[a-f0-9]{64}$", selection$mapping_sha256)) {
+    stop("config.yml analysis_unit.mapping_sha256 must be a SHA-256 digest.")
+  }
+  if (!is_safe_relative_path(selection$mapping_path)) {
+    stop("config.yml analysis_unit.mapping_path must be a safe relative path.")
+  }
+  authority <- analysis_unit_mapping_authority()
+  if (!identical(selection[mapping_fields], authority[mapping_fields])) {
+    stop("config.yml analysis_unit selection has no exact approved authority.")
+  }
+  c(selection, authority[c("scheme_id", "scheme_version", "authority_state")],
+    state = "selected_mapping")
+}
+
+normalize_analysis_unit_config <- function(config) {
+  selection <- analysis_unit_selection(config)
+  if (is.null(selection)) {
+    config$analysis_unit_resolved <- NULL
+    return(config)
+  }
+  resolved <- selection[c(
+    "resolution", "scheme_id", "scheme_version", "authority_reference",
+    "authority_state", "state"
+  )]
+  if (identical(selection$state, "selected_mapping")) {
+    resolved$mapping_profile_id <- selection$mapping_profile_id
+    resolved$mapping_path <- selection$mapping_path
+    resolved$mapping_sha256 <- selection$mapping_sha256
+  } else {
+    resolved$mapping_profile_id <- NULL
+    resolved$mapping_path <- NULL
+    resolved$mapping_sha256 <- NULL
+  }
+  config$analysis_unit_resolved <- resolved
+  config
+}
+
 #' Read and validate configuration
 #'
 #' @param path Path to config YAML.
@@ -99,9 +242,15 @@ read_config <- function(path = "config.yml", attach_runtime = TRUE) {
     stop("config.yml not found at path: ", path)
   }
 
-  config <- read_yaml(path)
+  raw_config <- read_yaml(path)
+  if ("analysis_unit" %in% names(raw_config) &&
+        is.null(raw_config$analysis_unit)) {
+    stop("config.yml analysis_unit may not be an explicit null block.")
+  }
+  config <- raw_config
   config <- modifyList(default_config(), config)
   config <- validate_config(config)
+  config <- normalize_analysis_unit_config(config)
 
   context_path <- Sys.getenv("CAMTRAP_EVIDENCE_CONTEXT", unset = "")
   if (isTRUE(attach_runtime) && nzchar(context_path)) {
@@ -554,6 +703,10 @@ validate_config <- function(config) {
       }
       validate_entity_config(config$entity_resolution)
     }
+  }
+
+  if ("analysis_unit" %in% names(config)) {
+    analysis_unit_selection(config)
   }
 
   if (!is.null(config$occupancy$species) &&

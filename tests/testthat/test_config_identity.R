@@ -4,6 +4,7 @@ import::from(
   expect_equal,
   expect_error,
   expect_false,
+  expect_null,
   expect_true
 )
 import::from("here", here)
@@ -12,6 +13,94 @@ import::from("jsonlite", read_json)
 source(here("R", "config_identity.R"))
 source(here("R", "fixity.R"))
 source(here("R", "config.R"))
+
+goal009_mapping_selection <- function() {
+  list(
+    resolution = "analysis_site",
+    mapping_profile_id = "judbury-analysis-site/1.0.0-proposed",
+    mapping_path = paste0(
+      "docs/goals/009-analysis-site-vertical-slice/",
+      "judbury_analysis_site_mapping.csv"
+    ),
+    mapping_sha256 =
+      "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083",
+    authority_reference = paste0(
+      "goal009-judbury-analysis-site-mapping-sha256-",
+      "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+    )
+  )
+}
+
+test_that("analysis-unit selection preserves omission and normalizes explicit modes", {
+  expect_false("analysis_unit" %in% names(default_config()))
+  legacy <- read_config(
+    here("tests", "testthat", "fixtures", "goal005", "config_equivalent_a.yml"),
+    attach_runtime = FALSE
+  )
+  expect_null(analysis_unit_selection(legacy))
+  expect_false("analysis_unit_resolved" %in% names(legacy))
+
+  for (path in c("config.yml", "config.camtrapdp_export.yml")) {
+    mapped <- read_config(here(path), attach_runtime = FALSE)
+    expect_equal(mapped$analysis_unit, goal009_mapping_selection(), info = path)
+    expect_equal(mapped$analysis_unit_resolved$resolution, "analysis_site", info = path)
+    expect_equal(mapped$analysis_unit_resolved$scheme_id, "judbury-analysis-site", info = path)
+    expect_equal(mapped$analysis_unit_resolved$scheme_version, "1.0.0-proposed", info = path)
+    expect_equal(mapped$analysis_unit_resolved$mapping_sha256,
+                 goal009_mapping_selection()$mapping_sha256, info = path)
+  }
+
+  identity <- list(
+    analysis_unit = list(
+      resolution = "analysis_site", mapping_profile_id = NULL,
+      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
+    )
+  )
+  expect_equal(analysis_unit_selection(identity)$scheme_id,
+               "camtrap-physical-location-identity")
+  nominal <- identity
+  nominal$analysis_unit$resolution <- "nominal_station"
+  expect_equal(analysis_unit_selection(nominal)$state,
+               "requires_runtime_authority")
+
+  for (path in c("config.template_example.yml", "config.forest_example.yml",
+                 "config.camtrapdp_example.yml")) {
+    config <- read_config(here(path), attach_runtime = FALSE)
+    expect_equal(config$analysis_unit$resolution, "physical_location", info = path)
+    expect_true(all(vapply(config$analysis_unit[setdiff(names(config$analysis_unit), "resolution")],
+                           is.null, logical(1))), info = path)
+    expect_equal(config$analysis_unit_resolved$scheme_id,
+                 "camtrap-physical-location-identity", info = path)
+  }
+})
+
+test_that("analysis-unit selection rejects null, partial, extra, and unapproved blocks", {
+  expect_error(analysis_unit_selection(list(analysis_unit = NULL)), "explicit null")
+  partial <- list(analysis_unit = goal009_mapping_selection())
+  partial$analysis_unit$mapping_sha256 <- NULL
+  expect_error(analysis_unit_selection(partial), "exact|complete|mapping")
+  extra <- list(analysis_unit = c(goal009_mapping_selection(), extra = "no"))
+  expect_error(analysis_unit_selection(extra), "exact")
+
+  unsupported <- list(analysis_unit = goal009_mapping_selection())
+  unsupported$analysis_unit$resolution <- "deployment"
+  expect_error(analysis_unit_selection(unsupported), "resolution")
+
+  direct <- goal009_mapping_selection()
+  direct$resolution <- "physical_location"
+  direct[c("mapping_profile_id", "mapping_path", "mapping_sha256",
+           "authority_reference")] <- list(NULL, NULL, NULL, NULL)
+  expect_equal(analysis_unit_selection(list(analysis_unit = direct))$resolution,
+               "physical_location")
+
+  direct_with_mapping <- list(analysis_unit = goal009_mapping_selection())
+  direct_with_mapping$analysis_unit$resolution <- "physical_location"
+  expect_error(analysis_unit_selection(direct_with_mapping), "only valid")
+
+  bad_authority <- list(analysis_unit = goal009_mapping_selection())
+  bad_authority$analysis_unit$authority_reference <- "not-approved"
+  expect_error(analysis_unit_selection(bad_authority), "authority")
+})
 
 test_that("raw YAML differs while equivalent resolved configuration matches", {
   fixture <- here("tests", "testthat", "fixtures", "goal005")

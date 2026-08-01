@@ -75,6 +75,61 @@ compute_beta_diversity <- function(abundance_matrix, site_raw) {
   dplyr::bind_rows(rows)
 }
 
+#' Compute descriptive selected-resolution Jaccard dissimilarity
+#'
+#' @param presence_matrix A 0/1 selected-resolution presence data frame.
+#' @param analysis_units Optional row identities; defaults to row names.
+#' @return Full symmetric pair table, including diagonals.
+#' @export
+compute_selected_jaccard <- function(
+    presence_matrix,
+    analysis_units = rownames(presence_matrix)) {
+  if (!is.data.frame(presence_matrix) && !is.matrix(presence_matrix)) {
+    stop("Selected Jaccard requires a presence matrix.")
+  }
+  matrix_value <- as.matrix(presence_matrix)
+  if ((!is.numeric(matrix_value) && !is.logical(matrix_value)) ||
+        anyNA(matrix_value) || any(!matrix_value %in% c(0, 1))) {
+    stop("Selected Jaccard requires complete zero/one presence values.")
+  }
+  analysis_units <- as.character(analysis_units)
+  if (length(analysis_units) != nrow(matrix_value) || anyNA(analysis_units) ||
+        any(!nzchar(analysis_units)) || anyDuplicated(analysis_units)) {
+    stop("Selected Jaccard requires one unique analytical-unit identity per row.")
+  }
+
+  rows <- vector("list", length(analysis_units)^2)
+  index <- 0L
+  for (i in seq_along(analysis_units)) {
+    first <- matrix_value[i, ] == 1
+    for (j in seq_along(analysis_units)) {
+      second <- matrix_value[j, ] == 1
+      union_count <- sum(first | second)
+      dissimilarity <- if (union_count == 0L) {
+        NA_real_
+      } else {
+        1 - sum(first & second) / union_count
+      }
+      index <- index + 1L
+      rows[[index]] <- data.frame(
+        analysis_unit_id_1 = analysis_units[[i]],
+        analysis_unit_id_2 = analysis_units[[j]],
+        jaccard_dissimilarity = as.numeric(dissimilarity),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (length(rows) == 0L) {
+    return(data.frame(
+      analysis_unit_id_1 = character(),
+      analysis_unit_id_2 = character(),
+      jaccard_dissimilarity = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  do.call(rbind, rows)
+}
+
 #' Plot distance–decay (beta diversity vs distance)
 #'
 #' @param beta_tbl Output of `compute_beta_diversity()`.

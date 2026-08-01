@@ -11,6 +11,7 @@ outputs/
       provenance/
         phase2/
         entity_resolution/
+        selected_resolution/
       PREVIEW.json
   runs/
     <run_id>/
@@ -18,6 +19,7 @@ outputs/
       provenance/
         phase2/
         entity_resolution/
+        selected_resolution/
       figures/
       tables/
       report/
@@ -73,6 +75,23 @@ Expected (current MVP):
 - `tables/multi_species_images.csv` — images containing more than one detected species, with a compact species list per image.
 - `tables/multi_species_pairs.csv` — pairwise co-occurrence counts across qualifying multi-species images.
 - `tables/rarefaction.csv` — rarefaction curve data (sites, richness, se).
+- `tables/selected_effort_coverage.csv` — confirmed active, inactive, and
+  unknown selected-unit days; written only for an eligible explicit route.
+- `tables/selected_community_presence.csv` — selected-unit x species observed
+  presence; written only for an eligible explicit route.
+- `tables/selected_observed_richness.csv` — row sums of observed selected-unit
+  presence. Richness is detection- and effort-limited, not estimated unseen
+  richness; written only for an eligible explicit route.
+- `tables/selected_jaccard.csv` — full symmetric descriptive Jaccard
+  dissimilarity table based on observed presences. It is not standardized for
+  unequal confirmed effort, sampling completeness, or species detectability;
+  empty-union comparisons are recorded as missing. Written only for an
+  eligible explicit route.
+- `tables/selected_resolution_status.json` — always written for an explicit
+  selection. It records integrity and route eligibility, reasons, resolution,
+  scheme/version/authority, contributing physical locations and deployments,
+  exact event conservation, claim limits, and four nullable ecological links.
+  An ineligible route has four JSON null links and no selected CSV files.
 
 ## Figures (MVP)
 
@@ -163,6 +182,16 @@ Expected (current MVP):
   unique/unresolved/ambiguous counts, bound to both the entity-ledger digest
   and the immutable source SHA-256. Goal 008 records zero joined analytical
   rows and forbids analytical routing. It is not an analytical join.
+- `provenance/selected_resolution/membership.csv` — exact physical-location to
+  selected-unit membership, scheme/version/authority, physical coordinates,
+  and representative-coordinate basis.
+- `provenance/selected_resolution/operation.csv` — conservative selected-unit
+  day states with member-location and deployment contribution digests.
+- `provenance/selected_resolution/event_map.csv` — unchanged operational event
+  IDs assigned after event construction, retaining physical location,
+  source-row membership, and deployment attribution.
+- `provenance/selected_resolution/summary.json` — integrity, route eligibility,
+  reasons, counts, claim limits, and SHA-256 links for the three CSV records.
 - `run_manifest.json` — exact relative payload inventory with byte sizes and
   SHA-256 values plus source/config/engine/composite fingerprints.
 - `COMPLETED.json` — terminal record written last; binds the run ID, manifest
@@ -170,8 +199,12 @@ Expected (current MVP):
 - `session_info.txt` — `sessionInfo()` output for the run.
 
 The entity-resolution directory is a closed namespace: supported preview 1.1
-and manifest 1.2 evidence must contain exactly these five canonical paths, with
-no missing, renamed, redirected, symlinked, nested, or extra entry.
+and manifests 1.2-1.3 must contain exactly these five canonical paths, with no
+missing, renamed, redirected, symlinked, nested, or extra entry. The selected
+resolution directory is likewise a closed four-file namespace for preview 1.2
+and manifest 1.3. Its manifest links and the five selected table/status links
+are canonical and relative. `report/report_inputs.rds` stores the parsed
+selected tables and status, never staging paths.
 
 ## Camtrap DP export (optional)
 

@@ -59,11 +59,10 @@ phase.
   as implementation `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`;
   independent review passed with non-blocking notes and exact-SHA workflow
   `ci` run `30253764770` concluded `success`.
-  Goal 009 is now an approved but unpublished third bounded slice. It proposes
-  an explicit 13-physical-to-nine-analysis-site Judbury scheme and only four
-  descriptive selected-resolution outputs after physical event construction.
-  Execution authority remains conditional on exact eight-path packet
-  publication with the approved parent, subject, and mapping hash.
+  Goal 009 is the locally accepted third bounded slice at candidate content
+  HEAD `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`. Its explicit
+  13-physical-to-nine-analysis-site route is accepted locally; exact squash,
+  publication, and exact-SHA CI remain pending.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
@@ -81,8 +80,9 @@ phase.
   different service source, generalized reader reuse, or another deployment
   profile.
   Barry approved the exact Goal 009 mapping, packet, allowlist, subjects, and
-  boundaries on 2026-08-01. Analytical routing begins only after the exact
-  packet-publication gate activates that conditional authority.
+  boundaries on 2026-08-01. Exact packet commit
+  `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` activated implementation; local
+  acceptance is complete while implementation publication and CI remain open.
 
 ## Phase 4 — Capability planner and module-status envelope
 
@@ -156,7 +156,7 @@ phase.
 - **Decision gate:** Barry decides the independent case, software-note claim
   and release bar, and whether either optional extension should proceed.
 
-## Recommended next implementation goal
+## Current closeout and next-goal direction
 
 Phases 1 and 2 are complete, and Goal 007 is accepted and published as the
 first bounded Phase 3 slice.
@@ -180,14 +180,20 @@ reader must reject blank missing tokens and test literal-`NA`-only behavior.
 
 Goal 008 is closed.
 
-The recommended next implementation goal is Goal 009. Barry approved its
-exact mapping SHA-256
-`6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`,
-packet, authority reference, closed allowlist, subjects, and boundaries on
-2026-08-01. Execution remains conditional on publishing the exact eight-path
-packet with parent `c0ed40377af4aa0162098913e2c097da65eadc42`, the approved
-subject, and unchanged mapping hash. The slice preserves the legacy physical
-graph and adds a parallel post-event route for confirmed effort/coverage,
-observed richness, presence composition, and descriptive Jaccard turnover. It
-separates non-waivable evidence integrity from fail-soft route eligibility and
-does not claim implementation or Phase 3 completion.
+Goal 009 is locally accepted at candidate content HEAD
+`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f` under packet
+`183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` and mapping SHA-256
+`6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
+It preserves the legacy physical graph and adds a bounded post-event route for
+confirmed effort, observed detection-limited richness and presence, and
+descriptive observed-presence turnover. Exact squash, publication, and
+exact-SHA CI remain pending; Goal 009 does not complete Phase 3.
+
+Barry approved Goal 010 as a ruthless test-value and runtime audit before
+further feature work. Existing tests receive no presumption of necessity;
+retention requires a concrete prevented failure, beneficiary, understandable
+purpose, run occasion, and justified cost. Remove, combine, simplify, or demote
+tests where practical, distinguish fast everyday from slower release-grade
+integration only when value warrants it, and retain proportionate scientific,
+data-integrity, irreversible-publication, and reproducibility safeguards. This
+is direction only; no Goal 010 packet or test change is authorized here.

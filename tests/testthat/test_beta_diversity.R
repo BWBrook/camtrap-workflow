@@ -1,4 +1,4 @@
-import::from("testthat", test_that, expect_true)
+import::from("testthat", test_that, expect_equal, expect_true)
 import::from("tibble", tibble)
 import::from("here", here)
 
@@ -31,4 +31,37 @@ test_that("plot_distance_decay writes a file", {
 
   plot_distance_decay(beta, out_path)
   expect_true(file.exists(out_path))
+})
+
+test_that("selected Jaccard reconstructs symmetry, bounds, and empty unions", {
+  presence <- data.frame(
+    sp1 = c(1L, 1L, 0L, 0L),
+    sp2 = c(1L, 0L, 1L, 0L),
+    sp3 = c(0L, 0L, 0L, 0L),
+    row.names = c("unit_a", "unit_b", "unit_c", "unit_empty"),
+    check.names = FALSE
+  )
+
+  jaccard <- compute_selected_jaccard(presence)
+  matrix_view <- xtabs(
+    jaccard_dissimilarity ~ analysis_unit_id_1 + analysis_unit_id_2,
+    data = jaccard,
+    addNA = TRUE,
+    na.action = stats::na.pass
+  )
+  value <- function(a, b) {
+    jaccard$jaccard_dissimilarity[
+      jaccard$analysis_unit_id_1 == a & jaccard$analysis_unit_id_2 == b
+    ]
+  }
+
+  expect_equal(nrow(jaccard), 16L)
+  expect_equal(value("unit_a", "unit_b"), 0.5)
+  expect_equal(value("unit_b", "unit_a"), 0.5)
+  expect_equal(value("unit_b", "unit_c"), 1)
+  expect_equal(value("unit_a", "unit_a"), 0)
+  expect_true(is.na(value("unit_empty", "unit_empty")))
+  nonempty <- jaccard$jaccard_dissimilarity[!is.na(jaccard$jaccard_dissimilarity)]
+  expect_true(all(nonempty >= 0 & nonempty <= 1))
+  expect_equal(unname(matrix_view), t(unname(matrix_view)))
 })

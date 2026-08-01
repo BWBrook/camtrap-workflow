@@ -45,6 +45,11 @@ run_dir_display <- if (!is.null(inputs$params$evidence_run$id)) {
     error = function(e) params$run_dir
   )
 }
+selected_status <- inputs$selected_resolution_status
+has_selected_resolution <- !is.null(selected_status)
+is_judbury_selected <- has_selected_resolution &&
+  identical(selected_status$scheme_id, "judbury-analysis-site") &&
+  identical(selected_status$scheme_version, "1.0.0-proposed")
 ```
 
 ## Snapshot
@@ -212,6 +217,42 @@ if (!is.null(params$beta_diversity_path)) {
 
 **Interpretation (what to conclude):** The distance–decay plot summarises how community dissimilarity changes with site distance.  
 **Caution (what not to conclude):** Spatial patterns can be confounded by habitat covariates not modelled explicitly.
+
+```{r, results='asis'}
+if (has_selected_resolution) {
+  cat("\n\n## Selected analysis resolution\n\n")
+  if (isTRUE(selected_status$route_eligible)) {
+    if (is_judbury_selected) {
+      cat(paste(
+        "For Judbury, the selected mapping combines 13 physical locations into nine analysis sites;",
+        "four coordinates are fixed synthetic midpoints used only for mapping and separation.\n\n"
+      ))
+    }
+    cat(paste(
+      "Selected results were derived after physical-location events were fixed; physical covariates were not pooled.",
+      "Effort means confirmed active site-days, richness is observed and detection-limited.",
+      "Jaccard turnover is descriptive and based on observed presences; it is not standardized for unequal confirmed effort, sampling completeness, or species detectability.\n\n"
+    ))
+    cat("### Effort and coverage\n\n")
+    print(knitr::kable(inputs$selected_effort_coverage))
+    cat("\n\n### Community presence\n\n")
+    print(knitr::kable(inputs$selected_community_presence))
+    cat("\n\n### Observed richness\n\n")
+    print(knitr::kable(inputs$selected_observed_richness))
+    cat("\n\n### Descriptive Jaccard turnover\n\n")
+    print(knitr::kable(inputs$selected_jaccard))
+  } else {
+    reasons <- unlist(selected_status$reasons, use.names = FALSE)
+    reasons <- reasons[!is.na(reasons) & nzchar(reasons)]
+    if (!length(reasons)) reasons <- "No eligible selected route was recorded."
+    cat(paste(
+      "An explicit selected analysis resolution was recorded, but the route is",
+      "ineligible for ecological tables. Recorded reasons:\n\n"
+    ))
+    cat(paste0("- ", reasons, collapse = "\n"), "\n")
+  }
+}
+```
 
 ## Rarefaction
 

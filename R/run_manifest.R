@@ -35,6 +35,7 @@ relativize_manifest_paths <- function(value, base_dir) {
 #' @param context Supported evidence-run context, or NULL for a partial run.
 #' @param phase2 Named Phase-2 artifact paths for manifest schema 1.1.
 #' @param entity_resolution Named entity artifact paths for manifest schema 1.2.
+#' @param selected_resolution Named selected-resolution paths for schema 1.3.
 #' @return Manifest path invisibly.
 #' @export
 write_run_manifest <- function(
@@ -46,7 +47,8 @@ write_run_manifest <- function(
     config_file = NULL,
     context = NULL,
     phase2 = NULL,
-    entity_resolution = NULL) {
+    entity_resolution = NULL,
+    selected_resolution = NULL) {
   bundle_dir <- dirname(path)
   dir.create(bundle_dir, recursive = TRUE, showWarnings = FALSE)
   if (file.exists(path)) {
@@ -80,7 +82,12 @@ write_run_manifest <- function(
   manifest <- list(
     manifest_schema = if (supported &&
                             !is.null(phase2) &&
-                            !is.null(entity_resolution)) {
+                            !is.null(entity_resolution) &&
+                            !is.null(selected_resolution)) {
+      "camtrap-evidence-manifest/1.3"
+    } else if (supported &&
+                 !is.null(phase2) &&
+                 !is.null(entity_resolution)) {
       "camtrap-evidence-manifest/1.2"
     } else if (supported && !is.null(phase2)) {
       "camtrap-evidence-manifest/1.1"
@@ -117,6 +124,11 @@ write_run_manifest <- function(
     },
     entity_resolution = if (supported && !is.null(entity_resolution)) {
       relativize_manifest_paths(entity_resolution, bundle_dir)
+    } else {
+      NULL
+    },
+    selected_resolution = if (supported && !is.null(selected_resolution)) {
+      relativize_manifest_paths(selected_resolution, bundle_dir)
     } else {
       NULL
     },

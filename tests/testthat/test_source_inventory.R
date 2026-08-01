@@ -1,4 +1,7 @@
-import::from("testthat", test_that, expect_equal, expect_error, expect_false, expect_true)
+import::from(
+  "testthat", test_that, expect_equal, expect_error, expect_false,
+  expect_true
+)
 import::from("here", here)
 
 source(here("R", "config_identity.R"))
@@ -6,6 +9,23 @@ source(here("R", "fixity.R"))
 source(here("R", "config.R"))
 source(here("R", "entity_resolution.R"))
 source(here("R", "source_inventory.R"))
+
+goal009_mapping_selection <- function() {
+  list(
+    resolution = "analysis_site",
+    mapping_profile_id = "judbury-analysis-site/1.0.0-proposed",
+    mapping_path = paste0(
+      "docs/goals/009-analysis-site-vertical-slice/",
+      "judbury_analysis_site_mapping.csv"
+    ),
+    mapping_sha256 =
+      "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083",
+    authority_reference = paste0(
+      "goal009-judbury-analysis-site-mapping-sha256-",
+      "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+    )
+  )
+}
 
 goal005_four_table_config <- function(input_root) {
   config <- default_config()
@@ -43,6 +63,142 @@ test_that("four-table snapshots inventory every parser-consumed byte", {
   )))
   expect_true(verify_source_snapshot(snapshot, stage))
   expect_false(any(grepl(normalizePath(input_root), canonical_json(snapshot$inventory), fixed = TRUE)))
+})
+
+test_that("mapped analysis-site selection snapshots exactly one immutable mapping input", {
+  input_root <- copy_goal005_inputs(tempfile("goal009-input-"))
+  stage <- tempfile("goal009-stage-")
+  dir.create(stage)
+  config <- goal005_four_table_config(input_root)
+  config$analysis_unit <- goal009_mapping_selection()
+  validate_config(config)
+
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  mapping <- snapshot$inventory[vapply(
+    snapshot$inventory,
+    function(record) identical(record$role, "analysis_site_mapping_input"),
+    logical(1)
+  )]
+  expect_equal(length(mapping), 1L)
+  expect_false(mapping[[1]]$consumed_by_parser)
+  expect_equal(mapping[[1]]$sha256, config$analysis_unit$mapping_sha256)
+  expect_equal(
+    snapshot$analysis_site_mapping_path,
+    file.path(stage, "source_snapshot", "analysis_site_mapping",
+              "judbury_analysis_site_mapping.csv")
+  )
+  expect_equal(sha256_file(snapshot$analysis_site_mapping_path),
+               config$analysis_unit$mapping_sha256)
+  expect_true(verify_source_snapshot(snapshot, stage))
+
+  write("sidecar", file.path(stage, "source_snapshot", "analysis_site_mapping",
+                              "unexpected.txt"))
+  expect_error(verify_source_snapshot(snapshot, stage), "exactly one|extra")
+})
+
+test_that("omitted and identity selections retain zero mapping inventory", {
+  input_root <- copy_goal005_inputs(tempfile("goal009-legacy-input-"))
+  selections <- list(
+    omitted = NULL,
+    identity = list(
+      resolution = "analysis_site", mapping_profile_id = NULL,
+      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
+    ),
+    physical = list(
+      resolution = "physical_location", mapping_profile_id = NULL,
+      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
+    ),
+    nominal = list(
+      resolution = "nominal_station", mapping_profile_id = NULL,
+      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
+    )
+  )
+  for (name in names(selections)) {
+    selection <- selections[[name]]
+    stage <- tempfile("goal009-zero-stage-")
+    dir.create(stage)
+    config <- goal005_four_table_config(input_root)
+    if (!is.null(selection)) config$analysis_unit <- selection
+    snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+    roles <- vapply(snapshot$inventory, `[[`, character(1), "role")
+    expect_equal(sum(roles == "analysis_site_mapping_input"), 0L, info = name)
+    expect_true(is.null(snapshot$analysis_site_mapping_path), info = name)
+    expect_true(verify_source_snapshot(snapshot, stage), info = name)
+  }
+})
+
+test_that("mapped analysis-site acquisition rejects path escape, symlink, and checksum drift", {
+  input_root <- copy_goal005_inputs(tempfile("goal009-invalid-input-"))
+  config <- goal005_four_table_config(input_root)
+  config$analysis_unit <- goal009_mapping_selection()
+
+  escaped <- config
+  escaped$analysis_unit$mapping_path <- "../judbury_analysis_site_mapping.csv"
+  expect_error(materialize_source_snapshot(escaped, tempfile("goal009-escape-")),
+               "path|approved|escape")
+
+  drifted <- config
+  drifted$analysis_unit$mapping_sha256 <- paste(rep("a", 64L), collapse = "")
+  expect_error(materialize_source_snapshot(drifted, tempfile("goal009-drift-")),
+               "authority|SHA-256")
+
+  symlink_root <- tempfile("goal009-symlink-root-")
+  dir.create(file.path(symlink_root, "docs", "goals"), recursive = TRUE)
+  approved_dir <- file.path(symlink_root, "approved-mapping")
+  dir.create(approved_dir, recursive = TRUE)
+  copy_goal005_inputs(file.path(symlink_root, "data"))
+  file.copy(here("docs", "goals", "009-analysis-site-vertical-slice",
+                 "judbury_analysis_site_mapping.csv"),
+            file.path(approved_dir, "judbury_analysis_site_mapping.csv"))
+  expect_true(file.symlink(
+    approved_dir,
+    file.path(symlink_root, "docs", "goals", "009-analysis-site-vertical-slice")
+  ))
+  symlink_config <- goal005_four_table_config(file.path(symlink_root, "data"))
+  symlink_config$paths$inputs <- list(
+    site = file.path(symlink_root, "data", "site.csv"),
+    op = file.path(symlink_root, "data", "op.csv"),
+    obs = file.path(symlink_root, "data", "obs.csv"),
+    taxa = file.path(symlink_root, "data", "taxa.csv"),
+    camtrapdp = NULL
+  )
+  symlink_config$analysis_unit <- config$analysis_unit
+  expect_error(
+    materialize_source_snapshot(
+      symlink_config,
+      tempfile("goal009-symlink-stage-"),
+      project_root = symlink_root
+    ),
+    "symlink"
+  )
+})
+
+test_that("mapping mutation cannot be hidden by inventory reclosure or duplicate roles", {
+  input_root <- copy_goal005_inputs(tempfile("goal009-reclosure-input-"))
+  config <- goal005_four_table_config(input_root)
+  config$analysis_unit <- goal009_mapping_selection()
+  stage <- tempfile("goal009-reclosure-stage-")
+  dir.create(stage)
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  index <- which(vapply(snapshot$inventory, function(record) {
+    identical(record$role, "analysis_site_mapping_input")
+  }, logical(1)))
+  write("tamper", snapshot$analysis_site_mapping_path, append = TRUE)
+  mutated <- file.info(snapshot$analysis_site_mapping_path)
+  snapshot$inventory[[index]]$bytes <- unname(as.numeric(mutated$size))
+  snapshot$inventory[[index]]$sha256 <- sha256_file(snapshot$analysis_site_mapping_path)
+  snapshot$source_sha256 <- fixity_identity(snapshot$inventory)
+  expect_error(verify_source_snapshot(snapshot, stage), "authority|configured|mapping")
+
+  duplicate <- materialize_source_snapshot(
+    config, tempfile("goal009-duplicate-stage-"), project_root = here()
+  )
+  duplicate$inventory[[length(duplicate$inventory) + 1L]] <-
+    duplicate$inventory[[which(vapply(duplicate$inventory, function(record) {
+      identical(record$role, "analysis_site_mapping_input")
+    }, logical(1)))[[1L]]]]
+  duplicate$source_sha256 <- fixity_identity(duplicate$inventory)
+  expect_error(verify_source_snapshot(duplicate), "exactly one|duplicate")
 })
 
 test_that("one source byte changes identity and snapshot mutation fails fixity", {

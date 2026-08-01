@@ -62,6 +62,11 @@ import::here(
 )
 
 import::here(
+  validate_selected_resolution_artifacts,
+  .from = "R/selected_resolution.R"
+)
+
+import::here(
   assert_path_within_root,
   assert_safe_relative_path,
   atomic_replace_text,
@@ -69,6 +74,7 @@ import::here(
   file_fixity_record,
   fixity_identity,
   inventory_files,
+  is_safe_relative_path,
   normalize_relative_path,
   sha256_file,
   sha256_text,
@@ -185,17 +191,22 @@ import::here(
 
 import::here(
   build_community_matrices,
+  build_selected_presence,
+  validate_selected_runtime_events,
+  write_selected_ecological_outputs,
   .from = "R/community_matrices.R"
 )
 
 import::here(
   compute_alpha_diversity,
+  compute_selected_observed_richness,
   plot_alpha_diversity,
   .from = "R/alpha_diversity.R"
 )
 
 import::here(
   compute_beta_diversity,
+  compute_selected_jaccard,
   plot_distance_decay,
   .from = "R/beta_diversity.R"
 )
@@ -525,6 +536,115 @@ list(
       }
     },
     cue = tar_cue(mode = "always")
+  ),
+  ## -- SELECTED-RESOLUTION ECOLOGICAL BRANCH ------------------------------
+  tar_target(
+    selected_resolution_state,
+    {
+      if (!isTRUE(run_context$supported_full_run) ||
+            is.null(run_context$selected_resolution)) {
+        NULL
+      } else {
+        selected_paths <- unlist(
+          run_context$selected_resolution$artifacts,
+          use.names = TRUE
+        )
+        state <- validate_selected_resolution_artifacts(
+          run_dir,
+          selected_paths,
+          require_integrity = FALSE
+        )
+        context_flags <- c(
+          integrity_ok = isTRUE(run_context$selected_resolution$integrity_ok),
+          route_eligible = isTRUE(run_context$selected_resolution$route_eligible)
+        )
+        state_flags <- c(
+          integrity_ok = isTRUE(state$integrity_ok),
+          route_eligible = isTRUE(state$route_eligible)
+        )
+        if (!identical(context_flags, state_flags)) {
+          stop("Selected-resolution context flags do not match validated provenance.")
+        }
+        state
+      }
+    },
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    selected_event_conservation_check,
+    {
+      if (is.null(selected_resolution_state)) {
+        NULL
+      } else if (!isTRUE(selected_resolution_state$integrity_ok)) {
+        list(
+          checked = FALSE,
+          exact = FALSE,
+          reason = "selected_resolution_integrity_failure"
+        )
+      } else {
+        event_lineage_check
+        validate_selected_runtime_events(
+          selected_resolution_state$event_map,
+          obs_events
+        )
+      }
+    },
+    cue = tar_cue(mode = "always")
+  ),
+  tar_target(
+    selected_ecological_outputs,
+    {
+      if (is.null(selected_resolution_state)) {
+        NULL
+      } else {
+        write_selected_ecological_outputs(
+          selected_resolution_state,
+          obs_events,
+          run_dir,
+          event_conservation = selected_event_conservation_check
+        )
+      }
+    }
+  ),
+  tar_target(
+    selected_effort_coverage_csv,
+    if (is.null(selected_ecological_outputs)) {
+      NULL
+    } else {
+      selected_ecological_outputs$effort_coverage
+    }
+  ),
+  tar_target(
+    selected_community_presence_csv,
+    if (is.null(selected_ecological_outputs)) {
+      NULL
+    } else {
+      selected_ecological_outputs$community_presence
+    }
+  ),
+  tar_target(
+    selected_observed_richness_csv,
+    if (is.null(selected_ecological_outputs)) {
+      NULL
+    } else {
+      selected_ecological_outputs$observed_richness
+    }
+  ),
+  tar_target(
+    selected_jaccard_csv,
+    if (is.null(selected_ecological_outputs)) {
+      NULL
+    } else {
+      selected_ecological_outputs$jaccard
+    }
+  ),
+  tar_target(
+    selected_resolution_status_json,
+    if (is.null(selected_ecological_outputs)) {
+      NULL
+    } else {
+      selected_ecological_outputs$status
+    }
   ),
   tar_target(
     events_per_day,
@@ -1339,6 +1459,34 @@ list(
           occupancy_aic = occupancy_aic_tbl,
           occupancy_species = occupancy_species,
           occupancy_predictions = occupancy_predictions_table,
+          selected_effort_coverage = if (is.null(selected_effort_coverage_csv)) {
+            NULL
+          } else {
+            readr::read_csv(selected_effort_coverage_csv, show_col_types = FALSE)
+          },
+          selected_community_presence = if (is.null(selected_community_presence_csv)) {
+            NULL
+          } else {
+            readr::read_csv(selected_community_presence_csv, show_col_types = FALSE)
+          },
+          selected_observed_richness = if (is.null(selected_observed_richness_csv)) {
+            NULL
+          } else {
+            readr::read_csv(selected_observed_richness_csv, show_col_types = FALSE)
+          },
+          selected_jaccard = if (is.null(selected_jaccard_csv)) {
+            NULL
+          } else {
+            readr::read_csv(selected_jaccard_csv, show_col_types = FALSE)
+          },
+          selected_resolution_status = if (is.null(selected_resolution_status_json)) {
+            NULL
+          } else {
+            jsonlite::read_json(
+              selected_resolution_status_json,
+              simplifyVector = FALSE
+            )
+          },
           schema_version = schema_version,
           params = config
         )
@@ -1348,7 +1496,41 @@ list(
         saveRDS(
           list(
             message = "Report disabled by config.",
-            params = config
+            params = config,
+            selected_effort_coverage = if (is.null(selected_effort_coverage_csv)) {
+              NULL
+            } else {
+              readr::read_csv(selected_effort_coverage_csv, show_col_types = FALSE)
+            },
+            selected_community_presence = if (is.null(selected_community_presence_csv)) {
+              NULL
+            } else {
+              readr::read_csv(
+                selected_community_presence_csv,
+                show_col_types = FALSE
+              )
+            },
+            selected_observed_richness = if (is.null(selected_observed_richness_csv)) {
+              NULL
+            } else {
+              readr::read_csv(
+                selected_observed_richness_csv,
+                show_col_types = FALSE
+              )
+            },
+            selected_jaccard = if (is.null(selected_jaccard_csv)) {
+              NULL
+            } else {
+              readr::read_csv(selected_jaccard_csv, show_col_types = FALSE)
+            },
+            selected_resolution_status = if (is.null(selected_resolution_status_json)) {
+              NULL
+            } else {
+              jsonlite::read_json(
+                selected_resolution_status_json,
+                simplifyVector = FALSE
+              )
+            }
           ),
           out_path
         )
@@ -1598,6 +1780,8 @@ list(
       phase2_validation_check
       entity_resolution_check
       event_lineage_check
+      selected_resolution_state
+      selected_event_conservation_check
       out_path <- file.path(run_dir, "run_manifest.json")
       outputs <- list(
         tables = list(
@@ -1633,7 +1817,12 @@ list(
           first_detection_wait_time_species = first_detection_wait_time_species_csv,
           multi_species_images = multi_species_images_csv,
           multi_species_pairs = multi_species_pairs_csv,
-          rarefaction = rarefaction_table_csv
+          rarefaction = rarefaction_table_csv,
+          selected_effort_coverage = selected_effort_coverage_csv,
+          selected_community_presence = selected_community_presence_csv,
+          selected_observed_richness = selected_observed_richness_csv,
+          selected_jaccard = selected_jaccard_csv,
+          selected_resolution_status = selected_resolution_status_json
         ),
         figures = list(
           rarefaction = rarefaction_plot,
@@ -1674,6 +1863,12 @@ list(
         },
         entity_resolution = if (isTRUE(run_context$supported_full_run)) {
           run_context$entity_resolution$artifacts
+        } else {
+          NULL
+        },
+        selected_resolution = if (isTRUE(run_context$supported_full_run) &&
+                                    !is.null(run_context$selected_resolution)) {
+          run_context$selected_resolution$artifacts
         } else {
           NULL
         }
