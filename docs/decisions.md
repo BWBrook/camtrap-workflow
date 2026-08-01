@@ -737,10 +737,14 @@ Rationale:
 
 Consequences / follow-ups:
 - Candidate content HEAD `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`
-  passed local acceptance under packet
+  passed local acceptance and was published as core implementation
+  `3d0f23ac0cbabdeef780144a0fad261d2ce366be` under packet
   `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` and the approved mapping SHA-256.
   Independent reconstruction passed 26/26; final review returned `I1_CLOSED`,
   `SPEC_PASS`, `SCIENCE_PASS`, `QUALITY_PASS`, and `PUBLISH`.
+- First CI run `30713505836` failed only at one platform-dependent bundle-test
+  assertion. Test-only repair `d0594861e8941f4496989de4ab1c8a6e66f9b889`
+  then passed exact-SHA workflow `30716777969`, completing Goal 009 closeout.
 - RAI, diel, occupancy, traits, functional diversity, rarefaction, exports,
   physical community outputs, and the broad site map remain on their existing
   physical-location inputs.
@@ -749,7 +753,9 @@ Consequences / follow-ups:
   grouping, or support inferential turnover conclusions.
 - A public analysis-unit API, profile precedence, and migration policy remain
   deferred.
-- Exact-path squash/publication and exact-SHA CI remain pending.
+- Goal 009 is complete, accepted, published, and exact-SHA-CI-confirmed at the
+  final repair SHA; the core scientific implementation remains
+  `3d0f23ac0cbabdeef780144a0fad261d2ce366be`.
 
 ---
 
@@ -757,7 +763,7 @@ Consequences / follow-ups:
 
 Decision:
 - Goal 010 will ruthlessly audit the test suite before further feature work.
-  No test is presumed necessary because it exists.
+  Default to subtraction; no test is presumed necessary because it exists.
 - Retain a test only when it identifies the real failure prevented, beneficiary,
   run occasion, understandable purpose, and runtime/resource trade-off. Remove,
   combine, simplify, or demote tests wherever practical; distinguish fast

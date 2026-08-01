@@ -59,10 +59,10 @@ phase.
   as implementation `377c0fd4f78513885a3f2b53308e788bfa8d1cb4`;
   independent review passed with non-blocking notes and exact-SHA workflow
   `ci` run `30253764770` concluded `success`.
-  Goal 009 is the locally accepted third bounded slice at candidate content
-  HEAD `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`. Its explicit
-  13-physical-to-nine-analysis-site route is accepted locally; exact squash,
-  publication, and exact-SHA CI remain pending.
+  Goal 009 is the accepted and published third bounded slice. Core
+  implementation `3d0f23ac0cbabdeef780144a0fad261d2ce366be` was followed by
+  test-only portability repair `d0594861e8941f4496989de4ab1c8a6e66f9b889`;
+  that final repair SHA passed workflow `30716777969` with conclusion `success`.
 - **Exit evidence:** Both adapters complete core QC/effort/event paths;
   optional fields remain unknown; profile precedence and named scales persist;
   zero versus unknown is invariant; reviewed inference is uncertain and
@@ -81,8 +81,8 @@ phase.
   profile.
   Barry approved the exact Goal 009 mapping, packet, allowlist, subjects, and
   boundaries on 2026-08-01. Exact packet commit
-  `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` activated implementation; local
-  acceptance is complete while implementation publication and CI remain open.
+  `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` activated implementation; Goal
+  009 is now complete, published, and exact-SHA-CI-confirmed.
 
 ## Phase 4 — Capability planner and module-status envelope
 
@@ -180,18 +180,23 @@ reader must reject blank missing tokens and test literal-`NA`-only behavior.
 
 Goal 008 is closed.
 
-Goal 009 is locally accepted at candidate content HEAD
-`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f` under packet
+Goal 009 is accepted and published under packet
 `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` and mapping SHA-256
 `6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
-It preserves the legacy physical graph and adds a bounded post-event route for
-confirmed effort, observed detection-limited richness and presence, and
-descriptive observed-presence turnover. Exact squash, publication, and
-exact-SHA CI remain pending; Goal 009 does not complete Phase 3.
+Core implementation `3d0f23ac0cbabdeef780144a0fad261d2ce366be`
+preserves the legacy graph and adds the bounded post-event route. First CI run
+`30713505836` failed only at a platform-dependent bundle-test assertion;
+test-only repair `d0594861e8941f4496989de4ab1c8a6e66f9b889` passed final exact-SHA
+workflow `30716777969`. The slice remains limited to confirmed effort,
+observed detection-limited richness/presence, and descriptive Jaccard not
+standardized for unequal effort, completeness, or detectability. It makes no
+abundance, density, inferential, pooled-covariate, or generalized-grouping
+claim and does not complete Phase 3.
 
 Barry approved Goal 010 as a ruthless test-value and runtime audit before
-further feature work. Existing tests receive no presumption of necessity;
-retention requires a concrete prevented failure, beneficiary, understandable
+further feature work. Default to subtraction: existing tests receive no
+presumption of necessity. Retention requires a concrete prevented failure,
+beneficiary, understandable
 purpose, run occasion, and justified cost. Remove, combine, simplify, or demote
 tests where practical, distinguish fast everyday from slower release-grade
 integration only when value warrants it, and retain proportionate scientific,

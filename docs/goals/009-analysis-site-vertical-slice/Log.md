@@ -1,12 +1,12 @@
 # Goal 009 - Packet log
 
-- **Canonical goal state:** `LOCAL_ACCEPTANCE_COMPLETE_AWAITING_EXACT_PUBLICATION`
+- **Canonical goal state:** `COMPLETE_PUBLISHED`
 - **Scientific specification state:** `BARRY_APPROVED_WRITTEN_GOAL`
 - **Exact mapping state:** `APPROVED_EXACT_SHA256`
 - **Packet state:** `PUBLISHED_EXACT_PACKET`
-- **Execution state:** `LOCAL_ACCEPTANCE_COMPLETE`
-- **Implementation publication state:** `NOT_PUBLISHED`
-- **Exact-SHA CI state:** `NOT_RUN`
+- **Execution state:** `COMPLETE`
+- **Implementation publication state:** `PUBLISHED`
+- **Exact-SHA CI state:** `PUBLISHED_CI_CONFIRMED`
 - **Independent implementation review:**
   `I1_CLOSED / SPEC_PASS / SCIENCE_PASS / QUALITY_PASS / PUBLISH`
 - **Packet date:** 2026-07-31 AEST
@@ -18,6 +18,10 @@
   `docs: define Goal 009 analysis-site vertical slice`
 - **Locally accepted candidate content HEAD:**
   `6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`
+- **Core implementation commit:**
+  `3d0f23ac0cbabdeef780144a0fad261d2ce366be`
+- **Final accepted repair commit:**
+  `d0594861e8941f4496989de4ab1c8a6e66f9b889`
 
 ## Exact packet paths
 
@@ -161,8 +165,7 @@ One focused static review passed:
 ## Future execution record
 
 The packet-authoring checklist below is superseded by the local acceptance
-record in Task 6. Exact implementation publication and exact-SHA CI remain
-pending.
+record in Task 6 and the publication closeout below.
 
 - exact approval receipt and packet SHA;
 - baseline preview/full run IDs and comparator evidence;
@@ -473,10 +476,10 @@ Goal 009 reached local acceptance on 2026-08-02. The exact packet authority is
 commit `183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4`, subject
 `docs: define Goal 009 analysis-site vertical slice`, with mapping SHA-256
 `6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083`.
-The locally accepted candidate content is HEAD
-`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`. Its eventual implementation
-publication commit is not yet known because the reviewed candidate will be
-squashed later.
+The locally accepted candidate content was HEAD
+`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`. At this checkpoint, its eventual
+implementation publication commit was not yet known because the reviewed
+candidate was to be squashed later.
 
 The final local gate recorded:
 
@@ -509,8 +512,9 @@ unequal confirmed effort, completeness, or detectability. Goal 009 makes no
 claim about pooled covariates, abundance or density, unseen richness,
 inference, or generalized concurrency or grouping.
 
-This is local acceptance only. Exact-path squash and publication, followed by
-GitHub Actions on the exact published SHA, remain pending and are not claimed.
+At this local-acceptance checkpoint, exact-path squash, publication, and
+exact-SHA GitHub Actions remained pending. The publication closeout below
+supersedes that historical state.
 
 ## Approved next-goal direction
 
@@ -519,8 +523,9 @@ before further feature work. No test is presumed necessary because it exists.
 Each retained test must state the real failure it prevents, who or what
 benefits, when it runs, why a user or developer can understand it, and its
 runtime and resource trade-off. Tests should be removed, combined, simplified,
-or demoted wherever practical; a fast everyday suite and slower release-grade
-integration should remain distinct only where retained value justifies cost.
+or demoted wherever practical under a default subtraction rule; a fast everyday
+suite and slower release-grade integration should remain distinct only where
+retained value justifies cost.
 
 Compatibility, provenance, bundle, tamper, and publication tests require
 concrete current-project justification; engineering best practice alone is
@@ -529,3 +534,55 @@ correctness, data integrity, destructive or irreversible publication, and
 reproducibility. This records approved next-goal direction only: no Goal 010
 Goal, Plan, or Runbook is authored here, and no test change is authorized or
 implemented.
+
+## Publication and exact-SHA CI closeout
+
+Goal 009 was published as core implementation commit
+`3d0f23ac0cbabdeef780144a0fad261d2ce366be`, subject
+`feat: add analysis-site ecological slice`, with packet
+`183bb7a80e54abb8dd59ec7f2c2a31dda72e5bc4` as its sole parent. The core
+commit contains the locally accepted candidate content recorded at
+`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f`.
+
+The first exact-SHA workflow run `30713505836`, job `91405028902`, ran against
+head SHA exactly `3d0f23ac0cbabdeef780144a0fad261d2ce366be` and failed after
+`1h22m36s` at one platform-dependent `test_run_bundle` assertion. The unit-test
+summary was `[ FAIL 1 | WARN 1 | SKIP 0 | PASS 880 ]`; the warning was the sole
+expected CamtrapDP unparseable-datetime fixture warning, and later workflow
+steps were skipped. The failure was a test portability defect and did not
+implicate the Goal 009 implementation.
+
+A test-only repair was published as
+`d0594861e8941f4496989de4ab1c8a6e66f9b889`, subject
+`test: make manifest drift control portable`, with the core implementation as
+its sole parent. Exact-SHA GitHub Actions then completed successfully in
+[`30716777969`](https://github.com/BWBrook/camtrap-workflow/actions/runs/30716777969),
+job `91413569305`, head SHA exactly
+`d0594861e8941f4496989de4ab1c8a6e66f9b889`, duration `1h49m58s`.
+
+The passing workflow recorded:
+
+- lint success in 19 seconds;
+- unit tests in `1h11m59s` with
+  `[ FAIL 0 | WARN 1 | SKIP 0 | PASS 881 ]` and the sole expected CamtrapDP
+  unparseable-datetime fixture warning;
+- `test_run_bundle` PASS at 99/99 and pipeline smoke PASS in 8 seconds;
+- full immutable run `20260801T213517Z-e179fbf11da94f40` in `30m40s`;
+- bundle verification in `5m02s`, `valid = true`, with 101 payloads and
+  manifest SHA-256
+  `d931901848bdba29777653a910fd2e2ec13327784dd9018c54c1b040e18da53c`;
+  and
+- uploaded artifact `8824757010`: 39,917,667 bytes, 104 files, ZIP SHA-256
+  `57b3380c6b4b1517e581e678b5083cbeb92f088d6529dcf5dfd9a64946e14fe4`.
+
+Goal 009 is complete, accepted, published, and exact-SHA-CI-confirmed at final
+repair SHA `d0594861e8941f4496989de4ab1c8a6e66f9b889`. The core scientific
+implementation remains `3d0f23ac0cbabdeef780144a0fad261d2ce366be`; the final
+commit changes only the platform-dependent test control.
+
+Scientific interpretation is unchanged: confirmed effort only; observed,
+detection-limited richness and presence; and descriptive Jaccard not
+standardized for unequal confirmed effort, completeness, or detectability.
+Goal 009 makes no abundance, density, inference, pooled-covariate, or
+generalized-grouping claim. The approved Goal 010 test-value/runtime audit
+direction remains unchanged, with no Goal 010 packet or implementation yet.

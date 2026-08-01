@@ -1192,21 +1192,24 @@ profile may be approved.
 - [x] Complete independent scientific reconstruction and final review after
   claim repair with `I1_CLOSED`, `SPEC_PASS`, `SCIENCE_PASS`, `QUALITY_PASS`,
   and `PUBLISH`.
-- [ ] Squash and publish the exact locally accepted candidate content, then
-  confirm GitHub Actions against that exact published SHA.
+- [x] Publish core implementation
+  `3d0f23ac0cbabdeef780144a0fad261d2ce366be`, repair the platform-dependent
+  test only in `d0594861e8941f4496989de4ab1c8a6e66f9b889`, and confirm final
+  exact-SHA workflow `30716777969` with conclusion `success`.
 
-Goal 009 is locally accepted at candidate content HEAD
-`6ca44dd6f8fd78ae9462cc6c80c0010f147a316f` and awaits exact squash,
-publication, and exact-SHA CI. The detailed local evidence and the bounded
-confirmed-effort, observed-presence, and descriptive-turnover claim limits are
-recorded in the Goal log and `docs/log/670_goal009_analysis_site_vertical_slice.md`.
+Goal 009 is complete, accepted, and published. Its first CI run `30713505836`
+failed only at one platform-dependent bundle-test assertion; the final repair
+SHA passed exact-SHA CI. Claims remain limited to confirmed effort, observed
+detection-limited richness/presence, and descriptive Jaccard not standardized
+for unequal effort, completeness, or detectability. No abundance, density,
+inference, pooled covariates, or generalized grouping is claimed.
 
 **Approved next-goal direction:** Goal 010 must ruthlessly audit test value and
-runtime before further feature work. Retain tests only for concrete current
-failures and beneficiaries at justified run cadence and cost; remove, combine,
-simplify, or demote the rest, while preserving proportionate scientific, data
-integrity, irreversible-publication, and reproducibility safeguards. This is
-direction only: no Goal 010 packet or test change is authorized here.
+runtime before further feature work. Default to subtraction; retain tests only
+for concrete current failures and beneficiaries at justified run cadence and
+cost, while preserving proportionate scientific, data-integrity,
+irreversible-publication, and reproducibility safeguards. This is direction
+only: no Goal 010 packet or test change is authorized here.
 
 ---
 
