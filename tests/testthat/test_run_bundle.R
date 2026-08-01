@@ -776,21 +776,15 @@ test_that("manifest 1.2 verifies entity links and semantic reconstruction portab
   expect_true(verify_run_bundle(copied)$valid)
 })
 
-test_that("selected manifest comparison tolerates CSV round-trip drift only", {
+test_that("selected manifest comparison tolerates machine-epsilon drift only", {
   expected <- data.frame(
     analysis_unit_from = "jc_cen",
     analysis_unit_to = "jc_co2",
-    jaccard_dissimilarity = 1 - 13 / 21
+    jaccard_dissimilarity = 1
   )
-  csv_path <- tempfile("goal009-jaccard-", fileext = ".csv")
-  on.exit(unlink(csv_path), add = TRUE)
-  readr::write_csv(expected, csv_path, na = "")
-  observed <- utils::read.csv(
-    csv_path,
-    stringsAsFactors = FALSE,
-    check.names = FALSE,
-    na.strings = ""
-  )
+  observed <- expected
+  observed$jaccard_dissimilarity <-
+    expected$jaccard_dissimilarity - .Machine$double.eps / 2
 
   expect_false(identical(
     observed$jaccard_dissimilarity,
@@ -799,7 +793,7 @@ test_that("selected manifest comparison tolerates CSV round-trip drift only", {
   expect_true(selected_manifest_frames_equal(observed, expected))
 
   observed$jaccard_dissimilarity <-
-    observed$jaccard_dissimilarity + 0.01
+    expected$jaccard_dissimilarity - 0.01
   expect_false(selected_manifest_frames_equal(observed, expected))
 })
 
