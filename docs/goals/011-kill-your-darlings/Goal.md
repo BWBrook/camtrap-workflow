@@ -2,7 +2,7 @@
 
 Date: 2026-08-02
 
-State: `DESIGN_APPROVED_AWAITING_WRITTEN_SPEC_REVIEW`
+State: `IMPLEMENTATION_AUTHORIZED`
 
 ## Purpose
 
@@ -33,9 +33,10 @@ Barry approved the full simplification direction on 2026-08-02, including:
 
 Barry named this operating posture **Kill Your Darlings Mode**.
 
-The product and architecture design below has been approved in discussion. This
-written specification remains subject to Barry's review before an implementation
-plan is written or production code is changed.
+Barry approved this written specification and authorized implementation on
+2026-08-02. The orchestrator may execute the coherent refactor, conduct the two
+specified end reviews, make at most one focused repair pass, and publish the
+accepted result within the boundaries below.
 
 ## North Star
 
@@ -487,6 +488,6 @@ Stop early and return to Barry only if:
 
 ## Next gate
 
-Barry reviews this written specification. After approval, the orchestrator may
-write the implementation `Plan.md` and review it against this contract. No
-production implementation is authorized by this document's current state.
+Implementation is authorized. The next human gate is Barry's review of the
+completed Goal 011 evidence and recommendation after the end reviews and exact-
+SHA release proof. Return earlier only for a stop condition named above.
