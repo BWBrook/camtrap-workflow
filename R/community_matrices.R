@@ -1,34 +1,5 @@
 # community_matrices.R
 
-#' Build community presence and abundance matrices
-#'
-#' @param events_per_day Tibble with columns site, species, date, events.
-#' @param sites Optional character vector of sites to include.
-#' @return List with `abundance` and `presence` tibbles (site x species).
-#' @export
-build_community_matrices <- function(events_per_day, sites = NULL) {
-  import::from("dplyr", group_by, summarise, mutate)
-  import::from("tidyr", pivot_wider, replace_na)
-  import::from("tibble", tibble)
-  import::from("dplyr", left_join)
-
-  abundance <- events_per_day |>
-    group_by(site, species) |>
-    summarise(events = sum(events), .groups = "drop") |>
-    pivot_wider(names_from = species, values_from = events, values_fill = 0)
-
-  if (!is.null(sites)) {
-    abundance <- tibble(site = unique(sites)) |>
-      left_join(abundance, by = "site") |>
-      mutate(across(-site, ~ replace_na(.x, 0)))
-  }
-
-  presence <- abundance |>
-    mutate(across(-site, \(x) ifelse(x > 0, 1L, 0L)))
-
-  list(abundance = abundance, presence = presence)
-}
-
 #' Build selected-resolution presence by logical OR
 #'
 #' @param event_map Validated event-to-analysis-unit map.
@@ -70,6 +41,70 @@ build_selected_presence <- function(event_map, analysis_units, species) {
     )] <- 1L
   }
   as.data.frame(presence, check.names = FALSE, stringsAsFactors = FALSE)
+}
+
+compute_selected_observed_richness <- function( # nolint: object_length_linter.
+    presence_matrix,
+    analysis_units = rownames(presence_matrix)) {
+  matrix_value <- as.matrix(presence_matrix)
+  if ((!is.numeric(matrix_value) && !is.logical(matrix_value)) ||
+        anyNA(matrix_value) || any(!matrix_value %in% c(0, 1))) {
+    stop("Observed richness requires complete zero/one presence values.")
+  }
+  analysis_units <- as.character(analysis_units)
+  if (length(analysis_units) != nrow(matrix_value) || anyNA(analysis_units) ||
+        any(!nzchar(analysis_units)) || anyDuplicated(analysis_units)) {
+    stop("Observed richness requires one unique analysis-unit identity per row.")
+  }
+  data.frame(
+    analysis_unit_id = analysis_units,
+    observed_richness = as.integer(rowSums(matrix_value)),
+    stringsAsFactors = FALSE
+  )
+}
+
+compute_selected_jaccard <- function(
+    presence_matrix,
+    analysis_units = rownames(presence_matrix)) {
+  matrix_value <- as.matrix(presence_matrix)
+  if ((!is.numeric(matrix_value) && !is.logical(matrix_value)) ||
+        anyNA(matrix_value) || any(!matrix_value %in% c(0, 1))) {
+    stop("Jaccard requires complete zero/one presence values.")
+  }
+  analysis_units <- as.character(analysis_units)
+  if (length(analysis_units) != nrow(matrix_value) || anyNA(analysis_units) ||
+        any(!nzchar(analysis_units)) || anyDuplicated(analysis_units)) {
+    stop("Jaccard requires one unique analysis-unit identity per row.")
+  }
+  rows <- vector("list", length(analysis_units)^2)
+  index <- 0L
+  for (first_index in seq_along(analysis_units)) {
+    first <- matrix_value[first_index, ] == 1
+    for (second_index in seq_along(analysis_units)) {
+      second <- matrix_value[second_index, ] == 1
+      union_count <- sum(first | second)
+      index <- index + 1L
+      rows[[index]] <- data.frame(
+        analysis_unit_id_1 = analysis_units[[first_index]],
+        analysis_unit_id_2 = analysis_units[[second_index]],
+        jaccard_dissimilarity = if (union_count == 0L) {
+          NA_real_
+        } else {
+          1 - sum(first & second) / union_count
+        },
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  if (length(rows) == 0L) {
+    return(data.frame(
+      analysis_unit_id_1 = character(),
+      analysis_unit_id_2 = character(),
+      jaccard_dissimilarity = numeric(),
+      stringsAsFactors = FALSE
+    ))
+  }
+  do.call(rbind, rows)
 }
 
 validate_selected_runtime_events <- function(event_map, obs_events) { # nolint: object_length_linter.

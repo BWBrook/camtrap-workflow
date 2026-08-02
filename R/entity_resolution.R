@@ -3,7 +3,6 @@
 entity_resolver_version <- "camtrap-entity-resolver/1.0"
 entity_record_schema <- "camtrap-entity-resolution/1.0"
 entity_link_schema <- "camtrap-entity-links/1.0"
-deployment_lineage_legacy_schema <- "camtrap-deployment-lineage/1.0" # nolint: object_length_linter.
 deployment_lineage_schema <- "camtrap-deployment-lineage/1.1"
 entity_summary_schema <- "camtrap-entity-resolution-summary/1.0"
 join_readiness_schema <- "camtrap-join-readiness/1.0"
@@ -299,7 +298,6 @@ deployment_lineage_record <- function(
     evidence_basis,
     source_inventory_path = NA_character_,
     source_row_id = NA_character_,
-    record_schema = deployment_lineage_schema,
     physical_location_identifier = NA_character_,
     date_precision = NA_character_,
     endpoint_semantics = NA_character_,
@@ -325,14 +323,8 @@ deployment_lineage_record <- function(
     operation_authority_inventory_path = NA_character_, # nolint: object_length_linter.
     operation_authority_sha256 = NA_character_,
     run_days_disposition = NA_character_) {
-  if (!record_schema %in% c(
-    deployment_lineage_legacy_schema,
-    deployment_lineage_schema
-  )) {
-    stop("Unsupported deployment-lineage record schema.")
-  }
   record <- list(
-    deployment_record_schema = record_schema,
+    deployment_record_schema = deployment_lineage_schema,
     resolver_version = entity_resolver_version,
     deployment_identifier = deployment_identifier,
     deployment_entity_id = deployment_entity_id,
@@ -346,36 +338,33 @@ deployment_lineage_record <- function(
     source_inventory_path = source_inventory_path,
     source_row_id = source_row_id
   )
-  if (identical(record_schema, deployment_lineage_schema)) {
-    record <- c(record, list(
-      physical_location_identifier = physical_location_identifier,
-      date_precision = date_precision,
-      endpoint_semantics = endpoint_semantics,
-      start_service_label = start_service_label,
-      end_service_label = end_service_label,
-      service_event_count = service_event_count,
-      service_event_digest = service_event_digest,
-      predecessor_deployment_id = predecessor_deployment_id,
-      successor_deployment_id = successor_deployment_id,
-      service_source_schema = service_source_schema,
-      service_source_version = service_source_version,
-      service_source_inventory_path = service_source_inventory_path,
-      service_source_sha256 = service_source_sha256,
-      service_source_row_ordinal = service_source_row_ordinal,
-      service_source_row_id = service_source_row_id,
-      deployment_ledger_schema = deployment_ledger_schema,
-      deployment_ledger_version = deployment_ledger_version,
-      deployment_ledger_inventory_path = deployment_ledger_inventory_path,
-      deployment_ledger_sha256 = deployment_ledger_sha256,
-      deployment_ledger_row_ordinal = deployment_ledger_row_ordinal,
-      deployment_ledger_row_id = deployment_ledger_row_id,
-      approval_reference = approval_reference,
-      operation_authority_inventory_path =
-        operation_authority_inventory_path,
-      operation_authority_sha256 = operation_authority_sha256,
-      run_days_disposition = run_days_disposition
-    ))
-  }
+  record <- c(record, list(
+    physical_location_identifier = physical_location_identifier,
+    date_precision = date_precision,
+    endpoint_semantics = endpoint_semantics,
+    start_service_label = start_service_label,
+    end_service_label = end_service_label,
+    service_event_count = service_event_count,
+    service_event_digest = service_event_digest,
+    predecessor_deployment_id = predecessor_deployment_id,
+    successor_deployment_id = successor_deployment_id,
+    service_source_schema = service_source_schema,
+    service_source_version = service_source_version,
+    service_source_inventory_path = service_source_inventory_path,
+    service_source_sha256 = service_source_sha256,
+    service_source_row_ordinal = service_source_row_ordinal,
+    service_source_row_id = service_source_row_id,
+    deployment_ledger_schema = deployment_ledger_schema,
+    deployment_ledger_version = deployment_ledger_version,
+    deployment_ledger_inventory_path = deployment_ledger_inventory_path,
+    deployment_ledger_sha256 = deployment_ledger_sha256,
+    deployment_ledger_row_ordinal = deployment_ledger_row_ordinal,
+    deployment_ledger_row_id = deployment_ledger_row_id,
+    approval_reference = approval_reference,
+    operation_authority_inventory_path = operation_authority_inventory_path,
+    operation_authority_sha256 = operation_authority_sha256,
+    run_days_disposition = run_days_disposition
+  ))
   record <- lapply(record, function(value) {
     if (is.null(value) || length(value) == 0L || is.na(value)) {
       NA_character_
@@ -462,9 +451,7 @@ entity_links_frame <- function(records) {
   result
 }
 
-deployment_lineage_frame <- function(
-    records,
-    record_schema = deployment_lineage_schema) {
+deployment_lineage_frame <- function(records) {
   columns <- c(
     "deployment_record_schema",
     "resolver_version",
@@ -480,37 +467,33 @@ deployment_lineage_frame <- function(
     "source_inventory_path",
     "source_row_id"
   )
-  if (identical(record_schema, deployment_lineage_schema)) {
-    columns <- c(columns, c(
-      "physical_location_identifier",
-      "date_precision",
-      "endpoint_semantics",
-      "start_service_label",
-      "end_service_label",
-      "service_event_count",
-      "service_event_digest",
-      "predecessor_deployment_id",
-      "successor_deployment_id",
-      "service_source_schema",
-      "service_source_version",
-      "service_source_inventory_path",
-      "service_source_sha256",
-      "service_source_row_ordinal",
-      "service_source_row_id",
-      "deployment_ledger_schema",
-      "deployment_ledger_version",
-      "deployment_ledger_inventory_path",
-      "deployment_ledger_sha256",
-      "deployment_ledger_row_ordinal",
-      "deployment_ledger_row_id",
-      "approval_reference",
-      "operation_authority_inventory_path",
-      "operation_authority_sha256",
-      "run_days_disposition"
-    ))
-  } else if (!identical(record_schema, deployment_lineage_legacy_schema)) {
-    stop("Unsupported deployment-lineage frame schema.")
-  }
+  columns <- c(columns, c(
+    "physical_location_identifier",
+    "date_precision",
+    "endpoint_semantics",
+    "start_service_label",
+    "end_service_label",
+    "service_event_count",
+    "service_event_digest",
+    "predecessor_deployment_id",
+    "successor_deployment_id",
+    "service_source_schema",
+    "service_source_version",
+    "service_source_inventory_path",
+    "service_source_sha256",
+    "service_source_row_ordinal",
+    "service_source_row_id",
+    "deployment_ledger_schema",
+    "deployment_ledger_version",
+    "deployment_ledger_inventory_path",
+    "deployment_ledger_sha256",
+    "deployment_ledger_row_ordinal",
+    "deployment_ledger_row_id",
+    "approval_reference",
+    "operation_authority_inventory_path",
+    "operation_authority_sha256",
+    "run_days_disposition"
+  ))
   result <- records_frame(records, c(columns, "record_digest"))
   if (nrow(result) > 0L) {
     result <- result[order(
@@ -1702,7 +1685,6 @@ resolve_four_table_entities <- function(
           evidence_basis = "exact_approved_deployment_service_reconciliation",
           source_inventory_path = ledger_inventory_path,
           source_row_id = row$deployment_ledger_row_id,
-          record_schema = deployment_lineage_schema,
           physical_location_identifier = row$physical_location_id,
           date_precision = row$date_precision,
           endpoint_semantics = row$endpoint_semantics,
@@ -1790,7 +1772,6 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
   links <- list()
   lineage <- list()
   findings <- list()
-  lineage_schema <- deployment_lineage_schema
   inventory_path <- parser_inventory_path(
     snapshot,
     "^source_snapshot/camtrapdp/.*deployments.*"
@@ -2050,7 +2031,6 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
             "deployments",
             evidence_index
           ),
-          record_schema = lineage_schema,
           physical_location_identifier = candidate_location
         )
       }
@@ -2142,7 +2122,6 @@ build_join_readiness <- function(
     validation_state,
     selected,
     deployment_selected,
-    links,
     deployment_lineage,
     entity_digest,
     source_sha256) {
@@ -2153,16 +2132,17 @@ build_join_readiness <- function(
     routing_ready <- unique(deployment_lineage$deployment_identifier[
       deployment_lineage$resolution_state == "resolved"
     ])
-    linked_deployment_entities <- links$source_entity_id[
-      links$link_type == "deployment_to_physical_location"
-    ]
-    physical_ready <- unique(deployment_lineage$deployment_identifier[
-      deployment_lineage$deployment_entity_id %in% linked_deployment_entities
+    physical_ready <- unique(deployment_lineage$physical_location_identifier[
+      deployment_lineage$resolution_state == "resolved"
     ])
     ambiguous_deployments <- unique(deployment_lineage$deployment_identifier[
       deployment_lineage$resolution_state == "ambiguous"
     ])
-    physical_ambiguous <- setdiff(ambiguous_deployments, physical_ready)
+    physical_ambiguous <- unique(
+      deployment_lineage$physical_location_identifier[
+        deployment_lineage$resolution_state == "ambiguous"
+      ]
+    )
     deployment_ambiguous <- ambiguous_deployments
     observation_keys <- as.character(inputs$obs$site)
     keys <- list(
@@ -2294,11 +2274,7 @@ resolve_entity_evidence <- function(config, snapshot, validation_state) {
   }
   records <- entity_records_frame(result$records)
   links <- entity_links_frame(result$links)
-  lineage_schema <- deployment_lineage_schema
-  deployment_lineage <- deployment_lineage_frame(
-    result$deployment_lineage,
-    record_schema = lineage_schema
-  )
+  deployment_lineage <- deployment_lineage_frame(result$deployment_lineage)
   selected <- entity_resolution_is_selected(selection)
   deployment_selected <- deployment_evidence_is_selected(
     deployment_selection
@@ -2390,7 +2366,6 @@ resolve_entity_evidence <- function(config, snapshot, validation_state) {
     validation_state,
     selected,
     deployment_selected,
-    links,
     deployment_lineage,
     entity_digest,
     source_sha256

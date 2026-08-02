@@ -135,81 +135,29 @@ summarise_events <- function(obs_events) {
     summarise(events = n_distinct(event_id), .groups = "drop")
 }
 
-#' Calculate relative‐abundance indices (RAI)
-#'
-#' Derives RAI at two resolutions: per camera‐site × species and site‐pooled
-#' across all cameras. RAI is defined as the number of independent events
-#' divided by trap-night effort.
-#'
-#' @param events_per_day Tibble with columns `site`, `species`, `date`, `events`
-#'   (output of `summarise_events()`).
-#' @param trap_nights    Tibble with columns `site`, `trap_nights`
-#'   (output of `calc_trap_nights()`).
-#'
-#' @return A list with two tibbles:
-#' * `$site`    — one row per `site` × `species`, columns `rai`.
-#' * `$pooled` — one row per `species`, pooled across sites, column `rai`.
-#'
-#' @export
-calc_rai <- function(events_per_day, trap_nights) {
-  import::from("dplyr", group_by, summarise, left_join, mutate, across, select)
+compute_operational_event_detection_rate <- function( # nolint: object_length_linter.
+    events_per_day,
+    trap_nights) {
+  import::from("dplyr", group_by, left_join, mutate, select, summarise)
 
-  total_trap_nights <- sum(trap_nights$trap_nights, na.rm = TRUE)
-
-  rai_site <- events_per_day |>
+  events_per_day |>
     group_by(site, species) |>
-    summarise(events = sum(events), .groups = "drop") |>
+    summarise(event_count = sum(events), .groups = "drop") |>
     left_join(trap_nights, by = "site") |>
-    mutate(rai = events / trap_nights) |>
-    select(site, species, rai)
-
-  rai_species <- events_per_day |>
-    group_by(species) |>
-    summarise(events = sum(events), .groups = "drop") |>
     mutate(
-      trap_nights = total_trap_nights,
-      rai = ifelse(trap_nights > 0, events / trap_nights, NA_real_)
+      events_per_100_active_days = ifelse(
+        trap_nights > 0,
+        100 * event_count / trap_nights,
+        NA_real_
+      )
     ) |>
-    select(species, rai)
-
-  list(site = rai_site, pooled = rai_species)
+    select(
+      physical_location_id = site, species, event_count,
+      confirmed_active_days = trap_nights, events_per_100_active_days
+    )
 }
 
-#' Proportion of camera-active days with an event
-#'
-#' Computes, for each species at each camera site, the fraction of days
-#' on which at least one independent detection occurred while the camera
-#' was operational.
-#'
-#' @param events_per_day Tibble of independent events aggregated by day
-#'   (see `summarise_events()`).
-#' @param trap_nights    Tibble of trap-night effort per site.
-#'
-#' @return A list with two tibbles analogous to `calc_rai()`:
-#' * `$site`    — proportion per site × species.
-#' * `$pooled` — mean proportion across sites for each species.
-#'
-#' @export
-calc_prop_days <- function(events_per_day, trap_nights) {
-  import::from("dplyr", group_by, summarise, left_join, mutate, select)
-
-  days_with_event <- events_per_day |>
-    group_by(site, species) |>
-    summarise(days_event = n(), .groups = "drop")
-
-  prop_site <- days_with_event |>
-    left_join(trap_nights, by = "site") |>
-    mutate(prop_days = days_event / trap_nights) |>
-    select(site, species, prop_days)
-
-  prop_species <- prop_site |>
-    group_by(species) |>
-    summarise(prop_days = mean(prop_days), .groups = "drop")
-
-  list(site = prop_site, pooled = prop_species)
-}
-
-#' Day–night (and seasonal) activity proportions
+#' Coarse day/night activity proportions
 #'
 #' Classifies each independent event as ‘day’ (flash == 0) or ‘night’
 #' (flash == 1) and, optionally, assigns it to a climatological season
@@ -217,31 +165,34 @@ calc_prop_days <- function(events_per_day, trap_nights) {
 #'
 #' @param obs_events Tibble with one row per independent event and columns
 #'   `site`, `species`, `flash`, `dt` (POSIXct).
-#' @param by_season  Logical. If `TRUE` results are split by season; if
-#'   `FALSE` proportions are computed over the whole year.
 #' @param method Diel classification method: `flash` or `clock`.
 #' @param day_start_hour Hour (0-23) marking start of day for `clock` method.
 #' @param day_end_hour Hour (0-23) marking end of day for `clock` method.
 #'
-#' @return Tibble with grouping columns (`site`, `species`, and optionally
-#'   `season`, `period`) plus `n` (count) and `prop` (proportion).
+#' @return Tibble with physical location, species, period, count, and proportion.
 #'
 #' @export
 calc_diel <- function(
   obs_events,
-  by_season = FALSE,
   method = "flash",
   day_start_hour = 6,
   day_end_hour = 18
 ) {
-  import::from("dplyr", mutate, group_by, summarise, ungroup, across, case_when, n)
-  import::from("lubridate", month, hour)
+  import::from(
+    "dplyr", across, distinct, group_by, mutate, n, summarise, ungroup
+  )
+  import::from("lubridate", hour)
 
   if (!method %in% c("flash", "clock")) {
     stop("calc_diel method must be 'flash' or 'clock'.")
   }
+  required <- c("event_id", "site", "species", "flash", "dt")
+  if (!is.data.frame(obs_events) || !all(required %in% names(obs_events))) {
+    stop("Coarse day-night output requires identified independent events.")
+  }
 
   df <- obs_events |>
+    distinct(event_id, .keep_all = TRUE) |>
     mutate(
       period = if (method == "flash") {
         ifelse(flash == 1, "night", "day")
@@ -251,41 +202,33 @@ calc_diel <- function(
           "day",
           "night"
         )
-      },
-      season = case_when(
-        month(dt) %in% c(12, 1, 2)  ~ "DJF",
-        month(dt) %in% c(3, 4, 5)   ~ "MAM",
-        month(dt) %in% c(6, 7, 8)   ~ "JJA",
-        TRUE                        ~ "SON"
-      )
+      }
     )
 
-  if (by_season) {
-    df <- group_by(df, site, species, season, period)
-  } else {
-    df <- group_by(df, site, species, period)
-  }
-
   df |>
+    group_by(site, species, period) |>
     summarise(n = n(), .groups = "drop") |>
     group_by(across(-c(n, period))) |>
     mutate(prop = n / sum(n)) |>
-    ungroup()
+    ungroup() |>
+    dplyr::rename(
+      physical_location_id = site,
+      event_count = n,
+      event_proportion = prop
+    )
 }
 
 #' Build a species-accumulation curve
 #'
-#' Converts the events table to a presence–absence matrix and runs
-#' `vegan::specaccum()` with random permutations.
+#' Converts the events table to a presence-absence matrix and runs the exact
+#' expected species-accumulation calculation in `vegan::specaccum()`.
 #'
 #' @param events_per_day Tibble of daily independent events.
-#' @param permutations   Integer, number of random permutations.
-#'
 #' @return Tibble with columns `sites`, `richness`, and `se`
 #'   (standard error of richness).
 #'
 #' @export
-build_rarefaction <- function(events_per_day, permutations = 100) {
+compute_species_accumulation <- function(events_per_day) {
   import::from("vegan", specaccum)
   import::from("dplyr", distinct, mutate)
   import::from("tidyr", pivot_wider)
@@ -299,7 +242,7 @@ build_rarefaction <- function(events_per_day, permutations = 100) {
     column_to_rownames("site") |>
     as.matrix()
 
-  acc <- specaccum(inc_mat, method = "random", permutations = permutations)
+  acc <- suppressWarnings(specaccum(inc_mat, method = "exact"))
 
   tibble(
     sites    = acc$sites,
@@ -308,19 +251,19 @@ build_rarefaction <- function(events_per_day, permutations = 100) {
   )
 }
 
-#' Plot and save the rarefaction curve
+#' Plot and save the species-accumulation curve
 #'
 #' Generates a `ggplot2` figure from the species-accumulation data and
 #' writes it to disk.
 #'
-#' @param df       Output of `build_rarefaction()`.
+#' @param df       Output of `compute_species_accumulation()`.
 #' @param out_path File path (character) where the graphic is saved.
 #'
 #' @return Invisibly returns `out_path` for use in `targets` with
 #'   `format = "file"`.
 #'
 #' @export
-plot_rarefaction <- function(df, out_path) {
+plot_species_accumulation <- function(df, out_path) {
   import::from("ggplot2", ggplot, aes, geom_line,
                geom_ribbon, theme_minimal, labs, ggsave)
 
@@ -331,7 +274,10 @@ plot_rarefaction <- function(df, out_path) {
     geom_ribbon(aes(ymin = richness - se, ymax = richness + se), alpha = 0.2) +
     geom_line() +
     theme_minimal() +
-    labs(x = "Number of camera sites", y = "Species richness")
+    labs(
+      x = "Number of physical locations",
+      y = "Expected accumulated species"
+    )
 
   ggsave(out_path, p, width = 6, height = 4, dpi = 300)
   out_path

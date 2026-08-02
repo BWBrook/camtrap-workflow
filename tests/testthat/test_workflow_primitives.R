@@ -132,7 +132,7 @@ test_that("Events: summarise_events counts distinct event_id per day", {
   expect_equal(events_per_day$events, 2)
 })
 
-test_that("Metrics: calc_rai is non-negative and respects zero events", {
+test_that("Metrics: operational event rates use confirmed active days", {
   events_per_day <- tibble(
     site = c("A", "A", "B"),
     species = c("sp1", "sp2", "sp1"),
@@ -141,39 +141,46 @@ test_that("Metrics: calc_rai is non-negative and respects zero events", {
   )
   trap_nights <- tibble(site = c("A", "B"), trap_nights = c(10, 5))
 
-  rai <- calc_rai(events_per_day, trap_nights)
+  rates <- compute_operational_event_detection_rate(
+    events_per_day,
+    trap_nights
+  )
 
-  expect_true(all(rai$site$rai >= 0))
-  expect_true(all(rai$pooled$rai >= 0))
-
-  expect_equal(rai$site$rai[rai$site$site == "A" & rai$site$species == "sp2"], 0)
-  expect_equal(rai$pooled$rai[rai$pooled$species == "sp2"], 0)
+  expect_true(all(rates$events_per_100_active_days >= 0))
+  expect_equal(
+    rates$events_per_100_active_days[
+      rates$physical_location_id == "A" & rates$species == "sp1"
+    ],
+    20
+  )
+  expect_equal(
+    rates$events_per_100_active_days[
+      rates$physical_location_id == "A" & rates$species == "sp2"
+    ],
+    0
+  )
 })
 
-test_that("Metrics: calc_diel proportions sum to 1 within grouping units", {
+test_that("Metrics: coarse day-night proportions count each event once", {
   obs_events <- tibble(
+    event_id = c("e1", "e1", "e2", "e3"),
     site = c("A", "A", "A", "A"),
     species = c("sp1", "sp1", "sp1", "sp1"),
-    flash = c(0, 1, 0, 1),
+    flash = c(0, 0, 1, 1),
     dt = as.POSIXct(
-      c("2020-01-01 01:00:00", "2020-01-01 02:00:00", "2020-06-01 01:00:00", "2020-06-01 02:00:00"),
+      c("2020-01-01 01:00:00", "2020-01-01 01:05:00", "2020-01-01 02:00:00", "2020-06-01 02:00:00"),
       tz = "Australia/Hobart"
     )
   )
 
-  diel <- calc_diel(obs_events, by_season = FALSE)
-  expect_equal(sum(diel$prop), 1)
-  expect_true(all(diel$prop >= 0))
-  expect_true(all(diel$prop <= 1))
-
-  diel_season <- calc_diel(obs_events, by_season = TRUE)
-  djf <- diel_season[diel_season$season == "DJF", ]
-  jja <- diel_season[diel_season$season == "JJA", ]
-  expect_equal(sum(djf$prop), 1)
-  expect_equal(sum(jja$prop), 1)
+  diel <- calc_diel(obs_events)
+  expect_equal(sum(diel$event_count), 3)
+  expect_equal(sum(diel$event_proportion), 1)
+  expect_true(all(diel$event_proportion >= 0))
+  expect_true(all(diel$event_proportion <= 1))
 })
 
-test_that("Rarefaction: build_rarefaction returns expected shape", {
+test_that("Accumulation: exact curve returns expected shape", {
   events_per_day <- tibble(
     site = c("A", "A", "B"),
     species = c("sp1", "sp2", "sp1"),
@@ -181,8 +188,7 @@ test_that("Rarefaction: build_rarefaction returns expected shape", {
     events = c(1, 1, 1)
   )
 
-  set.seed(1)
-  acc <- build_rarefaction(events_per_day, permutations = 10)
+  acc <- compute_species_accumulation(events_per_day)
 
   expect_equal(names(acc), c("sites", "richness", "se"))
   expect_equal(nrow(acc), 2)
