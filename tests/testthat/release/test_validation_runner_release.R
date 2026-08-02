@@ -74,9 +74,18 @@ release_runner_fixture <- function(unauthorized_mapping = FALSE) {
   )
 }
 
+release_runner_latest_sentinel <- function(outputs_root) {
+  dir.create(outputs_root, recursive = TRUE)
+  path <- latest_pointer_path(outputs_root)
+  bytes <- charToRaw("pre-existing-latest-pointer\r\n")
+  writeBin(bytes, path)
+  list(path = path, bytes = bytes)
+}
+
 test_that("current validation-only runner publishes a ready preview", {
   fixture <- release_runner_fixture()
   source_before <- inventory_files(fixture$source_root)
+  latest <- release_runner_latest_sentinel(fixture$outputs_root)
   run_id <- "20260802T000000Z-0000000000000103"
 
   result <- run_full_evidence_run(
@@ -98,7 +107,10 @@ test_that("current validation-only runner publishes a ready preview", {
   expect_equal(verified$status, "ready")
   expect_true(is.list(record$selected_resolution))
   expect_false(file.exists(completion_path(result$preview)))
-  expect_false(file.exists(latest_pointer_path(fixture$outputs_root)))
+  expect_equal(
+    readBin(latest$path, "raw", n = file.info(latest$path)$size),
+    latest$bytes
+  )
   expect_false(dir.exists(file.path(
     fixture$outputs_root,
     "runs",
@@ -110,6 +122,7 @@ test_that("current validation-only runner publishes a ready preview", {
 test_that("unauthorized mapping hard-stops without publishing", {
   fixture <- release_runner_fixture(unauthorized_mapping = TRUE)
   source_before <- inventory_files(fixture$source_root)
+  latest <- release_runner_latest_sentinel(fixture$outputs_root)
   run_id <- "20260802T000000Z-0000000000000104"
 
   expect_error(
@@ -123,7 +136,10 @@ test_that("unauthorized mapping hard-stops without publishing", {
   )
   preview <- file.path(fixture$outputs_root, "preflight", run_id)
   expect_false(dir.exists(preview))
-  expect_false(file.exists(latest_pointer_path(fixture$outputs_root)))
+  expect_equal(
+    readBin(latest$path, "raw", n = file.info(latest$path)$size),
+    latest$bytes
+  )
   expect_false(dir.exists(file.path(
     fixture$outputs_root,
     "runs",

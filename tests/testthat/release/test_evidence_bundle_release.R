@@ -205,6 +205,8 @@ release_current_stage <- function(outputs_root, run_id) {
     report_inputs
   )
   writeLines(c("value", "1"), export)
+  session_info <- file.path(stage, "session_info.txt")
+  writeLines(capture.output(sessionInfo()), session_info)
 
   outputs <- list(
     report = list(html = report),
@@ -222,7 +224,7 @@ release_current_stage <- function(outputs_root, run_id) {
     schema_version = trimws(readLines(here("schema_version.txt"))[[1L]]),
     params = resolved,
     outputs = outputs,
-    session_info_path = report_inputs,
+    session_info_path = session_info,
     config_file = raw_config,
     context = context,
     phase2 = as.list(phase2),
@@ -246,6 +248,7 @@ test_that("current manifest 1.3 publishes, copies, and fails safely", {
 
   expect_true(verified$valid)
   expect_equal(manifest$manifest_schema, "camtrap-evidence-manifest/1.3")
+  expect_equal(manifest$session_info, "session_info.txt")
   expect_equal(resolve_latest_bundle(outputs_root), final)
   expect_true(grepl(
     first_id,
@@ -274,11 +277,13 @@ test_that("current manifest 1.3 publishes, copies, and fails safely", {
   write("mutated", file.path(copied, "exports", "data.csv"), append = TRUE)
   expect_error(verify_run_bundle(copied), "fixity mismatch")
 
+  final_before_collision <- inventory_files(final)
   collision <- release_current_stage(outputs_root, first_id)
   expect_error(
     publish_run_bundle(collision$stage, outputs_root, first_id),
     "Refusing to overwrite"
   )
+  expect_equal(inventory_files(final), final_before_collision)
 
   pointer <- latest_pointer_path(outputs_root)
   pointer_before <- readBin(pointer, "raw", n = file.info(pointer)$size)
