@@ -252,8 +252,17 @@ test_that("selected ecological writer conserves events and routes by eligibility
   expect_equal(richness$observed_richness, c(1L, 1L, 0L))
   expect_equal(unique(jaccard$claim_limit), jaccard_claim_limit)
   expect_identical(status$claim_limits$jaccard, jaccard_claim_limit)
-  expect_identical(status$selected_resolution_status_schema,
-                   "camtrap-selected-resolution-status/1.0")
+  expect_identical(status$module_status_schema, "camtrap-module-status/1.0")
+  expect_identical(status$status, "completed")
+  expect_true(is.null(status$reason))
+  expect_identical(status$actual_resolution, "analysis_site")
+  expect_setequal(
+    unlist(status$required_evidence, use.names = FALSE),
+    c(
+      "validated_selected_resolution", "confirmed_effort",
+      "physical_location_events"
+    )
+  )
   expect_true(isTRUE(status$event_conservation$exact))
   expect_true(all(c(
     "contributing_physical_locations", "contributing_deployments"
@@ -287,6 +296,11 @@ test_that("selected ecological writer conserves events and routes by eligibility
     simplifyVector = FALSE
   )
   expect_false(isTRUE(ineligible_status$route_eligible))
+  expect_identical(ineligible_status$status, "omitted")
+  expect_identical(
+    ineligible_status$reason,
+    "genuine_concurrent_member_deployments:unit_a"
+  )
   expect_true(all(vapply(ineligible_status$outputs[1:4], is.null, logical(1))))
   expect_equal(
     ineligible_status$reasons[[1]],
@@ -310,7 +324,68 @@ test_that("selected ecological writer conserves events and routes by eligibility
     integrity_outputs$status,
     simplifyVector = FALSE
   )
-  expect_equal(integrity_status$status, "integrity_failure")
+  expect_equal(integrity_status$status, "failed")
+  expect_equal(integrity_status$reason, "incomplete_or_orphan_mapping")
   expect_equal(integrity_status$reasons[[1]], "incomplete_or_orphan_mapping")
   expect_false(isTRUE(integrity_status$event_conservation$checked))
+})
+
+test_that("zero events produce valid empty evidence with a plain warning", {
+  root <- tempfile("selected-zero-events-")
+  analysis_units <- c("unit_a", "unit_b")
+  state <- list(
+    integrity_ok = TRUE,
+    route_eligible = TRUE,
+    reasons = character(),
+    membership = data.frame(
+      physical_location_id = c("camera_a", "camera_b"),
+      analysis_unit_id = analysis_units,
+      stringsAsFactors = FALSE
+    ),
+    operation = data.frame(
+      analysis_unit_id = analysis_units,
+      date = as.Date(c("2020-01-01", "2020-01-01")),
+      operation = c(0, 0),
+      deployment_states_json = c("{}", "{}"),
+      stringsAsFactors = FALSE
+    ),
+    event_map = data.frame(
+      event_id = character(),
+      physical_location_id = character(),
+      analysis_unit_id = character(),
+      species = character(),
+      event_time = as.POSIXct(character(), tz = "UTC"),
+      source_membership_count = integer(),
+      source_membership_digest = character(),
+      source_membership_reference = character(),
+      deployment_id = character(),
+      deployment_resolution_state = character(),
+      stringsAsFactors = FALSE
+    ),
+    summary = list(
+      status = "eligible", integrity_ok = TRUE, route_eligible = TRUE,
+      resolution = "analysis_site", scheme_id = "test-scheme",
+      scheme_version = "1.0.0", authority_reference = "test-authority",
+      membership_count = 2L, analysis_unit_count = 2L,
+      physical_location_count = 2L, event_count = 0L,
+      source_row_membership_count = 0L, reasons = character()
+    )
+  )
+  runtime_events <- data.frame(
+    event_id = character(), site = character(), species = character(),
+    dt = as.POSIXct(character(), tz = "UTC"), stringsAsFactors = FALSE
+  )
+
+  outputs <- write_selected_ecological_outputs(state, runtime_events, root)
+  presence <- read.csv(outputs$community_presence, check.names = FALSE)
+  richness <- read.csv(outputs$observed_richness, check.names = FALSE)
+  jaccard <- read.csv(outputs$jaccard, check.names = FALSE)
+  status <- jsonlite::read_json(outputs$status, simplifyVector = FALSE)
+
+  expect_equal(nrow(presence), 2L)
+  expect_equal(richness$observed_richness, c(0L, 0L))
+  expect_equal(nrow(jaccard), 4L)
+  expect_true(all(is.na(jaccard$jaccard_dissimilarity)))
+  expect_identical(status$status, "completed_with_warnings")
+  expect_identical(status$reason, "no_operational_events")
 })

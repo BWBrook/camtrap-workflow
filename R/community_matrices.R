@@ -355,12 +355,40 @@ write_selected_ecological_outputs <- function( # nolint: object_length_linter.
   if (is.null(reasons) || length(reasons) == 0L) {
     reasons <- unlist(state$summary$reasons, use.names = FALSE)
   }
+  reasons <- unique(as.character(reasons))
+  module_status <- if (!isTRUE(state$integrity_ok)) {
+    "failed"
+  } else if (!isTRUE(state$route_eligible)) {
+    "omitted"
+  } else if (nrow(state$event_map) == 0L) {
+    "completed_with_warnings"
+  } else {
+    "completed"
+  }
+  reason <- if (identical(module_status, "completed")) {
+    NULL
+  } else if (identical(module_status, "completed_with_warnings")) {
+    "no_operational_events"
+  } else if (length(reasons) > 0L) {
+    reasons[[1L]]
+  } else if (identical(module_status, "omitted")) {
+    "scientific_prerequisites_not_met"
+  } else {
+    "integrity_failure"
+  }
   status <- list(
-    selected_resolution_status_schema = "camtrap-selected-resolution-status/1.0",
-    status = state$summary$status,
+    module_status_schema = "camtrap-module-status/1.0",
+    module = "selected_community",
+    status = module_status,
+    reason = reason,
+    required_evidence = as.list(c(
+      "validated_selected_resolution", "confirmed_effort",
+      "physical_location_events"
+    )),
+    actual_resolution = state$summary$resolution,
     integrity_ok = isTRUE(state$integrity_ok),
     route_eligible = isTRUE(state$route_eligible),
-    reasons = as.list(as.character(reasons)),
+    reasons = as.list(reasons),
     resolution = state$summary$resolution,
     scheme_id = state$summary$scheme_id,
     scheme_version = state$summary$scheme_version,

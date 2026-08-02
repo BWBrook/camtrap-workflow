@@ -344,13 +344,17 @@ test_that("opaque CamtrapDP identities resolve only explicit deployment evidence
   )
   expect_equal(nrow(resolved$deployment_lineage), 2L)
   expect_true(all(resolved$deployment_lineage$resolution_state == "resolved"))
+  expect_equal(
+    resolved$deployment_lineage$physical_location_identifier,
+    deployments$locationID
+  )
   expect_false(any(
     resolved$records$entity_type == "nominal_grid_station" &
       resolved$records$resolution_state == "resolved"
   ))
 })
 
-test_that("missing optional CamtrapDP location or interval evidence stays unresolved", {
+test_that("missing CamtrapDP location identity fails closed without inference", {
   deployments <- data.frame(
     deploymentID = c("missing-location", "missing-end"),
     locationID = c(NA_character_, "explicit-location"),
@@ -370,7 +374,7 @@ test_that("missing optional CamtrapDP location or interval evidence stays unreso
     goal007_camtrapdp_state(deployments)
   )
 
-  expect_true(resolved$can_analyze)
+  expect_false(resolved$can_analyze)
   expect_true(all(
     resolved$records$resolution_state[
       resolved$records$entity_type == "deployment"
@@ -383,7 +387,13 @@ test_that("missing optional CamtrapDP location or interval evidence stays unreso
     sum(resolved$links$link_type == "deployment_to_physical_location"),
     1L
   )
-  expect_equal(length(resolved$integrity_findings), 0L)
+  expect_true(any(vapply(
+    resolved$integrity_findings,
+    function(finding) {
+      identical(finding$code, "camtrapdp.physical_location_identity_missing")
+    },
+    logical(1)
+  )))
 })
 
 test_that("duplicate and competing CamtrapDP deployment evidence stop distinctly", {

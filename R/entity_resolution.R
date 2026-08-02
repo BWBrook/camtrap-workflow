@@ -1790,11 +1790,7 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
   links <- list()
   lineage <- list()
   findings <- list()
-  lineage_schema <- if ("deployment_evidence" %in% names(config)) {
-    deployment_lineage_schema
-  } else {
-    deployment_lineage_legacy_schema
-  }
+  lineage_schema <- deployment_lineage_schema
   inventory_path <- parser_inventory_path(
     snapshot,
     "^source_snapshot/camtrapdp/.*deployments.*"
@@ -1824,6 +1820,15 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
       as.character(deployments$locationID)
     } else {
       rep(NA_character_, nrow(deployments))
+    }
+    missing_locations <- which(is.na(location_ids) | !nzchar(location_ids))
+    if (length(missing_locations) > 0L) {
+      findings <- add_integrity_finding(
+        findings,
+        "camtrapdp.physical_location_identity_missing",
+        "CamtrapDP deployment locationID is missing; physical identity cannot be inferred.",
+        "deployments"
+      )
     }
     starts <- vapply(seq_len(nrow(deployments)), function(index) {
       if ("deploymentStart" %in% names(deployments)) {
@@ -2045,7 +2050,8 @@ resolve_camtrapdp_entities <- function(config, snapshot, validation_state) {
             "deployments",
             evidence_index
           ),
-          record_schema = lineage_schema
+          record_schema = lineage_schema,
+          physical_location_identifier = candidate_location
         )
       }
     }
@@ -2288,11 +2294,7 @@ resolve_entity_evidence <- function(config, snapshot, validation_state) {
   }
   records <- entity_records_frame(result$records)
   links <- entity_links_frame(result$links)
-  lineage_schema <- if ("deployment_evidence" %in% names(config)) {
-    deployment_lineage_schema
-  } else {
-    deployment_lineage_legacy_schema
-  }
+  lineage_schema <- deployment_lineage_schema
   deployment_lineage <- deployment_lineage_frame(
     result$deployment_lineage,
     record_schema = lineage_schema

@@ -138,6 +138,7 @@ build_event_lineage <- function(
       event_schema = "camtrap-operational-event/1.0",
       event_id = event_id,
       site = event_rows$site[[index]],
+      physical_location_id = event_rows$site[[index]],
       species = event_rows$species[[index]],
       member_count = as.integer(length(members))
     )
@@ -147,6 +148,7 @@ build_event_lineage <- function(
       event_schema = character(),
       event_id = character(),
       site = character(),
+      physical_location_id = character(),
       species = character(),
       member_count = integer(),
       stringsAsFactors = FALSE
@@ -170,6 +172,18 @@ build_event_lineage <- function(
       ),
       event_id = obs_events$event_id[[index]],
       source_row_id = source_row_id,
+      physical_location_id = if (
+        "physical_location_id" %in% names(obs_events)
+      ) {
+        as.character(obs_events$physical_location_id[[index]])
+      } else {
+        as.character(obs_events$site[[index]])
+      },
+      deployment_id = if ("deployment_id" %in% names(obs_events)) {
+        as.character(obs_events$deployment_id[[index]])
+      } else {
+        NA_character_
+      },
       stringsAsFactors = FALSE
     )
   })
@@ -179,6 +193,8 @@ build_event_lineage <- function(
       membership_id = character(),
       event_id = character(),
       source_row_id = character(),
+      physical_location_id = character(),
+      deployment_id = character(),
       stringsAsFactors = FALSE
     )
   } else {
@@ -356,12 +372,34 @@ validate_event_membership <- function(
     source_row_id = mapping$source_row_id[source_matches],
     stringsAsFactors = FALSE
   )
+  lineage_fields <- intersect(
+    c("physical_location_id", "deployment_id"),
+    names(event_lineage$memberships)
+  )
+  if ("physical_location_id" %in% lineage_fields) {
+    current$physical_location_id <- if (
+      "physical_location_id" %in% names(obs_events)
+    ) {
+      as.character(obs_events$physical_location_id)
+    } else {
+      as.character(obs_events$site)
+    }
+  }
+  if ("deployment_id" %in% lineage_fields) {
+    current$deployment_id <- if ("deployment_id" %in% names(obs_events)) {
+      as.character(obs_events$deployment_id)
+    } else {
+      rep(NA_character_, nrow(obs_events))
+    }
+  }
   current <- current[
     order(current$event_id, current$source_row_id, method = "radix"),
     ,
     drop = FALSE
   ]
-  recorded <- event_lineage$memberships[c("event_id", "source_row_id")]
+  recorded <- event_lineage$memberships[c(
+    "event_id", "source_row_id", lineage_fields
+  )]
   recorded <- recorded[
     order(recorded$event_id, recorded$source_row_id, method = "radix"),
     ,

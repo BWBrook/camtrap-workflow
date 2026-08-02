@@ -371,6 +371,46 @@ test_that("event mapping preserves multi-row lineage and exact event conservatio
   )
   expect_equal(length(unique(mapped$analysis_unit_id)), 1L)
 })
+
+test_that("zero operational events remain typed and integrity valid", {
+  fixture <- goal009_fixture()
+  event_lineage <- fixture$validation_state$event_lineage
+  event_lineage$events <- event_lineage$events[0, , drop = FALSE]
+  event_lineage$memberships <- event_lineage$memberships[0, , drop = FALSE]
+  event_lineage$obs_events <- event_lineage$obs_events[0, , drop = FALSE]
+  fixture$validation_state$event_lineage <- event_lineage
+  fixture$validation_state$lineage$rows$disposition <- "excluded"
+  fixture$validation_state$lineage$rows$rule_id <- "operational_filter/1.0"
+  fixture$validation_state$lineage$rows$reason <- "no_operational_event"
+
+  state <- do.call(
+    resolve_selected_resolution,
+    fixture[c("config", "snapshot", "validation_state", "entity_state")]
+  )
+
+  expect_true(isTRUE(state$integrity_ok))
+  expect_true(isTRUE(state$route_eligible))
+  expect_equal(nrow(state$event_map), 0L)
+  expect_identical(
+    names(state$event_map),
+    c(
+      "event_id", "physical_location_id", "analysis_unit_id", "species",
+      "event_time", "source_membership_count", "source_membership_digest",
+      "source_membership_reference", "deployment_id",
+      "deployment_resolution_state"
+    )
+  )
+  expect_true(inherits(state$event_map$event_time, "POSIXct"))
+  expect_identical(state$event_map$source_membership_count, integer())
+  expect_equal(state$summary$event_count, 0L)
+  expect_equal(state$summary$source_row_membership_count, 0L)
+
+  root <- tempfile("goal011-zero-events-")
+  paths <- write_selected_resolution_artifacts(state, root)
+  reconstructed <- validate_selected_resolution_artifacts(root, paths)
+  expect_true(isTRUE(reconstructed$integrity_ok))
+  expect_equal(nrow(reconstructed$event_map), 0L)
+})
 test_that("explicit selected provenance retains root and reconstructed route status", {
   fixture <- goal009_fixture()
   root <- tempfile("goal009-artifacts-")

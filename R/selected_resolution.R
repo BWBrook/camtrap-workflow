@@ -434,6 +434,22 @@ selected_resolution_classify_concurrency <- function( # nolint: object_length_li
   list(operation = operation, reasons = unique(reasons), integrity = unique(integrity))
 }
 
+empty_selected_event_map <- function(tz = "UTC") {
+  data.frame(
+    event_id = character(),
+    physical_location_id = character(),
+    analysis_unit_id = character(),
+    species = character(),
+    event_time = as.POSIXct(character(), tz = tz),
+    source_membership_count = integer(),
+    source_membership_digest = character(),
+    source_membership_reference = character(),
+    deployment_id = character(),
+    deployment_resolution_state = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
 build_selected_event_map <- function(event_lineage, membership, lineage = NULL,
                                      deployment_lineage = NULL) {
   if (!is.list(event_lineage) || !is.data.frame(event_lineage$obs_events) ||
@@ -463,6 +479,9 @@ build_selected_event_map <- function(event_lineage, membership, lineage = NULL,
     "UTC"
   } else {
     event_tz[[1L]]
+  }
+  if (length(event_ids) == 0L) {
+    return(empty_selected_event_map(event_tz))
   }
   unique_events <- do.call(rbind, lapply(event_ids, function(id) {
     rows <- events[events$event_id == id, , drop = FALSE]
@@ -667,7 +686,7 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
     error = function(e) {
       integrity_ok <<- FALSE
       reasons <<- c(reasons, conditionMessage(e))
-      data.frame()
+      empty_selected_event_map()
     }
   )
   concurrency <- concurrency_state$reasons
@@ -751,7 +770,16 @@ selected_resolution_prepare_event_map <- function(value) { # nolint: object_leng
               "event_time", "source_membership_count", "source_membership_digest",
               "source_membership_reference", "deployment_id",
               "deployment_resolution_state")
-  for (field in setdiff(fields, names(value))) value[[field]] <- NA
+  row_count <- nrow(value)
+  for (field in setdiff(fields, names(value))) {
+    value[[field]] <- if (identical(field, "event_time")) {
+      as.POSIXct(rep(NA_real_, row_count), origin = "1970-01-01", tz = "UTC")
+    } else if (identical(field, "source_membership_count")) {
+      rep(NA_integer_, row_count)
+    } else {
+      rep(NA_character_, row_count)
+    }
+  }
   value[fields]
 }
 

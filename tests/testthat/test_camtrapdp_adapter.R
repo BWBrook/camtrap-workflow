@@ -1,4 +1,6 @@
-import::from("testthat", test_that, expect_error, expect_true, expect_equal)
+import::from(
+  "testthat", test_that, expect_equal, expect_error, expect_false, expect_true
+)
 import::from("tibble", tibble)
 import::from("here", here)
 
@@ -46,10 +48,17 @@ test_that("CamtrapDP supplied fields map exactly without fabrication", {
 
   expect_true(all(c("site", "taxa", "op", "obs") %in% names(out)))
   expect_true(all(c("site", "lat", "lon") %in% names(out$site)))
-  expect_true("dep1" %in% names(out$op))
-  expect_true(all(c("datetime", "species", "site") %in% names(out$obs)))
+  expect_true("loc1" %in% names(out$op))
+  expect_false("dep1" %in% names(out$op))
+  expect_true(all(c(
+    "datetime", "species", "site", "deployment_id",
+    "physical_location_id"
+  ) %in% names(out$obs)))
   expect_true(all(c("short", "genus", "species") %in% names(out$taxa)))
-  expect_equal(out$obs$site[1], "dep1")
+  expect_equal(out$site$site, "loc1")
+  expect_equal(out$obs$site[1], "loc1")
+  expect_equal(out$obs$deployment_id[1], "dep1")
+  expect_equal(out$obs$physical_location_id[1], "loc1")
   expect_equal(out$obs$datetime[[1]], "02/01/2020 10:00:00")
   expect_equal(out$obs$count[[1]], 3L)
   expect_equal(out$obs$flash[[1]], 1L)
@@ -60,6 +69,38 @@ test_that("CamtrapDP supplied fields map exactly without fabrication", {
     logical(1),
     "meaning_preserving"
   )))
+})
+
+test_that("CamtrapDP missing physical-location identity fails closed", {
+  deployments <- tibble(
+    deploymentID = "opaque-deployment",
+    locationID = NA_character_,
+    locationName = "Unresolved location",
+    latitude = 1,
+    longitude = 2,
+    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
+    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
+    featureType = "trail"
+  )
+  observations <- tibble(
+    observationID = "obs1", deploymentID = "opaque-deployment",
+    eventStart = as.POSIXct("2020-01-02", tz = "UTC"),
+    scientificName = "Canis lupus", count = 1L, flash = 0L,
+    lifeStage = "adult", sex = "unknown", mediaID = NA_character_
+  )
+
+  expect_error(
+    camtrapdp_to_internal(
+      structure(
+        list(data = list(
+          deployments = deployments, observations = observations, media = NULL
+        )),
+        class = c("camtrapdp", "datapackage", "list")
+      ),
+      tz = "UTC"
+    ),
+    "locationID"
+  )
 })
 
 goal006_camtrapdp_object <- function(

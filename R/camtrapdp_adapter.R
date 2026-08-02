@@ -26,7 +26,7 @@ read_camtrapdp_dataset <- function(path) {
 #' @param deployments Camtrap DP deployments table.
 #' @return Tibble in wide format: date + one column per deploymentID (0/1).
 build_effort_from_deployments <- function(deployments) {
-  import::from("dplyr", mutate, select, left_join)
+  import::from("dplyr", group_by, left_join, mutate, select, summarise)
   import::from("tidyr", pivot_wider, expand_grid)
   import::from("tibble", tibble)
   import::from("lubridate", as_date)
@@ -54,16 +54,18 @@ build_effort_from_deployments <- function(deployments) {
 
   all_dates <- seq(min(dep$start_date, na.rm = TRUE), max(dep$end_date, na.rm = TRUE), by = "day")
 
-  effort_long <- map2_dfr(dep$deploymentID, seq_len(nrow(dep)), function(dep_id, idx) {
+  effort_long <- map2_dfr(dep$locationID, seq_len(nrow(dep)), function(location_id, idx) {
     start <- dep$start_date[idx]
     end <- dep$end_date[idx]
     if (is.na(start) || is.na(end)) {
       return(tibble(date = as.Date(character()), site = character(), on_off = integer()))
     }
-    tibble(date = seq(start, end, by = "day"), site = dep_id, on_off = 1L)
-  })
+    tibble(date = seq(start, end, by = "day"), site = location_id, on_off = 1L)
+  }) |>
+    group_by(date, site) |>
+    summarise(on_off = max(on_off), .groups = "drop")
 
-  grid <- expand_grid(date = all_dates, site = dep$deploymentID)
+  grid <- expand_grid(date = all_dates, site = unique(dep$locationID))
   effort_long <- left_join(grid, effort_long, by = c("date", "site")) |>
     mutate(on_off = ifelse(is.na(on_off), 0L, on_off))
 
@@ -87,6 +89,11 @@ assert_unique_camtrapdp_key <- function(table, field, resource) {
 
 assert_camtrapdp_integrity <- function(deployments, observations, media) {
   assert_unique_camtrapdp_key(deployments, "deploymentID", "deployments")
+  if (!"locationID" %in% names(deployments) ||
+        anyNA(deployments$locationID) ||
+        any(!nzchar(trimws(as.character(deployments$locationID))))) {
+    stop("CamtrapDP deployments require an explicit non-empty locationID.")
+  }
   assert_unique_camtrapdp_key(observations, "observationID", "observations")
   if (!is.null(media) && nrow(media) > 0L) {
     assert_unique_camtrapdp_key(media, "mediaID", "media")
@@ -115,6 +122,34 @@ assert_camtrapdp_integrity <- function(deployments, observations, media) {
     }
   }
   invisible(TRUE)
+}
+
+collapse_camtrapdp_locations <- function(deployments) {
+  fields <- c(
+    "locationID", "locationName", "latitude", "longitude", "featureType"
+  )
+  for (field in setdiff(fields, names(deployments))) {
+    deployments[[field]] <- NA
+  }
+  location_ids <- unique(as.character(deployments$locationID))
+  rows <- lapply(location_ids, function(location_id) {
+    candidates <- deployments[
+      as.character(deployments$locationID) == location_id,
+      fields,
+      drop = FALSE
+    ]
+    for (field in fields[-1L]) {
+      supplied <- candidates[[field]][!is.na(candidates[[field]])]
+      if (length(unique(supplied)) > 1L) {
+        stop(
+          "CamtrapDP locationID has conflicting supplied metadata: ",
+          location_id, " (", field, ")"
+        )
+      }
+    }
+    candidates[1L, , drop = FALSE]
+  })
+  do.call(rbind, rows)
 }
 
 camtrapdp_semantic_defaults <- function(deployments, observations, media) {
@@ -233,10 +268,13 @@ camtrapdp_transformations <- function() {
       rule_version = "1.0",
       input_resources = "deployments",
       source_fields = c(
-        "deploymentID", "latitude", "longitude", "featureType", "locationName"
+        "deploymentID", "locationID", "latitude", "longitude", "featureType",
+        "locationName"
       ),
       resolved_table = "site",
-      resolved_fields = c("site", "lat", "lon", "type", "location"),
+      resolved_fields = c(
+        "site", "physical_location_id", "lat", "lon", "type", "location"
+      ),
       meaning_preserving = TRUE,
       reversibility_basis = "Direct field mapping; absent optional covariates remain NA."
     ),
@@ -247,7 +285,7 @@ camtrapdp_transformations <- function() {
       input_resources = "deployments",
       source_fields = c("deploymentID", "deploymentStart", "deploymentEnd"),
       resolved_table = "op",
-      resolved_fields = c("date", "deploymentID columns"),
+      resolved_fields = c("date", "physical location columns"),
       meaning_preserving = TRUE,
       reversibility_basis = "Daily 0/1 effort expands explicit closed deployment intervals."
     ),
@@ -262,7 +300,8 @@ camtrapdp_transformations <- function() {
       ),
       resolved_table = "obs",
       resolved_fields = c(
-        "site", "datetime", "species", "count", "age", "sex", "filename"
+        "site", "physical_location_id", "deployment_id", "datetime",
+        "species", "count", "age", "sex", "filename"
       ),
       meaning_preserving = TRUE,
       reversibility_basis = paste(
@@ -385,6 +424,10 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
   observations$.source_ordinal <- seq_len(nrow(observations))
   observations_clean <- observations |>
     left_join(
+      select(deployments, deploymentID, locationID),
+      by = "deploymentID"
+    ) |>
+    left_join(
       select(media, mediaID, timestamp, fileName),
       by = "mediaID"
     ) |>
@@ -416,13 +459,15 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
 
   obs_tbl <- observations_clean |>
     select(
-      index, site = deploymentID, datetime, flash, count, species,
+      index, site = locationID, physical_location_id = locationID,
+      deployment_id = deploymentID, datetime, flash, count, species,
       filename, age, sex, imageid
     )
 
-  site_tbl <- deployments |>
+  site_tbl <- collapse_camtrapdp_locations(deployments) |>
     mutate(
-      site = deploymentID,
+      site = locationID,
+      physical_location_id = locationID,
       lat = as.numeric(latitude),
       lon = as.numeric(longitude),
       type = as.character(featureType),
@@ -438,7 +483,7 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
       fire_sens = NA_character_
     ) |>
     select(
-      site, lat, lon, type, location, cover, vegclass, elevation_m,
+      site, physical_location_id, lat, lon, type, location, cover, vegclass, elevation_m,
       slope_d, canopy_h_m, ndvi, nbr, fire_flam, fire_sens
     )
 
@@ -466,6 +511,7 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
     result$.audit <- list(
       audit_schema = "camtrap-parser-audit/1.0",
       parsed_tables = parsed_tables,
+      deployment_locations = deployments[c("deploymentID", "locationID")],
       observation_source_ordinal = observation_source_ordinal,
       transformations = camtrapdp_transformations(),
       semantic_defaults = semantic_defaults

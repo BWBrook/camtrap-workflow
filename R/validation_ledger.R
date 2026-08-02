@@ -669,7 +669,10 @@ json_records_frame <- function(records, columns) {
     return(result[FALSE, , drop = FALSE])
   }
   result <- do.call(rbind, lapply(records, function(record) {
-    values <- record[columns]
+    values <- stats::setNames(lapply(columns, function(column) {
+      value <- record[[column]]
+      if (is.null(value) || length(value) == 0L) NA_character_ else value
+    }), columns)
     as.data.frame(values, stringsAsFactors = FALSE)
   }))
   rownames(result) <- NULL
@@ -1164,13 +1167,17 @@ validate_validation_artifacts <- function(
   event_json <- documents$event_membership
   events <- json_records_frame(
     event_json$events,
-    c("event_schema", "event_id", "site", "species", "member_count")
+    c(
+      "event_schema", "event_id", "site", "physical_location_id",
+      "species", "member_count"
+    )
   )
   events$member_count <- as.integer(events$member_count)
   memberships <- json_records_frame(
     event_json$records,
     c(
-      "membership_schema", "membership_id", "event_id", "source_row_id"
+      "membership_schema", "membership_id", "event_id", "source_row_id",
+      "physical_location_id", "deployment_id"
     )
   )
   event_lineage <- list(
@@ -1329,13 +1336,17 @@ validate_recorded_membership <- function(root, paths, obs_events) {
   )
   events <- json_records_frame(
     event_json$events,
-    c("event_schema", "event_id", "site", "species", "member_count")
+    c(
+      "event_schema", "event_id", "site", "physical_location_id",
+      "species", "member_count"
+    )
   )
   events$member_count <- as.integer(events$member_count)
   memberships <- json_records_frame(
     event_json$records,
     c(
-      "membership_schema", "membership_id", "event_id", "source_row_id"
+      "membership_schema", "membership_id", "event_id", "source_row_id",
+      "physical_location_id", "deployment_id"
     )
   )
   lineage <- list(
