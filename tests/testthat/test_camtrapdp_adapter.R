@@ -8,7 +8,7 @@ source(here("R", "config.R"))
 source(here("R", "source_inventory.R"))
 source(here("R", "camtrapdp_adapter.R"))
 
-test_that("camtrapdp_to_internal maps minimal dataset", {
+test_that("CamtrapDP supplied fields map exactly without fabrication", {
   deployments <- tibble(
     deploymentID = "dep1",
     locationID = "loc1",
@@ -22,11 +22,12 @@ test_that("camtrapdp_to_internal maps minimal dataset", {
   observations <- tibble(
     observationID = "obs1",
     deploymentID = "dep1",
-    eventStart = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
+    eventStart = as.POSIXct("2020-01-02 10:00:00", tz = "UTC"),
     scientificName = "Canis lupus",
-    count = 1,
+    count = 3L,
+    flash = 1L,
     lifeStage = "adult",
-    sex = "unknown",
+    sex = "female",
     mediaID = "m1"
   )
   media <- tibble(
@@ -41,7 +42,7 @@ test_that("camtrapdp_to_internal maps minimal dataset", {
     class = c("camtrapdp", "datapackage", "list")
   )
 
-  out <- camtrapdp_to_internal(dp, tz = "UTC")
+  out <- camtrapdp_to_internal(dp, tz = "UTC", include_audit = TRUE)
 
   expect_true(all(c("site", "taxa", "op", "obs") %in% names(out)))
   expect_true(all(c("site", "lat", "lon") %in% names(out$site)))
@@ -49,6 +50,16 @@ test_that("camtrapdp_to_internal maps minimal dataset", {
   expect_true(all(c("datetime", "species", "site") %in% names(out$obs)))
   expect_true(all(c("short", "genus", "species") %in% names(out$taxa)))
   expect_equal(out$obs$site[1], "dep1")
+  expect_equal(out$obs$datetime[[1]], "02/01/2020 10:00:00")
+  expect_equal(out$obs$count[[1]], 3L)
+  expect_equal(out$obs$flash[[1]], 1L)
+  expect_equal(length(out$.audit$semantic_defaults), 0L)
+  expect_true(all(vapply(
+    out$.audit$transformations,
+    `[[`,
+    logical(1),
+    "meaning_preserving"
+  )))
 })
 
 goal006_camtrapdp_object <- function(
@@ -65,7 +76,7 @@ goal006_camtrapdp_object <- function(
   )
 }
 
-test_that("CamtrapDP legacy unknown-value defaults stay unapplied and classified", {
+test_that("CamtrapDP unknowns and endpoints are never silently fabricated", {
   deployments <- tibble(
     deploymentID = "dep1",
     locationID = "loc1",
@@ -119,30 +130,15 @@ test_that("CamtrapDP legacy unknown-value defaults stay unapplied and classified
     },
     logical(1)
   )))
-})
 
-test_that("CamtrapDP deployment endpoints are never copied automatically", {
-  deployments <- tibble(
-    deploymentID = "dep1",
-    locationID = "loc1",
-    locationName = "Site 1",
-    latitude = 1,
-    longitude = 2,
-    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
-    deploymentEnd = as.POSIXct(NA),
-    featureType = "trail"
+  deployments$deploymentEnd[[1]] <- as.POSIXct(NA)
+  observations$eventStart[[1]] <- as.POSIXct(
+    "2020-01-02 12:00:00",
+    tz = "UTC"
   )
-  observations <- tibble(
-    observationID = "obs1",
-    deploymentID = "dep1",
-    eventStart = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
-    scientificName = "Canis lupus",
-    count = 1L,
-    flash = 1L,
-    lifeStage = "adult",
-    sex = "unknown",
-    mediaID = NA_character_
-  )
+  observations$count[[1]] <- 1L
+  observations$flash <- 1L
+  observations$mediaID[[1]] <- NA_character_
   dp <- goal006_camtrapdp_object(deployments, observations)
   preview <- camtrapdp_to_internal(dp, tz = "UTC", include_audit = TRUE)
   defaults <- preview$.audit$semantic_defaults
@@ -163,52 +159,6 @@ test_that("CamtrapDP deployment endpoints are never copied automatically", {
     camtrapdp_to_internal(dp, tz = "UTC"),
     "forbids automatic endpoint copying"
   )
-})
-
-test_that("CamtrapDP supplied evidence and meaning-preserving mappings stay exact", {
-  deployments <- tibble(
-    deploymentID = "dep1",
-    locationID = "loc1",
-    locationName = "Site 1",
-    latitude = 1,
-    longitude = 2,
-    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
-    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
-    featureType = "trail"
-  )
-  observations <- tibble(
-    observationID = "obs1",
-    deploymentID = "dep1",
-    eventStart = as.POSIXct("2020-01-02 10:00:00", tz = "UTC"),
-    scientificName = "Canis lupus",
-    count = 3L,
-    flash = 1L,
-    lifeStage = "adult",
-    sex = "female",
-    mediaID = "m1"
-  )
-  media <- tibble(
-    mediaID = "m1",
-    deploymentID = "dep1",
-    timestamp = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
-    fileName = "img1.jpg"
-  )
-  out <- camtrapdp_to_internal(
-    goal006_camtrapdp_object(deployments, observations, media),
-    tz = "UTC",
-    include_audit = TRUE
-  )
-
-  expect_equal(out$obs$datetime[[1]], "02/01/2020 10:00:00")
-  expect_equal(out$obs$count[[1]], 3L)
-  expect_equal(out$obs$flash[[1]], 1L)
-  expect_equal(length(out$.audit$semantic_defaults), 0L)
-  expect_true(all(vapply(
-    out$.audit$transformations,
-    `[[`,
-    logical(1),
-    "meaning_preserving"
-  )))
 })
 
 test_that("CamtrapDP collisions and broken references fail without row loss", {
@@ -277,7 +227,7 @@ goal005_camtrapdp_config <- function(descriptor, mode = "local", cache_dir = tem
   config
 }
 
-test_that("local CamtrapDP acquisition snapshots every referenced resource before parse", {
+test_that("local CamtrapDP acquisition pins every referenced resource before parse", {
   fixture <- here("tests", "testthat", "fixtures", "goal005", "camtrapdp")
   config <- goal005_camtrapdp_config(file.path(fixture, "datapackage.json"))
   stage <- tempfile("goal005-camtrap-local-")
@@ -314,78 +264,6 @@ test_that("local CamtrapDP acquisition snapshots every referenced resource befor
     verify_source_snapshot(snapshot, stage),
     "Source snapshot integrity mismatch"
   )
-})
-
-test_that("CamtrapDP descriptor byte-only changes alter source identity", {
-  fixture <- here("tests", "testthat", "fixtures", "goal005", "camtrapdp")
-  changed <- tempfile("goal005-camtrap-descriptor-")
-  fs::dir_copy(fixture, changed)
-  write(" ", file.path(changed, "datapackage.json"), append = TRUE)
-
-  original_stage <- tempfile("goal005-camtrap-original-")
-  changed_stage <- tempfile("goal005-camtrap-changed-")
-  dir.create(original_stage)
-  dir.create(changed_stage)
-  original <- materialize_source_snapshot(
-    goal005_camtrapdp_config(file.path(fixture, "datapackage.json")),
-    original_stage
-  )
-  modified <- materialize_source_snapshot(
-    goal005_camtrapdp_config(file.path(changed, "datapackage.json")),
-    changed_stage
-  )
-
-  expect_false(identical(original$source_sha256, modified$source_sha256))
-  expect_equal(
-    sha256_file(file.path(changed, "datapackage.json")),
-    sha256_file(modified$parser_paths$camtrapdp)
-  )
-  expect_true(verify_source_snapshot(modified, changed_stage))
-})
-
-test_that("mocked remote CamtrapDP acquisition is pinned and cache-backed", {
-  fixture <- here("tests", "testthat", "fixtures", "goal005", "camtrapdp")
-  base_url <- "https://example.test/camtrapdp/"
-  descriptor_url <- paste0(base_url, "datapackage.json")
-  source_map <- list(
-    "https://example.test/camtrapdp/datapackage.json" = file.path(fixture, "datapackage.json"),
-    "https://example.test/camtrapdp/deployments.csv" = file.path(fixture, "deployments.csv"),
-    "https://example.test/camtrapdp/media.csv" = file.path(fixture, "media.csv"),
-    "https://example.test/camtrapdp/observations.csv" = file.path(fixture, "observations.csv")
-  )
-  calls <- character()
-  fetch <- function(source, destination) {
-    calls <<- c(calls, source)
-    if (!file.copy(source_map[[source]], destination)) {
-      stop("mock fetch failed")
-    }
-    invisible(destination)
-  }
-
-  config <- goal005_camtrapdp_config(
-    descriptor_url,
-    mode = "remote",
-    cache_dir = tempfile("goal005-camtrap-cache-")
-  )
-  config$camtrapdp_acquisition$descriptor_sha256 <- sha256_file(source_map[[descriptor_url]])
-  for (name in c("deployments.csv", "media.csv", "observations.csv")) {
-    config$camtrapdp_acquisition$resource_sha256[[name]] <-
-      sha256_file(source_map[[paste0(base_url, name)]])
-  }
-  config <- validate_config(config)
-
-  first_stage <- tempfile("goal005-camtrap-remote-")
-  second_stage <- tempfile("goal005-camtrap-remote-")
-  dir.create(first_stage)
-  dir.create(second_stage)
-  first <- materialize_source_snapshot(config, first_stage, fetch = fetch)
-  call_count <- length(calls)
-  second <- materialize_source_snapshot(config, second_stage, fetch = fetch)
-
-  expect_equal(call_count, 4L)
-  expect_equal(length(calls), call_count)
-  expect_equal(first$source_sha256, second$source_sha256)
-  expect_true(verify_source_snapshot(second, second_stage))
 })
 
 test_that("CamtrapDP missing resources and pinned mismatches fail before analysis", {

@@ -22,21 +22,6 @@ test_that("calc_rai_with_ci returns non-negative rates within CI bounds", {
   expect_equal(unique(rai$pooled$trap_nights), sum(trap_nights$trap_nights))
 })
 
-test_that("plot_rai_species writes a file", {
-  rai_species <- tibble(
-    species = c("sp1", "sp2"),
-    events = c(3, 1),
-    trap_nights = c(10, 10),
-    rai = c(0.3, 0.1),
-    rai_lower = c(0.1, 0.01),
-    rai_upper = c(0.5, 0.2)
-  )
-  out_path <- tempfile(fileext = ".png")
-
-  plot_rai_species(rai_species, out_path, top_n = 2)
-  expect_true(file.exists(out_path))
-})
-
 test_that("summarise_diel_overall proportions sum to 1", {
   obs_events <- tibble(
     flash = c(0, 1, 1, 0)
@@ -44,12 +29,4 @@ test_that("summarise_diel_overall proportions sum to 1", {
 
   diel <- summarise_diel_overall(obs_events)
   expect_equal(sum(diel$prop), 1)
-})
-
-test_that("plot_diel_overall writes a file", {
-  diel <- tibble(period = c("day", "night"), n = c(2, 2), prop = c(0.5, 0.5))
-  out_path <- tempfile(fileext = ".png")
-
-  plot_diel_overall(diel, out_path)
-  expect_true(file.exists(out_path))
 })

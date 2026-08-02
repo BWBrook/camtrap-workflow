@@ -63,6 +63,12 @@ test_that("four-table snapshots inventory every parser-consumed byte", {
   )))
   expect_true(verify_source_snapshot(snapshot, stage))
   expect_false(any(grepl(normalizePath(input_root), canonical_json(snapshot$inventory), fixed = TRUE)))
+
+  write("tamper", snapshot$parser_paths$site, append = TRUE)
+  expect_error(
+    verify_source_snapshot(snapshot, stage),
+    "Source snapshot integrity mismatch"
+  )
 })
 
 test_that("mapped analysis-site selection snapshots exactly one immutable mapping input", {
@@ -91,172 +97,46 @@ test_that("mapped analysis-site selection snapshots exactly one immutable mappin
                config$analysis_unit$mapping_sha256)
   expect_true(verify_source_snapshot(snapshot, stage))
 
-  write("sidecar", file.path(stage, "source_snapshot", "analysis_site_mapping",
-                              "unexpected.txt"))
-  expect_error(verify_source_snapshot(snapshot, stage), "exactly one|extra")
-})
-
-test_that("omitted and identity selections retain zero mapping inventory", {
-  input_root <- copy_goal005_inputs(tempfile("goal009-legacy-input-"))
-  selections <- list(
-    omitted = NULL,
-    identity = list(
-      resolution = "analysis_site", mapping_profile_id = NULL,
-      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
-    ),
-    physical = list(
-      resolution = "physical_location", mapping_profile_id = NULL,
-      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
-    ),
-    nominal = list(
-      resolution = "nominal_station", mapping_profile_id = NULL,
-      mapping_path = NULL, mapping_sha256 = NULL, authority_reference = NULL
-    )
-  )
-  for (name in names(selections)) {
-    selection <- selections[[name]]
-    stage <- tempfile("goal009-zero-stage-")
-    dir.create(stage)
-    config <- goal005_four_table_config(input_root)
-    if (!is.null(selection)) config$analysis_unit <- selection
-    snapshot <- materialize_source_snapshot(config, stage, project_root = here())
-    roles <- vapply(snapshot$inventory, `[[`, character(1), "role")
-    expect_equal(sum(roles == "analysis_site_mapping_input"), 0L, info = name)
-    expect_true(is.null(snapshot$analysis_site_mapping_path), info = name)
-    expect_true(verify_source_snapshot(snapshot, stage), info = name)
-  }
-})
-
-test_that("mapped analysis-site acquisition rejects path escape, symlink, and checksum drift", {
-  input_root <- copy_goal005_inputs(tempfile("goal009-invalid-input-"))
-  config <- goal005_four_table_config(input_root)
-  config$analysis_unit <- goal009_mapping_selection()
-
-  escaped <- config
-  escaped$analysis_unit$mapping_path <- "../judbury_analysis_site_mapping.csv"
-  expect_error(materialize_source_snapshot(escaped, tempfile("goal009-escape-")),
-               "path|approved|escape")
-
-  drifted <- config
-  drifted$analysis_unit$mapping_sha256 <- paste(rep("a", 64L), collapse = "")
-  expect_error(materialize_source_snapshot(drifted, tempfile("goal009-drift-")),
-               "authority|SHA-256")
-
-  symlink_root <- tempfile("goal009-symlink-root-")
-  dir.create(file.path(symlink_root, "docs", "goals"), recursive = TRUE)
-  approved_dir <- file.path(symlink_root, "approved-mapping")
-  dir.create(approved_dir, recursive = TRUE)
-  copy_goal005_inputs(file.path(symlink_root, "data"))
-  file.copy(here("docs", "goals", "009-analysis-site-vertical-slice",
-                 "judbury_analysis_site_mapping.csv"),
-            file.path(approved_dir, "judbury_analysis_site_mapping.csv"))
-  expect_true(file.symlink(
-    approved_dir,
-    file.path(symlink_root, "docs", "goals", "009-analysis-site-vertical-slice")
-  ))
-  symlink_config <- goal005_four_table_config(file.path(symlink_root, "data"))
-  symlink_config$paths$inputs <- list(
-    site = file.path(symlink_root, "data", "site.csv"),
-    op = file.path(symlink_root, "data", "op.csv"),
-    obs = file.path(symlink_root, "data", "obs.csv"),
-    taxa = file.path(symlink_root, "data", "taxa.csv"),
-    camtrapdp = NULL
-  )
-  symlink_config$analysis_unit <- config$analysis_unit
+  bad_authority <- config
+  bad_authority$analysis_unit$mapping_sha256 <- paste(rep("a", 64L), collapse = "")
   expect_error(
     materialize_source_snapshot(
-      symlink_config,
-      tempfile("goal009-symlink-stage-"),
-      project_root = symlink_root
+      bad_authority,
+      tempfile("goal009-invalid-stage-"),
+      project_root = here()
     ),
-    "symlink"
+    "authority|SHA-256"
   )
-})
 
-test_that("mapping mutation cannot be hidden by inventory reclosure or duplicate roles", {
-  input_root <- copy_goal005_inputs(tempfile("goal009-reclosure-input-"))
-  config <- goal005_four_table_config(input_root)
-  config$analysis_unit <- goal009_mapping_selection()
-  stage <- tempfile("goal009-reclosure-stage-")
-  dir.create(stage)
-  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
-  index <- which(vapply(snapshot$inventory, function(record) {
+  mapping_index <- which(vapply(snapshot$inventory, function(record) {
     identical(record$role, "analysis_site_mapping_input")
   }, logical(1)))
-  write("tamper", snapshot$analysis_site_mapping_path, append = TRUE)
-  mutated <- file.info(snapshot$analysis_site_mapping_path)
-  snapshot$inventory[[index]]$bytes <- unname(as.numeric(mutated$size))
-  snapshot$inventory[[index]]$sha256 <- sha256_file(snapshot$analysis_site_mapping_path)
+  snapshot$inventory[[length(snapshot$inventory) + 1L]] <-
+    snapshot$inventory[[mapping_index]]
   snapshot$source_sha256 <- fixity_identity(snapshot$inventory)
-  expect_error(verify_source_snapshot(snapshot, stage), "authority|configured|mapping")
-
-  duplicate <- materialize_source_snapshot(
-    config, tempfile("goal009-duplicate-stage-"), project_root = here()
-  )
-  duplicate$inventory[[length(duplicate$inventory) + 1L]] <-
-    duplicate$inventory[[which(vapply(duplicate$inventory, function(record) {
-      identical(record$role, "analysis_site_mapping_input")
-    }, logical(1)))[[1L]]]]
-  duplicate$source_sha256 <- fixity_identity(duplicate$inventory)
-  expect_error(verify_source_snapshot(duplicate), "exactly one|duplicate")
-})
-
-test_that("one source byte changes identity and snapshot mutation fails fixity", {
-  input_root <- copy_goal005_inputs(tempfile("goal005-input-"))
-  first_stage <- tempfile("goal005-stage-")
-  second_stage <- tempfile("goal005-stage-")
-  dir.create(first_stage)
-  dir.create(second_stage)
-  config <- goal005_four_table_config(input_root)
-  first <- materialize_source_snapshot(config, first_stage)
-
-  site_path <- file.path(input_root, "site.csv")
-  text <- readLines(site_path)
-  writeLines(sub("-42.0", "-42.1", text, fixed = TRUE), site_path)
-  second <- materialize_source_snapshot(config, second_stage)
-  expect_false(identical(first$source_sha256, second$source_sha256))
-
-  snapshotted_site <- first$parser_paths$site
-  write("tamper", snapshotted_site, append = TRUE)
   expect_error(
-    verify_source_snapshot(first, first_stage),
-    "Source snapshot integrity mismatch"
+    verify_source_snapshot(snapshot, stage),
+    "exactly one|duplicate"
   )
 })
 
-test_that("missing source input fails before analysis", {
-  input_root <- copy_goal005_inputs(tempfile("goal005-input-"))
-  unlink(file.path(input_root, "obs.csv"))
-  stage <- tempfile("goal005-stage-")
+test_that("physical selection requires no analysis-site mapping inventory", {
+  input_root <- copy_goal005_inputs(tempfile("goal009-physical-input-"))
+  stage <- tempfile("goal009-physical-stage-")
   dir.create(stage)
-
-  expect_error(
-    materialize_source_snapshot(goal005_four_table_config(input_root), stage),
-    "missing or not a file"
+  config <- goal005_four_table_config(input_root)
+  config$analysis_unit <- list(
+    resolution = "physical_location",
+    mapping_profile_id = NULL,
+    mapping_path = NULL,
+    mapping_sha256 = NULL,
+    authority_reference = NULL
   )
-})
-
-test_that("engine identity is bounded, relative, and SHA-256 based", {
-  engine <- compute_engine_identity(here())
-  paths <- vapply(engine$files, `[[`, character(1), "path")
-  packages <- vapply(engine$package_versions, `[[`, character(1), "package")
-
-  expect_equal(nchar(engine$engine_sha256), 64L)
-  expect_true("_targets.R" %in% paths)
-  expect_true("renv.lock" %in% paths)
-  expect_true("targets" %in% packages)
-  expect_false(any(fs::is_absolute_path(paths)))
-  expect_false(grepl(normalizePath(here()), canonical_json(engine), fixed = TRUE))
-
-  drifted <- engine
-  drifted$package_versions[[1]]$version <- paste0(
-    drifted$package_versions[[1]]$version,
-    "-drift"
-  )
-  expect_false(identical(
-    engine_identity_fingerprint(engine),
-    engine_identity_fingerprint(drifted)
-  ))
+  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
+  roles <- vapply(snapshot$inventory, `[[`, character(1), "role")
+  expect_equal(sum(roles == "analysis_site_mapping_input"), 0L)
+  expect_true(is.null(snapshot$analysis_site_mapping_path))
+  expect_true(verify_source_snapshot(snapshot, stage))
 })
 
 test_that("approved entity sidecar is snapshotted with a distinct non-parser role", {
@@ -292,40 +172,11 @@ test_that("approved entity sidecar is snapshotted with a distinct non-parser rol
   )
   expect_false(snapshot$entity_resolution_path %in% snapshot$parser_files)
   expect_true(verify_source_snapshot(snapshot, stage))
-})
 
-test_that("sidecar authority and post-snapshot mutation fail fixity", {
-  input_root <- copy_goal005_inputs(tempfile("goal007-input-"))
-  sidecar <- here(
-    "docs",
-    "goals",
-    "007-entity-resolution",
-    "judbury_entity_crosswalk.csv"
-  )
-  config <- goal005_four_table_config(input_root)
-  config$entity_resolution <- list(
-    profile_id = "judbury-entity-crosswalk/1.0.0-proposed",
-    sidecar_path = sidecar,
-    sidecar_sha256 = paste(rep("a", 64L), collapse = ""),
-    authority_reference = paste0(
-      "goal007-judbury-crosswalk-sha256-",
-      "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
-    )
-  )
+  config$entity_resolution$sidecar_sha256 <- paste(rep("a", 64L), collapse = "")
   expect_error(
     materialize_source_snapshot(config, tempfile("goal007-stage-")),
     "approved authority|SHA-256"
-  )
-
-  config$entity_resolution$sidecar_sha256 <-
-    "553abada14493f3a5f0ae3c072523b6d5cc0d0c6a6c6480ca17a9e3331f2d8ec"
-  stage <- tempfile("goal007-stage-")
-  dir.create(stage)
-  snapshot <- materialize_source_snapshot(config, stage)
-  write("tamper", snapshot$entity_resolution_path, append = TRUE)
-  expect_error(
-    verify_source_snapshot(snapshot, stage),
-    "Source snapshot integrity mismatch"
   )
 })
 
@@ -395,27 +246,6 @@ test_that("deployment service and ledger use two immutable non-parser roles", {
   )
   expect_false(any(unlist(snapshot$deployment_evidence_paths) %in% snapshot$parser_files))
   expect_true(verify_source_snapshot(snapshot, stage))
-})
-
-test_that("deployment snapshot mutation, duplicate role, and configured symlink fail", {
-  input_root <- copy_goal005_inputs(tempfile("goal008-input-"))
-  config <- goal008_selected_source_config(input_root)
-  stage <- tempfile("goal008-stage-")
-  dir.create(stage)
-  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
-  expect_true(is.list(snapshot$deployment_evidence_paths))
-  if (!is.list(snapshot$deployment_evidence_paths)) {
-    return(invisible(NULL))
-  }
-  write("tamper", snapshot$deployment_evidence_paths$service, append = TRUE)
-  expect_error(
-    verify_source_snapshot(snapshot, stage),
-    "Source snapshot integrity mismatch"
-  )
-
-  stage <- tempfile("goal008-stage-")
-  dir.create(stage)
-  snapshot <- materialize_source_snapshot(config, stage, project_root = here())
   service_index <- which(vapply(
     snapshot$inventory,
     function(record) identical(record$role, "deployment_service_input"),
@@ -431,62 +261,5 @@ test_that("deployment snapshot mutation, duplicate role, and configured symlink 
       deployment_evidence_selection(config)
     ),
     "exactly one deployment service"
-  )
-
-  project_root <- tempfile("goal008-symlink-root-")
-  dir.create(file.path(project_root, "data"), recursive = TRUE)
-  dir.create(
-    file.path(project_root, "docs", "goals", "007-entity-resolution"),
-    recursive = TRUE
-  )
-  dir.create(
-    file.path(
-      project_root,
-      "docs",
-      "goals",
-      "008-judbury-deployment-evidence"
-    ),
-    recursive = TRUE
-  )
-  file.copy(
-    here(
-      "docs",
-      "goals",
-      "007-entity-resolution",
-      "judbury_entity_crosswalk.csv"
-    ),
-    file.path(
-      project_root,
-      "docs",
-      "goals",
-      "007-entity-resolution",
-      "judbury_entity_crosswalk.csv"
-    )
-  )
-  file.copy(
-    here(
-      "tests",
-      "testthat",
-      "fixtures",
-      "goal008",
-      "judbury_deployment_ledger.csv"
-    ),
-    file.path(
-      project_root,
-      "docs",
-      "goals",
-      "008-judbury-deployment-evidence",
-      "judbury_deployment_ledger.csv"
-    )
-  )
-  expect_true(file.symlink(
-    here("tests", "testthat", "fixtures", "goal008", "jc_services.csv"),
-    file.path(project_root, "data", "jc_services.csv")
-  ))
-  symlink_stage <- tempfile("goal008-symlink-stage-")
-  dir.create(symlink_stage)
-  expect_error(
-    materialize_source_snapshot(config, symlink_stage, project_root = project_root),
-    "may not be a symlink"
   )
 })

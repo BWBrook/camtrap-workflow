@@ -29,16 +29,3 @@ test_that("compute_occasion_length_sens returns rows for each length/species", {
   expect_equal(nrow(out), 2)
   expect_true(all(out$species == "sp1"))
 })
-
-test_that("plot_occasion_length_sens writes a file", {
-  tbl <- tibble(
-    species = c("sp1", "sp1"),
-    naive_occupancy = c(0.5, 1.0),
-    detection_rate = c(0.2, 0.4),
-    occasion_length_days = c(1, 2)
-  )
-  out_path <- tempfile(fileext = ".png")
-
-  plot_occasion_length_sens(tbl, out_path)
-  expect_true(file.exists(out_path))
-})

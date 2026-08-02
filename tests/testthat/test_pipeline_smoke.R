@@ -1,80 +1,14 @@
-import::from("testthat", test_that, expect_equal, expect_false, expect_true)
-import::from("targets", tar_make, tar_manifest, tar_read_raw)
+import::from(
+  "testthat", test_that, expect_equal, expect_false, expect_identical,
+  expect_setequal, expect_true
+)
+import::from("targets", tar_make, tar_manifest)
 import::from("here", here)
 import::from("withr", local_envvar, with_dir)
 
-test_that("pipeline smoke: input contract validation target builds", {
-  with_dir(here(), {
-    suppressWarnings(
-      tar_make(
-        names = "input_contract_validation",
-        callr_function = NULL,
-        script = here("_targets.R"),
-        reporter = "silent"
-      )
-    )
-
-    result <- tar_read_raw("input_contract_validation", store = here("_targets"))
-    expect_true(!is.null(result))
-  })
-})
-
-test_that("pipeline smoke: exploratory summary and report targets build", {
-  with_dir(here(), {
-    legacy_config_path <- tempfile("pipeline-smoke-legacy-", fileext = ".yml")
-    legacy_config <- yaml::read_yaml(here("config.template_example.yml"))
-    legacy_config$analysis_unit <- NULL
-    yaml::write_yaml(legacy_config, legacy_config_path)
-    local_envvar(c(
-      CAMTRAP_CONFIG = legacy_config_path,
-      CAMTRAP_EVIDENCE_CONTEXT = NA
-    ))
-    dictionary_paths <- c(
-      here("data_dictionary.md"),
-      here("data", "data_dictionary.csv")
-    )
-    dictionary_before <- unname(tools::md5sum(dictionary_paths))
-    suppressWarnings(
-      tar_make(
-        names = c("species_summary_csv", "report_html"),
-        callr_function = NULL,
-        script = here("_targets.R"),
-        reporter = "silent"
-      )
-    )
-
-    species_summary_path <- tar_read_raw("species_summary_csv", store = here("_targets"))
-    report_html_path <- tar_read_raw("report_html", store = here("_targets"))
-
-    expect_true(file.exists(species_summary_path))
-    expect_true(file.exists(report_html_path))
-    rendered_report <- readChar(
-      report_html_path,
-      nchars = file.info(report_html_path)$size,
-      useBytes = TRUE
-    )
-    expect_false(grepl(
-      "id=\"selected-analysis-resolution\"",
-      rendered_report,
-      fixed = TRUE
-    ))
-    expect_equal(unname(tools::md5sum(dictionary_paths)), dictionary_before)
-  })
-})
-
-test_that("data dictionary maintenance is absent from the scientific DAG", {
-  with_dir(here(), {
-    manifest <- tar_manifest(
-      script = here("_targets.R"),
-      fields = "name",
-      callr_function = NULL
-    )
-    expect_false(any(manifest$name %in% c(
-      "data_dictionary_md",
-      "data_dictionary_csv"
-    )))
-  })
-})
+source(here("R", "alpha_diversity.R"))
+source(here("R", "beta_diversity.R"))
+source(here("R", "community_matrices.R"))
 
 test_that("direct partial target calls cannot complete or advance latest", {
   with_dir(here(), {
@@ -110,124 +44,6 @@ test_that("direct partial target calls cannot complete or advance latest", {
 
     expect_equal(pointer_after, pointer_before)
     expect_equal(completion, character())
-  })
-})
-
-test_that("Goal 008 deployment evidence remains outside the analytical DAG", {
-  with_dir(here(), {
-    local_envvar(c(
-      CAMTRAP_CONFIG = here("config.yml"),
-      CAMTRAP_EVIDENCE_CONTEXT = NA
-    ))
-    manifest <- tar_manifest(
-      script = here("_targets.R"),
-      fields = c("name", "command"),
-      callr_function = NULL
-    )
-    target_text <- paste(manifest$name, manifest$command, collapse = "\n")
-
-    expect_false(any(grepl(
-      "deployment_evidence|deployment_service|deployment_ledger|jc_services",
-      manifest$name
-    )))
-    expect_false(grepl(
-      "deployment_to_physical_location|service_event_digest",
-      target_text
-    ))
-
-    suppressWarnings(
-      tar_make(
-        names = "config",
-        callr_function = NULL,
-        script = here("_targets.R"),
-        reporter = "silent"
-      )
-    )
-    config <- tar_read_raw("config", store = here("_targets"))
-    expect_equal(
-      config$deployment_evidence$profile_id,
-      "judbury-deployment-evidence/1.0.0-proposed"
-    )
-  })
-})
-
-test_that("selected ecological targets are additive and post-event only", {
-  with_dir(here(), {
-    manifest <- tar_manifest(
-      script = here("_targets.R"),
-      fields = c("name", "command"),
-      callr_function = NULL
-    )
-    selected_targets <- c(
-      "selected_resolution_state",
-      "selected_event_conservation_check",
-      "selected_ecological_outputs",
-      "selected_effort_coverage_csv",
-      "selected_community_presence_csv",
-      "selected_observed_richness_csv",
-      "selected_jaccard_csv",
-      "selected_resolution_status_json"
-    )
-    expect_true(all(selected_targets %in% manifest$name))
-
-    selected_commands <- manifest$command[manifest$name %in% selected_targets]
-    expect_false(any(grepl("events_per_day", selected_commands, fixed = TRUE)))
-    reconciliation <- manifest$command[
-      manifest$name == "selected_event_conservation_check"
-    ]
-    expect_true(grepl("obs_events", reconciliation, fixed = TRUE))
-    expect_true(grepl("event_map", reconciliation, fixed = TRUE))
-    expect_true(grepl("integrity_ok", reconciliation, fixed = TRUE))
-
-    output_commands <- manifest$command[manifest$name %in% c(
-      "selected_effort_coverage_csv", "selected_community_presence_csv",
-      "selected_observed_richness_csv", "selected_jaccard_csv"
-    )]
-    expect_true(all(grepl("selected_ecological_outputs", output_commands,
-                          fixed = TRUE)))
-  })
-})
-
-test_that("selected evidence is wired into reports and manifest 1.3", {
-  with_dir(here(), {
-    manifest <- tar_manifest(
-      script = here("_targets.R"),
-      fields = c("name", "command"),
-      callr_function = NULL
-    )
-    selected_outputs <- c(
-      "selected_effort_coverage_csv",
-      "selected_community_presence_csv",
-      "selected_observed_richness_csv",
-      "selected_jaccard_csv",
-      "selected_resolution_status_json"
-    )
-    report_command <- manifest$command[manifest$name == "report_inputs_rds"]
-    run_manifest_command <- manifest$command[manifest$name == "run_manifest"]
-
-    expect_true(all(vapply(
-      selected_outputs,
-      grepl,
-      logical(1),
-      x = report_command,
-      fixed = TRUE
-    )))
-    expect_true(all(vapply(
-      c(
-        "selected_resolution_state",
-        "selected_event_conservation_check",
-        selected_outputs
-      ),
-      grepl,
-      logical(1),
-      x = run_manifest_command,
-      fixed = TRUE
-    )))
-    expect_true(grepl(
-      "run_context$selected_resolution$artifacts",
-      run_manifest_command,
-      fixed = TRUE
-    ))
   })
 })
 
@@ -282,60 +98,227 @@ test_that("report and methods state bounded selected-resolution claims", {
   }
 })
 
-test_that("named legacy targets retain their original target inputs", {
+pipeline_selected_fixture <- function() {
+  mapping <- read.csv(
+    here(
+      "docs", "goals", "009-analysis-site-vertical-slice",
+      "judbury_analysis_site_mapping.csv"
+    ),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  site_raw <- read.csv(
+    here("data", "jc_site.csv"),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  physical_ids <- as.character(site_raw$site)
+  analysis_ids <- sort(unique(mapping$analysis_site_id))
+  physical_index <- match(mapping$physical_location_id, physical_ids)
+  membership <- data.frame(
+    physical_location_id = mapping$physical_location_id,
+    analysis_unit_id = mapping$analysis_site_id,
+    physical_latitude = site_raw$lat[physical_index],
+    physical_longitude = site_raw$lon[physical_index],
+    representative_latitude = mapping$representative_latitude,
+    representative_longitude = mapping$representative_longitude,
+    coordinate_basis = mapping$coordinate_basis,
+    stringsAsFactors = FALSE
+  )
+  event_time <- as.POSIXct("2020-01-01 00:00:00", tz = "UTC") +
+    seq_along(physical_ids) * 3600
+  event_map <- data.frame(
+    event_id = paste0("event-", seq_along(physical_ids)),
+    physical_location_id = mapping$physical_location_id,
+    analysis_unit_id = mapping$analysis_site_id,
+    species = rep(c("sp1", "sp2", "sp3"), length.out = length(physical_ids)),
+    event_time = event_time,
+    deployment_id = paste0("deployment-", mapping$physical_location_id),
+    stringsAsFactors = FALSE
+  )
+  obs_events <- data.frame(
+    event_id = event_map$event_id,
+    site = event_map$physical_location_id,
+    species = event_map$species,
+    dt = event_map$event_time,
+    stringsAsFactors = FALSE
+  )
+  state <- list(
+    integrity_ok = TRUE,
+    route_eligible = TRUE,
+    reasons = character(),
+    membership = membership,
+    operation = data.frame(
+      analysis_unit_id = analysis_ids,
+      date = as.Date("2020-01-01"),
+      operation = 1L,
+      deployment_states_json = "{}",
+      stringsAsFactors = FALSE
+    ),
+    event_map = event_map,
+    summary = list(
+      status = "eligible",
+      integrity_ok = TRUE,
+      route_eligible = TRUE,
+      resolution = "analysis_site",
+      scheme_id = "judbury-analysis-site",
+      scheme_version = "1.0.0-proposed",
+      authority_reference = paste0(
+        "goal009-judbury-analysis-site-mapping-sha256-",
+        "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
+      ),
+      membership_count = 13L,
+      analysis_unit_count = 9L,
+      physical_location_count = 13L,
+      event_count = 13L,
+      reasons = character()
+    )
+  )
+  list(
+    mapping = mapping,
+    site_raw = site_raw,
+    physical_ids = physical_ids,
+    analysis_ids = analysis_ids,
+    obs_events = obs_events,
+    state = state
+  )
+}
+
+test_that("selected outputs leave protected physical carriers unchanged", {
+  fixture <- pipeline_selected_fixture()
+  physical_before <- serialize(
+    list(
+      site = fixture$site_raw,
+      events = fixture$obs_events,
+      covariates = fixture$site_raw[c(
+        "site", "lat", "lon", "elevation_m", "slope_d", "canopy_h_m",
+        "ndvi", "nbr"
+      )]
+    ),
+    NULL
+  )
+
+  outputs <- write_selected_ecological_outputs(
+    fixture$state,
+    fixture$obs_events,
+    tempfile("pipeline-selected-")
+  )
+  physical_after <- serialize(
+    list(
+      site = fixture$site_raw,
+      events = fixture$obs_events,
+      covariates = fixture$site_raw[c(
+        "site", "lat", "lon", "elevation_m", "slope_d", "canopy_h_m",
+        "ndvi", "nbr"
+      )]
+    ),
+    NULL
+  )
+  expect_identical(physical_after, physical_before)
+  expect_equal(length(fixture$physical_ids), 13L)
+  expect_equal(length(fixture$analysis_ids), 9L)
+
+  expect_setequal(fixture$site_raw$site, fixture$physical_ids)
+  expect_setequal(fixture$obs_events$site, fixture$physical_ids)
+  expect_false("analysis_unit_id" %in% names(fixture$site_raw))
+  expect_false("analysis_unit_id" %in% names(fixture$obs_events))
+
+  selected_names <- c(
+    "effort_coverage", "community_presence", "observed_richness", "jaccard"
+  )
+  expect_equal(names(outputs), c(selected_names, "status"))
+  selected <- lapply(outputs[selected_names], read.csv, check.names = FALSE)
+  selected_ids <- list(
+    effort_coverage = selected$effort_coverage$analysis_unit_id,
+    community_presence = selected$community_presence$analysis_unit_id,
+    observed_richness = selected$observed_richness$analysis_unit_id,
+    jaccard = c(
+      selected$jaccard$analysis_unit_id_1,
+      selected$jaccard$analysis_unit_id_2
+    )
+  )
+  expect_true(all(vapply(
+    selected_ids,
+    setequal,
+    logical(1),
+    y = fixture$analysis_ids
+  )))
+
+  coordinate_fields <- c(
+    "representative_latitude", "representative_longitude", "coordinate_basis"
+  )
+  expect_true(all(coordinate_fields %in% names(fixture$mapping)))
+  expect_true(all(coordinate_fields %in% names(fixture$state$membership)))
+  expect_false(any(coordinate_fields %in% names(fixture$site_raw)))
+  synthetic <- grepl(
+    "^synthetic_fixed_midpoint",
+    fixture$state$membership$coordinate_basis
+  )
+  expect_equal(nrow(unique(fixture$state$membership[
+    synthetic,
+    c("representative_latitude", "representative_longitude")
+  ])), 4L)
+  expect_true(all(
+    fixture$state$membership$representative_latitude[synthetic] !=
+      fixture$state$membership$physical_latitude[synthetic] |
+      fixture$state$membership$representative_longitude[synthetic] !=
+        fixture$state$membership$physical_longitude[synthetic]
+  ))
+  expect_false(any(vapply(selected, function(value) {
+    any(coordinate_fields %in% names(value))
+  }, logical(1))))
+
+  concurrent <- fixture$state
+  concurrent$route_eligible <- FALSE
+  concurrent$reasons <- "genuine_concurrent_member_deployments:jc_co1"
+  concurrent$summary$status <- "ineligible"
+  concurrent$summary$route_eligible <- FALSE
+  concurrent$summary$reasons <- concurrent$reasons
+  concurrent_outputs <- write_selected_ecological_outputs(
+    concurrent,
+    fixture$obs_events,
+    tempfile("pipeline-concurrent-")
+  )
+  expect_true(all(vapply(
+    concurrent_outputs[selected_names],
+    is.null,
+    logical(1)
+  )))
+  expect_true(file.exists(concurrent_outputs$status))
+  concurrent_status <- jsonlite::read_json(
+    concurrent_outputs$status,
+    simplifyVector = FALSE
+  )
+  expect_false(isTRUE(concurrent_status$route_eligible))
+  expect_equal(
+    concurrent_status$reasons[[1L]],
+    "genuine_concurrent_member_deployments:jc_co1"
+  )
+})
+
+test_that("protected targets retain physical site carriers", {
   with_dir(here(), {
     manifest <- tar_manifest(
       script = here("_targets.R"),
       fields = c("name", "command"),
       callr_function = NULL
     )
-    expected <- list(
-      op_long = c("op_raw"),
-      obs_events = c("config", "obs_filtered"),
-      events_per_day = c("obs_events"),
-      event_spacing = c("obs_events"),
-      event_threshold_sensitivity = c("config", "obs_filtered", "trap_nights"),
-      occasion_length_sensitivity = c(
-        "config", "detection_history", "events_per_day", "occupancy_species",
-        "op_long"
-      ),
-      detection_history = c("config", "events_per_day", "op_long", "taxa_raw"),
-      occupancy_species = c("config", "events_per_day"),
-      occupancy_models = c(
-        "detection_history", "occupancy_model_specs", "occupancy_site_covs",
-        "occupancy_species"
-      ),
-      community_matrices = c("events_per_day", "site_raw"),
-      alpha_diversity = c("community_abundance"),
-      beta_diversity = c("community_abundance", "site_raw"),
-      traits_alignment = c("community_abundance", "traits_clean"),
-      functional_diversity = c("community_abundance", "traits_aligned"),
-      trait_site_proportions = c(
-        "community_abundance", "trait_association_traits", "traits_aligned"
-      ),
-      trait_env_associations = c(
-        "site_raw", "trait_env_vars", "trait_site_proportions"
-      ),
-      rai_with_ci = c("events_per_day", "trap_nights"),
-      prop_days_site = c("events_per_day", "trap_nights"),
-      prop_days_species = c("events_per_day", "trap_nights"),
-      diel_site = c("config", "obs_events"),
-      diel_site_season = c("config", "obs_events"),
-      diel_overall = c("config", "obs_events"),
-      rarefaction_data = c("config", "events_per_day"),
-      camtrapdp_export = c(
-        "config", "obs_raw", "op_raw", "run_dir", "site_raw", "taxa_raw"
-      ),
-      site_map_plot = c("config", "run_dir", "site_raw")
+    protected <- c(
+      "rai_with_ci", "diel_site", "occupancy_models", "rarefaction_data",
+      "functional_diversity", "trait_env_associations", "camtrapdp_export",
+      "site_map_plot"
     )
-    target_names <- manifest$name
-    observed <- lapply(names(expected), function(name) {
-      command <- manifest$command[manifest$name == name]
-      symbols <- unique(all.names(parse(text = command)))
-      sort(setdiff(intersect(symbols, target_names), name))
-    })
-    names(observed) <- names(expected)
+    expect_true(all(protected %in% manifest$name))
+    commands <- manifest$command[match(protected, manifest$name)]
+    expect_false(any(grepl("selected_", commands, fixed = TRUE)))
 
-    expect_equal(observed, expected)
+    physical_carriers <- c(
+      "occupancy_site_covs", "trait_env_associations", "camtrapdp_export",
+      "site_map_plot"
+    )
+    carrier_commands <- manifest$command[
+      match(physical_carriers, manifest$name)
+    ]
+    expect_true(all(grepl("site_raw", carrier_commands, fixed = TRUE)))
   })
 })

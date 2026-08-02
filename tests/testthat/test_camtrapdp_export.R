@@ -1,4 +1,6 @@
-import::from("testthat", test_that, expect_true, expect_equal)
+import::from(
+  "testthat", test_that, expect_equal, expect_true, expect_warning
+)
 import::from("tibble", tibble)
 import::from("here", here)
 
@@ -62,25 +64,25 @@ sample_taxa <- tibble(
 )
 
 
-test_that("build_camtrapdp_deployments returns required columns", {
+test_that("CamtrapDP builders return complete required columns", {
   deployments <- build_camtrapdp_deployments(sample_site, sample_op, tz = "UTC")
-  required <- c("deploymentID", "latitude", "longitude", "deploymentStart", "deploymentEnd")
-  expect_true(all(required %in% names(deployments)))
+  media_tbl <- build_camtrapdp_media(sample_obs, tz = "UTC")
+  obs_tbl <- build_camtrapdp_observations(sample_obs, sample_taxa, tz = "UTC")
+
+  expect_true(all(c(
+    "deploymentID", "latitude", "longitude", "deploymentStart", "deploymentEnd"
+  ) %in% names(deployments)))
   expect_true(all(!is.na(deployments$deploymentStart)))
   expect_true(all(!is.na(deployments$deploymentEnd)))
-})
-
-test_that("build_camtrapdp_media returns required columns", {
-  media_tbl <- build_camtrapdp_media(sample_obs, tz = "UTC")
-  required <- c("mediaID", "deploymentID", "timestamp", "filePath", "filePublic", "fileMediatype")
-  expect_true(all(required %in% names(media_tbl)))
+  expect_true(all(c(
+    "mediaID", "deploymentID", "timestamp", "filePath", "filePublic",
+    "fileMediatype"
+  ) %in% names(media_tbl)))
   expect_true(all(!is.na(media_tbl$timestamp)))
-})
-
-test_that("build_camtrapdp_observations returns required columns", {
-  obs_tbl <- build_camtrapdp_observations(sample_obs, sample_taxa, tz = "UTC")
-  required <- c("observationID", "deploymentID", "eventStart", "eventEnd", "observationLevel", "observationType")
-  expect_true(all(required %in% names(obs_tbl)))
+  expect_true(all(c(
+    "observationID", "deploymentID", "eventStart", "eventEnd",
+    "observationLevel", "observationType"
+  ) %in% names(obs_tbl)))
   expect_true(all(!is.na(obs_tbl$eventStart)))
 })
 
@@ -136,7 +138,18 @@ test_that("export_camtrapdp_package writes audit file for dropped observations",
     B = c(1, 1)
   )
 
-  export_camtrapdp_package(sample_site, op_dst, bad_obs, sample_taxa, export_config, tmp_dir, tz = "Australia/Hobart")
+  expect_warning(
+    export_camtrapdp_package(
+      sample_site,
+      op_dst,
+      bad_obs,
+      sample_taxa,
+      export_config,
+      tmp_dir,
+      tz = "Australia/Hobart"
+    ),
+    "Dropping 1 observations with unparseable datetime"
+  )
 
   audit_path <- file.path(tmp_dir, "camtrapdp_export", "dropped_observations.csv")
   expect_true(file.exists(audit_path))

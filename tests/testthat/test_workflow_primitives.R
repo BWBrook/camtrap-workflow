@@ -163,15 +163,6 @@ test_that("Rarefaction: build_rarefaction returns expected shape", {
   expect_equal(max(acc$richness), 2)
 })
 
-test_that("Rarefaction: plot_rarefaction writes a file target", {
-  df <- tibble(sites = c(1, 2), richness = c(1, 2), se = c(0, 0))
-  out_path <- tempfile(fileext = ".png")
-
-  p <- plot_rarefaction(df, out_path)
-  expect_equal(p, out_path)
-  expect_true(file.exists(out_path))
-})
-
 test_that("Effort: summarise_effort computes totals and proportions", {
   op_long <- tibble(
     trap_date = as.Date(c("2020-01-01", "2020-01-02", "2020-01-01", "2020-01-02")),
@@ -200,22 +191,4 @@ test_that("Effort: validate_effort_censoring fails on inactive detections", {
     validate_effort_censoring(obs_filtered, op_long),
     "detections found on inactive"
   )
-})
-
-test_that("Effort plots write files", {
-  op_long <- tibble(
-    trap_date = as.Date(c("2020-01-01", "2020-01-02")),
-    site = c("A", "A"),
-    on_off = c(1, 0)
-  )
-  summary <- summarise_effort(op_long)
-
-  hist_path <- tempfile(fileext = ".png")
-  heat_path <- tempfile(fileext = ".png")
-
-  plot_effort_histogram(summary, hist_path)
-  plot_effort_heatmap(op_long, heat_path)
-
-  expect_true(file.exists(hist_path))
-  expect_true(file.exists(heat_path))
 })

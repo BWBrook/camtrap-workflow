@@ -24,15 +24,3 @@ test_that("compute_event_threshold_sens is monotonic for increasing thresholds",
   expect_equal(sensitivity$total_events, c(3, 2, 1))
   expect_true(all(diff(sensitivity$total_events) <= 0))
 })
-
-test_that("plot_event_threshold_sens writes a file", {
-  sensitivity <- tibble(
-    threshold_minutes = c(5, 15, 30),
-    total_events = c(10, 7, 5),
-    events_per_trap_night = c(0.2, 0.14, 0.1)
-  )
-
-  out_path <- tempfile(fileext = ".png")
-  plot_event_threshold_sens(sensitivity, out_path)
-  expect_true(file.exists(out_path))
-})

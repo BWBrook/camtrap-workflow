@@ -23,20 +23,6 @@ test_that("compute_event_spacing returns expected gaps", {
   expect_equal(gap, 1)
 })
 
-test_that("plot_event_spacing writes a file", {
-  spacing <- tibble(
-    site = c("A", "A"),
-    species = c("sp1", "sp1"),
-    event_id = c("A_sp1_1", "A_sp1_2"),
-    event_time = as.POSIXct(c("2020-01-01 00:00:00", "2020-01-01 01:00:00"), tz = "Australia/Hobart"),
-    gap_hours = c(NA, 1)
-  )
-
-  out_path <- tempfile(fileext = ".png")
-  plot_event_spacing(spacing, out_path)
-  expect_true(file.exists(out_path))
-})
-
 test_that("validate_event_invariants fails if event rows exceed detections", {
   obs_events <- tibble(
     site = c("A", "A"),

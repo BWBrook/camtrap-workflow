@@ -25,7 +25,7 @@ test_that("build_community_matrices returns presence/abundance matrices", {
   expect_equal(sum(mats$abundance$site == "C"), 1)
 })
 
-test_that("selected presence reconstructs nine units by exact logical OR", {
+test_that("selected community arithmetic is exact for the approved nine units", {
   mapping <- read.csv(
     here(
       "docs", "goals", "009-analysis-site-vertical-slice",
@@ -38,11 +38,20 @@ test_that("selected presence reconstructs nine units by exact logical OR", {
   pooled_members <- mapping$physical_location_id[
     mapping$analysis_site_id == pooled
   ][1:2]
+  other_units <- setdiff(analysis_units, pooled)
+  unit_b <- other_units[[1L]]
+  unit_c <- other_units[[2L]]
+  empty_unit <- other_units[[3L]]
   event_map <- data.frame(
-    event_id = c("e1", "e2", "e3"),
-    physical_location_id = c(pooled_members, pooled_members[[2]]),
-    analysis_unit_id = pooled,
-    species = c("sp1", "sp1", "sp2"),
+    event_id = paste0("e", 1:5),
+    physical_location_id = c(
+      pooled_members,
+      pooled_members[[2L]],
+      mapping$physical_location_id[match(unit_b, mapping$analysis_site_id)],
+      mapping$physical_location_id[match(unit_c, mapping$analysis_site_id)]
+    ),
+    analysis_unit_id = c(rep(pooled, 3L), unit_b, unit_c),
+    species = c("sp1", "sp1", "sp2", "sp1", "sp3"),
     stringsAsFactors = FALSE
   )
 
@@ -58,9 +67,40 @@ test_that("selected presence reconstructs nine units by exact logical OR", {
     unname(as.integer(presence[pooled_row, ])),
     c(1L, 1L, 0L)
   )
-  expect_equal(sum(presence), 2L)
+  expect_equal(sum(presence), 4L)
   physical_occurrences <- unique(event_map[c("physical_location_id", "species")])
   expect_equal(nrow(physical_occurrences) - sum(presence), 1L)
+
+  richness <- compute_selected_observed_richness(presence, analysis_units)
+  expect_equal(richness$analysis_unit_id, analysis_units)
+  expect_equal(
+    richness$observed_richness,
+    as.integer(rowSums(presence))
+  )
+
+  jaccard <- compute_selected_jaccard(presence, analysis_units)
+  matrix_view <- xtabs(
+    jaccard_dissimilarity ~ analysis_unit_id_1 + analysis_unit_id_2,
+    data = jaccard,
+    addNA = TRUE,
+    na.action = stats::na.pass
+  )
+  value <- function(a, b) {
+    jaccard$jaccard_dissimilarity[
+      jaccard$analysis_unit_id_1 == a & jaccard$analysis_unit_id_2 == b
+    ]
+  }
+  expect_equal(nrow(jaccard), 81L)
+  expect_equal(value(pooled, unit_b), 0.5)
+  expect_equal(value(unit_b, pooled), 0.5)
+  expect_equal(value(unit_b, unit_c), 1)
+  expect_equal(value(pooled, pooled), 0)
+  expect_true(is.na(value(empty_unit, empty_unit)))
+  nonempty <- jaccard$jaccard_dissimilarity[
+    !is.na(jaccard$jaccard_dissimilarity)
+  ]
+  expect_true(all(nonempty >= 0 & nonempty <= 1))
+  expect_equal(unname(matrix_view), t(unname(matrix_view)))
 })
 
 test_that("runtime event conservation decodes canonical artifact times as UTC", {
