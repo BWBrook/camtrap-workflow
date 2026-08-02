@@ -2,7 +2,7 @@
 
 Date: 2026-08-02
 
-State: `AUTHORIZED_FOR_IMPLEMENTATION`
+State: `COMPLETE_PUBLISHED`
 
 Goal contract: `docs/goals/011-kill-your-darlings/Goal.md`
 

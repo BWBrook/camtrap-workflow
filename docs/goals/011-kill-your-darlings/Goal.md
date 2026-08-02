@@ -2,7 +2,7 @@
 
 Date: 2026-08-02
 
-State: `IMPLEMENTATION_AUTHORIZED`
+State: `COMPLETE_PUBLISHED`
 
 ## Purpose
 
@@ -451,6 +451,50 @@ Goal 011 is complete when:
 Runtime limits are measured decision bars, not flaky timing assertions embedded
 in tests. Missing the 15-minute release bar requires diagnosis and a Barry
 decision; repeated unchanged reruns are not acceptable evidence.
+
+## Closeout evidence
+
+Accepted implementation `f62c11e370b04c91008454b781920b1c000754cf`
+passed ordinary exact-SHA workflow `30753378488`. Its fast-test step took 35
+seconds and the complete Linux job took 2 minutes 32 seconds. The local gate at
+the same product state reported 516 passes with no failures, warnings, or skips
+in 15.58 seconds wall time; lint, `actionlint`, `renv::status()`, and diff
+hygiene were clean.
+
+Manual exact-SHA workflow `30753489524` then passed one full Judbury publisher,
+one independent emitted-bundle reconstruction, and artefact upload. The
+publisher took 156.80 seconds and the verifier 21.30 seconds, for a measured
+release path of 178.10 seconds (2 minutes 58.1 seconds) against the 15-minute
+bar. The corresponding Goal 010 path was 39 minutes 20 seconds, so the retained
+path is about 13.3 times faster.
+
+The emitted run `20260802T150751Z-98a49af832994d80` has manifest SHA-256
+`b98e0602fb065c8a313fefb205199daed45aa2d0604a4a3ff2b1e6b33f921bea`.
+Independent reconstruction confirmed 13 physical locations, nine eligible
+analysis sites, 9,639 operation rows, 11,572 physical events, 15,672 source
+memberships, presence by logical OR, richness by presence row sums, all 81
+accepted Jaccard values, and unchanged physical coordinates. All nine retained
+module records were `completed`. GitHub artefact `8835273351` contains the
+51-payload bundle and report; its uploaded archive digest is
+`047a9b925f3f500eaa6ee57c60b884c471db57a6b2d385ad576bda563e0b1658`.
+
+The final surface is seven targets, 26 production R files and 10,476 lines, and
+21 fast test files and 4,201 lines. The Goal 011 diff removes 16,141 lines and
+adds 6,167, a net subtraction of 9,974 lines while preserving the accepted
+Judbury foundation.
+
+One initial exact-SHA CI attempt exposed a missing Linux GLPK runtime needed by
+the cached `igraph` binary. Restoring `libglpk-dev` in both CI jobs produced the
+accepted exact SHA; no full Judbury release was spent before ordinary CI was
+green.
+
+Two non-blocking presentation and subtraction residues remain. The report is
+scientifically bounded and complete, but its 243-row day/night table is longer
+than the intended concise primary view; a future report pass should summarise
+that table while retaining the full machine-readable result. A few old
+diagnostic helpers still have no production caller and can be reconsidered in a
+later value-led deletion pass. Neither changes the accepted ecological results,
+publication integrity, or runtime decision.
 
 ## Delivery and stopping policy
 

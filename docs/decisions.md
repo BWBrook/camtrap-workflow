@@ -38,8 +38,15 @@ Consequences / follow-ups:
 - Old internal contracts have no migration reader; regenerate current outputs
   from source data.
 - Every candidate module publishes an explicit status and claim limit.
-- A manual exact-SHA release must independently reconstruct the accepted
-  Judbury foundation and comparison oracle.
+- Exact-SHA workflow `30753489524` independently reconstructed the accepted
+  Judbury foundation and comparison oracle from emitted run
+  `20260802T150751Z-98a49af832994d80`.
+- The publisher plus verifier now takes 2 minutes 58.1 seconds, down from 39
+  minutes 20 seconds. All nine retained modules completed and the immutable
+  evidence artefact uploaded successfully.
+- Keep the full day/night table machine-readable, but make its next primary-
+  report presentation more compact. Reconsider the few remaining caller-free
+  diagnostic helpers only when a value-led subtraction pass is warranted.
 
 ---
 

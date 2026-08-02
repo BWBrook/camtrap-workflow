@@ -6,14 +6,20 @@ Goal 011 defines the lean current product and the only supported run contract.
 Implementation and acceptance evidence live in
 `docs/goals/011-kill-your-darlings/`.
 
-## Acceptance Work
+## Goal 011 Acceptance
 
-- complete compact local verification;
-- obtain one scientific and one architecture review;
-- make at most one focused repair pass;
-- prove ordinary CI on the exact feature SHA;
-- run one timed manual Judbury release and independent reconstruction; and
-- fast-forward the accepted change only when publication is non-destructive.
+- [x] Complete compact local verification.
+- [x] Obtain one scientific and one architecture review.
+- [x] Make one focused repair pass.
+- [x] Prove ordinary CI on exact SHA `f62c11e370b0`.
+- [x] Run one timed Judbury release and independent reconstruction.
+- [x] Upload the immutable evidence artefact.
+
+Workflow `30753489524` completed the full publisher plus verifier in 2 minutes
+58.1 seconds. Its emitted bundle reproduced the accepted 13-to-nine mapping,
+9,639 operation rows, 11,572 events, 15,672 source memberships, presence,
+richness, and all 81 Jaccard values. Goal 011 is complete; canonical publication
+is the final non-destructive repository action.
 
 ## Deferred Product Decisions
 
