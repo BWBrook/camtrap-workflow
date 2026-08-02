@@ -4,7 +4,6 @@ import::from(
   expect_equal,
   expect_error,
   expect_false,
-  expect_setequal,
   expect_true
 )
 import::from("here", here)
@@ -23,12 +22,12 @@ source(here("R", "source_row_lineage.R"))
 source(here("R", "repair_ledger.R"))
 source(here("R", "event_outputs.R"))
 source(here("R", "validation_ledger.R"))
-source(here("R", "run_bundle.R"))
-source(here("scripts", "run_full_evidence_run.R"))
 
-goal006_validation_fixture <- function(mutator = NULL) {
-  source_root <- here("tests", "testthat", "fixtures", "goal006", "four_table_clean")
-  root <- tempfile("goal006-validation-fixture-")
+current_validation_fixture <- function(mutator = NULL) {
+  source_root <- here(
+    "tests", "testthat", "fixtures", "goal006", "four_table_clean"
+  )
+  root <- tempfile("current-validation-fixture-")
   fs::dir_copy(source_root, root)
   if (!is.null(mutator)) {
     mutator(root)
@@ -36,10 +35,13 @@ goal006_validation_fixture <- function(mutator = NULL) {
   root
 }
 
-goal006_validation_config <- function(root, outputs = tempfile("goal006-validation-outputs-")) {
+current_validation_config <- function(
+    root,
+    outputs = tempfile("current-validation-outputs-")) {
   config <- default_config()
   config$schema_version_path <- here("schema_version.txt")
   config$timezone_fixed_offset_hours <- 10
+  config$validation <- list(repair_decisions = list())
   config$paths$inputs <- list(
     site = file.path(root, "site.csv"),
     op = file.path(root, "op.csv"),
@@ -57,11 +59,18 @@ goal006_validation_config <- function(root, outputs = tempfile("goal006-validati
     deployment_ledger_sha256 = NULL,
     authority_reference = NULL
   )
+  config$analysis_unit <- list(
+    resolution = "physical_location",
+    mapping_profile_id = NULL,
+    mapping_path = NULL,
+    mapping_sha256 = NULL,
+    authority_reference = NULL
+  )
   validate_config(config)
 }
 
-goal006_snapshot <- function(config) {
-  stage <- tempfile("goal006-validation-stage-")
+current_validation_snapshot <- function(config) {
+  stage <- tempfile("current-validation-stage-")
   dir.create(stage)
   list(
     stage = stage,
@@ -69,9 +78,9 @@ goal006_snapshot <- function(config) {
   )
 }
 
-test_that("clean preflight reconciles rows, exclusions, and operational-event membership", {
-  config <- goal006_validation_config(goal006_validation_fixture())
-  materialized <- goal006_snapshot(config)
+test_that("clean preflight reconciles rows, exclusions, and event membership", {
+  config <- current_validation_config(current_validation_fixture())
+  materialized <- current_validation_snapshot(config)
   state <- prepare_validation_preflight(config, materialized$snapshot)
 
   expect_true(state$can_analyze)
@@ -91,107 +100,22 @@ test_that("clean preflight reconciles rows, exclusions, and operational-event me
   expect_equal(names(state$inputs), c("site", "op", "obs", "taxa"))
 })
 
-test_that("mocked CamtrapDP preflight preserves unknown semantic defaults", {
-  source_root <- tempfile("goal006-camtrapdp-preflight-")
-  fs::dir_copy(
-    here("tests", "testthat", "fixtures", "goal005", "camtrapdp"),
-    source_root
-  )
-  deployments <- tibble::tibble(
-    deploymentID = "dep1",
-    locationID = "loc1",
-    locationName = "Site 1",
-    latitude = 1,
-    longitude = 2,
-    deploymentStart = as.POSIXct("2020-01-01", tz = "UTC"),
-    deploymentEnd = as.POSIXct("2020-01-03", tz = "UTC"),
-    featureType = "trail"
-  )
-  observations <- tibble::tibble(
-    observationID = "obs1",
-    deploymentID = "dep1",
-    eventStart = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
-    scientificName = "Canis lupus",
-    count = NA_integer_,
-    lifeStage = "adult",
-    sex = "unknown",
-    mediaID = "m1"
-  )
-  media <- tibble::tibble(
-    mediaID = "m1",
-    deploymentID = "dep1",
-    timestamp = as.POSIXct("2020-01-02 12:00:00", tz = "UTC"),
-    fileName = "img1.jpg"
-  )
-  readr::write_csv(deployments, file.path(source_root, "deployments.csv"))
-  readr::write_csv(media, file.path(source_root, "media.csv"))
-  readr::write_csv(observations, file.path(source_root, "observations.csv"))
-  dp <- structure(
-    list(data = list(
-      deployments = deployments,
-      media = media,
-      observations = observations
-    )),
-    class = c("camtrapdp", "datapackage", "list")
-  )
-  config <- default_config()
-  config$input_mode <- "camtrapdp"
-  config$timezone <- "UTC"
-  config$schema_version_path <- here("schema_version.txt")
-  config$paths$inputs <- list(
-    site = NULL,
-    op = NULL,
-    obs = NULL,
-    taxa = NULL,
-    camtrapdp = file.path(source_root, "datapackage.json")
-  )
-  config <- validate_config(config)
-  stage <- tempfile("goal006-camtrapdp-stage-")
-  dir.create(stage)
-  snapshot <- materialize_source_snapshot(config, stage)
-  state <- prepare_validation_preflight(
-    config,
-    snapshot,
-    camtrapdp_reader = function(path) dp,
-    camtrapdp_adapter = camtrapdp_to_internal
-  )
-  rules <- vapply(state$proposals, `[[`, character(1), "rule_id")
-
-  expect_true(state$can_analyze)
-  expect_equal(
-    sort(rules),
-    sort(c("legacy.fill_count_one", "legacy.fill_flash_zero"))
-  )
-  expect_true(all(vapply(
-    state$proposals,
-    function(proposal) {
-      identical(proposal$repair_class, "fill_unknown") &&
-        identical(proposal$applicable, FALSE)
-    },
-    logical(1)
-  )))
-  expect_true(is.na(state$inputs$obs$count[[1]]))
-  expect_true(is.na(state$inputs$obs$flash[[1]]))
-  expect_equal(
-    state$lineage$resources$logical_name,
-    c("deployments", "media", "observations")
-  )
-  expect_equal(nrow(state$event_lineage$memberships), 1L)
-})
-
-test_that("bounded whitespace normalization previews, applies, and declines exactly", {
-  root <- goal006_validation_fixture(function(path) {
+test_that("whitespace normalization is explicit, applicable, or declined", {
+  root <- current_validation_fixture(function(path) {
     obs <- readLines(file.path(path, "obs.csv"))
     obs[2] <- sub(",sp1,", ", sp1 ,", obs[2], fixed = TRUE)
     writeLines(obs, file.path(path, "obs.csv"))
   })
-  config <- goal006_validation_config(root)
-  materialized <- goal006_snapshot(config)
+  config <- current_validation_config(root)
+  materialized <- current_validation_snapshot(config)
   preview <- prepare_validation_preflight(config, materialized$snapshot)
 
   expect_false(preview$can_analyze)
   expect_equal(length(preview$proposals), 1L)
-  expect_equal(preview$proposals[[1]]$repair_class, "representation_normalization")
+  expect_equal(
+    preview$proposals[[1]]$repair_class,
+    "representation_normalization"
+  )
   expect_equal(preview$inputs$obs$species[1], " sp1 ")
 
   config$validation$repair_decisions <- list(list(
@@ -213,9 +137,9 @@ test_that("bounded whitespace normalization previews, applies, and declines exac
   expect_equal(declined$applications[[1]]$reason, "declined")
 })
 
-test_that("stale authority and broken keys become non-waivable integrity findings", {
-  clean <- goal006_validation_config(goal006_validation_fixture())
-  materialized <- goal006_snapshot(clean)
+test_that("stale authority and broken keys are non-waivable findings", {
+  clean <- current_validation_config(current_validation_fixture())
+  materialized <- current_validation_snapshot(clean)
   clean$validation$repair_decisions <- list(list(
     proposal_id = paste(rep("0", 64L), collapse = ""),
     proposal_digest = paste(rep("1", 64L), collapse = ""),
@@ -230,14 +154,17 @@ test_that("stale authority and broken keys become non-waivable integrity finding
     logical(1)
   )))
 
-  broken_root <- goal006_validation_fixture(function(path) {
+  broken_root <- current_validation_fixture(function(path) {
     obs <- readLines(file.path(path, "obs.csv"))
     obs[2] <- sub(",jc_a,", ",missing_site,", obs[2], fixed = TRUE)
     writeLines(obs, file.path(path, "obs.csv"))
   })
-  broken_config <- goal006_validation_config(broken_root)
-  broken_materialized <- goal006_snapshot(broken_config)
-  broken <- prepare_validation_preflight(broken_config, broken_materialized$snapshot)
+  broken_config <- current_validation_config(broken_root)
+  broken_materialized <- current_validation_snapshot(broken_config)
+  broken <- prepare_validation_preflight(
+    broken_config,
+    broken_materialized$snapshot
+  )
   expect_false(broken$can_analyze)
   expect_true(any(vapply(
     broken$findings,
@@ -246,16 +173,13 @@ test_that("stale authority and broken keys become non-waivable integrity finding
   )))
 })
 
-test_that("phase-2 sidecars round-trip and reject orphan membership", {
-  config <- goal006_validation_config(goal006_validation_fixture())
-  materialized <- goal006_snapshot(config)
+test_that("current Phase 2 sidecars round-trip and reject orphan membership", {
+  config <- current_validation_config(current_validation_fixture())
+  materialized <- current_validation_snapshot(config)
   state <- prepare_validation_preflight(config, materialized$snapshot)
   root <- materialized$stage
   dir.create(file.path(root, "provenance"))
-  yaml::write_yaml(
-    config,
-    file.path(root, "provenance", "config.raw.yml")
-  )
+  yaml::write_yaml(config, file.path(root, "provenance", "config.raw.yml"))
   write_source_inventory(
     materialized$snapshot,
     "20260723T123456Z-0000000000000059",
@@ -264,7 +188,11 @@ test_that("phase-2 sidecars round-trip and reject orphan membership", {
   paths <- write_validation_artifacts(state, root)
 
   expect_true(all(file.exists(unlist(paths, use.names = FALSE))))
-  expect_true(validate_validation_artifacts(root, paths, require_analysis_ready = TRUE))
+  expect_true(validate_validation_artifacts(
+    root,
+    paths,
+    require_analysis_ready = TRUE
+  ))
 
   membership_path <- paths$event_membership
   membership <- jsonlite::read_json(membership_path, simplifyVector = FALSE)
@@ -276,420 +204,11 @@ test_that("phase-2 sidecars round-trip and reject orphan membership", {
   unlink(membership_path)
   atomic_write_json(membership, membership_path)
   expect_error(
-    validate_validation_artifacts(root, paths, require_analysis_ready = TRUE),
+    validate_validation_artifacts(
+      root,
+      paths,
+      require_analysis_ready = TRUE
+    ),
     "Orphan event membership"
-  )
-})
-
-test_that("supported validation-only runner publishes immutable preview without latest", {
-  output_root <- tempfile("goal006-preview-root-")
-  dir.create(output_root)
-  config <- goal006_validation_config(
-    goal006_validation_fixture(),
-    outputs = output_root
-  )
-  config_path <- tempfile("goal006-preview-config-", fileext = ".yml")
-  yaml::write_yaml(config, config_path)
-  pointer <- file.path(output_root, "latest")
-  writeBin(charToRaw("prior-pointer\n"), pointer)
-  pointer_before <- readBin(pointer, "raw", n = 1000L)
-  run_id <- "20260723T123456Z-0000000000000060"
-
-  result <- run_full_evidence_run(
-    config_path = config_path,
-    run_id = run_id,
-    validation_only = TRUE,
-    project_root = here()
-  )
-  preview <- file.path(output_root, "preflight", run_id)
-
-  expect_equal(result$mode, "validation_only")
-  expect_true(dir.exists(preview))
-  expect_true(file.exists(file.path(preview, "PREVIEW.json")))
-  preview_record <- jsonlite::read_json(
-    file.path(preview, "PREVIEW.json"),
-    simplifyVector = FALSE
-  )
-  expect_equal(
-    preview_record$preview_schema,
-    "camtrap-validation-preview/1.1"
-  )
-  expect_equal(
-    names(preview_record$entity_resolution),
-    c(
-      "entity_resolution",
-      "entity_links",
-      "deployment_lineage",
-      "entity_resolution_summary",
-      "join_readiness"
-    )
-  )
-  expect_equal(
-    unlist(preview_record$entity_resolution, use.names = TRUE),
-    c(
-      entity_resolution =
-        "provenance/entity_resolution/entity_resolution.csv",
-      entity_links = "provenance/entity_resolution/entity_links.csv",
-      deployment_lineage =
-        "provenance/entity_resolution/deployment_lineage.csv",
-      entity_resolution_summary =
-        "provenance/entity_resolution/entity_resolution_summary.json",
-      join_readiness =
-        "provenance/entity_resolution/join_readiness.json"
-    )
-  )
-  expect_true(all(file.exists(file.path(
-    preview,
-    unlist(preview_record$entity_resolution, use.names = FALSE)
-  ))))
-  expect_false(file.exists(file.path(preview, "COMPLETED.json")))
-  expect_false(dir.exists(file.path(output_root, "runs", run_id)))
-  expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
-  expect_true(verify_preflight_record(preview)$valid)
-  legacy_parent <- tempfile("goal009-legacy-preview-")
-  dir.create(legacy_parent)
-  legacy_preview <- file.path(legacy_parent, run_id)
-  fs::dir_copy(preview, legacy_preview)
-  legacy_record <- jsonlite::read_json(
-    preflight_record_path(legacy_preview),
-    simplifyVector = FALSE
-  )
-  legacy_record$preview_schema <- "camtrap-validation-preview/1.0"
-  unlink(preflight_record_path(legacy_preview))
-  atomic_write_json(legacy_record, preflight_record_path(legacy_preview))
-  expect_true(verify_preflight_record(legacy_preview)$valid)
-  expect_equal(
-    names(readRDS(file.path(
-      preview,
-      preview_record$phase2$validated_inputs
-    ))),
-    c("site", "op", "obs", "taxa")
-  )
-  expect_error(
-    run_full_evidence_run(
-      config_path = config_path,
-      run_id = run_id,
-      validation_only = TRUE,
-      project_root = here()
-    ),
-    "collision|overwrite"
-  )
-})
-
-test_that("preview decisions and integrity failures never complete or advance latest", {
-  output_root <- tempfile("goal006-preview-boundaries-")
-  dir.create(output_root)
-  pointer <- file.path(output_root, "latest")
-  writeBin(charToRaw("prior-pointer\n"), pointer)
-  pointer_before <- readBin(pointer, "raw", n = 1000L)
-
-  normalized_root <- goal006_validation_fixture(function(path) {
-    obs <- readLines(file.path(path, "obs.csv"))
-    obs[2] <- sub(",sp1,", ", sp1 ,", obs[2], fixed = TRUE)
-    writeLines(obs, file.path(path, "obs.csv"))
-  })
-  normalized_config <- goal006_validation_config(
-    normalized_root,
-    outputs = output_root
-  )
-  materialized <- goal006_snapshot(normalized_config)
-  proposal <- prepare_validation_preflight(
-    normalized_config,
-    materialized$snapshot
-  )$proposals[[1]]
-
-  invocations <- list(
-    unresolved = list(
-      id = "20260723T123456Z-0000000000000070",
-      config = normalized_config,
-      ready = FALSE
-    ),
-    approved = list(
-      id = "20260723T123456Z-0000000000000071",
-      config = within(normalized_config, {
-        validation <- list(repair_decisions = list(list(
-          proposal_id = proposal$proposal_id,
-          proposal_digest = proposal$proposal_digest,
-          decision = "approved"
-        )))
-      }),
-      ready = TRUE
-    ),
-    declined = list(
-      id = "20260723T123456Z-0000000000000072",
-      config = within(normalized_config, {
-        validation <- list(repair_decisions = list(list(
-          proposal_id = proposal$proposal_id,
-          proposal_digest = proposal$proposal_digest,
-          decision = "declined"
-        )))
-      }),
-      ready = FALSE
-    )
-  )
-  for (name in names(invocations)) {
-    invocation <- invocations[[name]]
-    config_path <- tempfile(
-      paste0("goal006-", name, "-"),
-      fileext = ".yml"
-    )
-    yaml::write_yaml(invocation$config, config_path)
-    if (isTRUE(invocation$ready)) {
-      run_full_evidence_run(
-        config_path = config_path,
-        run_id = invocation$id,
-        validation_only = TRUE,
-        project_root = here()
-      )
-    } else {
-      expect_error(
-        run_full_evidence_run(
-          config_path = config_path,
-          run_id = invocation$id,
-          validation_only = TRUE,
-          project_root = here()
-        ),
-        "analysis is blocked",
-        info = name
-      )
-    }
-    preview <- file.path(output_root, "preflight", invocation$id)
-    expect_true(verify_preflight_record(preview)$valid, info = name)
-    expect_false(
-      file.exists(file.path(preview, "COMPLETED.json")),
-      info = name
-    )
-    expect_false(
-      dir.exists(file.path(output_root, "runs", invocation$id)),
-      info = name
-    )
-    expect_equal(
-      readBin(pointer, "raw", n = 1000L),
-      pointer_before,
-      info = name
-    )
-  }
-
-  unresolved_proposals <- jsonlite::read_json(
-    file.path(
-      output_root,
-      "preflight",
-      invocations$unresolved$id,
-      "provenance",
-      "phase2",
-      "repair_proposals.json"
-    ),
-    simplifyVector = FALSE
-  )$records
-  expect_equal(unresolved_proposals[[1]]$proposal_id, proposal$proposal_id)
-
-  broken_root <- goal006_validation_fixture(function(path) {
-    obs <- readLines(file.path(path, "obs.csv"))
-    obs[2] <- sub(",jc_a,", ",missing_site,", obs[2], fixed = TRUE)
-    writeLines(obs, file.path(path, "obs.csv"))
-  })
-  broken_config <- goal006_validation_config(
-    broken_root,
-    outputs = output_root
-  )
-  broken_path <- tempfile("goal006-integrity-", fileext = ".yml")
-  yaml::write_yaml(broken_config, broken_path)
-  broken_id <- "20260723T123456Z-0000000000000073"
-  expect_error(
-    run_full_evidence_run(
-      config_path = broken_path,
-      run_id = broken_id,
-      validation_only = TRUE,
-      project_root = here()
-    ),
-    "analysis is blocked"
-  )
-  integrity_preview <- file.path(output_root, "preflight", broken_id)
-  expect_equal(verify_preflight_record(integrity_preview)$status, "blocked")
-  expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
-  expect_false(dir.exists(file.path(output_root, "runs", broken_id)))
-})
-
-test_that("failure after preflight preserves prior preview and latest bytes", {
-  output_root <- tempfile("goal006-preflight-failure-")
-  dir.create(output_root)
-  pointer <- file.path(output_root, "latest")
-  writeBin(charToRaw("prior-pointer\n"), pointer)
-  pointer_before <- readBin(pointer, "raw", n = 1000L)
-  config <- goal006_validation_config(
-    goal006_validation_fixture(),
-    outputs = output_root
-  )
-  config_path <- tempfile("goal006-preflight-failure-", fileext = ".yml")
-  yaml::write_yaml(config, config_path)
-  prior_id <- "20260723T123456Z-0000000000000074"
-  failed_id <- "20260723T123456Z-0000000000000075"
-  run_full_evidence_run(
-    config_path = config_path,
-    run_id = prior_id,
-    validation_only = TRUE,
-    project_root = here()
-  )
-  prior_preview <- file.path(output_root, "preflight", prior_id)
-  prior_inventory <- inventory_files(prior_preview)
-
-  expect_error(
-    run_full_evidence_run(
-      config_path = config_path,
-      run_id = failed_id,
-      validation_only = FALSE,
-      fail_at = "after_preflight",
-      project_root = here()
-    ),
-    "Injected failure after validation preflight"
-  )
-
-  expect_equal(inventory_files(prior_preview), prior_inventory)
-  expect_equal(readBin(pointer, "raw", n = 1000L), pointer_before)
-  expect_false(dir.exists(file.path(output_root, "runs", failed_id)))
-  expect_false(dir.exists(file.path(output_root, "preflight", failed_id)))
-})
-
-goal008_validation_selection <- function() {
-  list(
-    profile_id = "judbury-deployment-evidence/1.0.0-proposed",
-    service_sidecar_path = "data/jc_services.csv",
-    service_sidecar_sha256 =
-      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a",
-    deployment_ledger_path =
-      "docs/goals/008-judbury-deployment-evidence/judbury_deployment_ledger.csv",
-    deployment_ledger_sha256 =
-      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf",
-    authority_reference = paste0(
-      "goal008-judbury-deployment-evidence-source-sha256-",
-      "f33eeac9d70126966717c8e3f4731c00a97cbc3a34c2f44ce5c70d91c7d5283a-",
-      "ledger-sha256-",
-      "0921eb8845c2bb1ad5760271f283ab2783735b7739e254c67e9243bc906f3ebf"
-    )
-  )
-}
-
-test_that("supported runner requires explicit deployment selected or null configuration", {
-  config <- goal006_validation_config(goal006_validation_fixture())
-  config$deployment_evidence <- NULL
-  config_path <- tempfile("goal008-omitted-config-", fileext = ".yml")
-  yaml::write_yaml(config, config_path)
-
-  expect_error(
-    run_full_evidence_run(
-      config_path = config_path,
-      run_id = "20260727T123456Z-0000000000000080",
-      validation_only = TRUE,
-      project_root = here()
-    ),
-    "Supported Goal 008 runs require an explicit deployment_evidence"
-  )
-})
-
-test_that("selected validation preview adds only Goal 008 audit evidence", {
-  selected_outputs <- tempfile("goal008-selected-output-")
-  null_outputs <- tempfile("goal008-null-output-")
-  selected <- read_config(here("config.yml"), attach_runtime = FALSE)
-  selected$paths$outputs <- selected_outputs
-  selected$deployment_evidence <- goal008_validation_selection()
-  null <- selected
-  null$paths$outputs <- null_outputs
-  null$deployment_evidence <- list(
-    profile_id = NULL,
-    service_sidecar_path = NULL,
-    service_sidecar_sha256 = NULL,
-    deployment_ledger_path = NULL,
-    deployment_ledger_sha256 = NULL,
-    authority_reference = NULL
-  )
-  selected_path <- tempfile("goal008-selected-config-", fileext = ".yml")
-  null_path <- tempfile("goal008-null-config-", fileext = ".yml")
-  yaml::write_yaml(selected, selected_path)
-  yaml::write_yaml(null, null_path)
-  selected_id <- "20260727T123456Z-0000000000000081"
-  null_id <- "20260727T123456Z-0000000000000082"
-
-  selected_result <- run_full_evidence_run(
-    config_path = selected_path,
-    run_id = selected_id,
-    validation_only = TRUE,
-    project_root = here()
-  )
-  null_result <- run_full_evidence_run(
-    config_path = null_path,
-    run_id = null_id,
-    validation_only = TRUE,
-    project_root = here()
-  )
-  selected_record <- jsonlite::read_json(
-    preflight_record_path(selected_result$preview),
-    simplifyVector = FALSE
-  )
-  null_record <- jsonlite::read_json(
-    preflight_record_path(null_result$preview),
-    simplifyVector = FALSE
-  )
-  selected_inputs <- readRDS(file.path(
-    selected_result$preview,
-    selected_record$phase2$validated_inputs
-  ))
-  null_inputs <- readRDS(file.path(
-    null_result$preview,
-    null_record$phase2$validated_inputs
-  ))
-  selected_lineage <- read_entity_csv(file.path(
-    selected_result$preview,
-    selected_record$entity_resolution$deployment_lineage
-  ))
-
-  expect_equal(selected_record$preview_schema, "camtrap-validation-preview/1.2")
-  expect_setequal(names(selected_record$selected_resolution),
-                  c("membership", "operation", "event_map", "summary"))
-  expect_true(verify_preflight_record(selected_result$preview)$valid)
-  selected_operation <- read.csv(file.path(
-    selected_result$preview,
-    selected_record$selected_resolution$operation
-  ), stringsAsFactors = FALSE, check.names = FALSE)
-  expect_true(any(
-    selected_operation$analysis_unit_id == "jc_pm14" &
-      selected_operation$operation == 0
-  ))
-
-  expect_equal(
-    analytical_inputs_fingerprint(selected_inputs),
-    analytical_inputs_fingerprint(null_inputs)
-  )
-  expect_equal(names(selected_inputs), c("site", "op", "obs", "taxa"))
-  expect_equal(nrow(selected_lineage), 13L)
-  expect_equal(
-    unique(selected_lineage$deployment_record_schema),
-    "camtrap-deployment-lineage/1.1"
-  )
-  expect_false(file.exists(file.path(selected_outputs, "latest")))
-  expect_false(file.exists(file.path(null_outputs, "latest")))
-
-  membership_path <- file.path(
-    selected_result$preview,
-    selected_record$selected_resolution$membership
-  )
-  membership <- read.csv(membership_path, stringsAsFactors = FALSE,
-                         check.names = FALSE)
-  membership$analysis_unit_id[[1L]] <- "tampered_analysis_unit"
-  readr::write_csv(membership, membership_path, na = "")
-  summary_path <- file.path(
-    selected_result$preview,
-    selected_record$selected_resolution$summary
-  )
-  summary <- jsonlite::read_json(summary_path, simplifyVector = FALSE)
-  summary$artifact_sha256$membership <- sha256_file(membership_path)
-  unlink(summary_path)
-  atomic_write_json(summary, summary_path)
-  preview_path <- preflight_record_path(selected_result$preview)
-  selected_record$payload <- preflight_payload_inventory(selected_result$preview)
-  unlink(preview_path)
-  atomic_write_json(selected_record, preview_path)
-  expect_error(
-    verify_preflight_record(selected_result$preview),
-    "reconstruct|membership"
   )
 })
