@@ -40,20 +40,36 @@ test_that("current configs preserve mapped and physical analysis authorities", {
                  goal009_mapping_selection()$mapping_sha256, info = path)
   }
 
-  physical <- read_config(
-    here("config.template_example.yml"),
-    attach_runtime = FALSE
-  )
-  expect_equal(physical$analysis_unit$resolution, "physical_location")
-  expect_true(all(vapply(
-    physical$analysis_unit[setdiff(names(physical$analysis_unit), "resolution")],
-    is.null,
-    logical(1)
-  )))
-  expect_equal(
-    physical$analysis_unit_resolved$scheme_id,
-    "camtrap-physical-location-identity"
-  )
+  for (path in c(
+    "config.template_example.yml",
+    "config.forest_example.yml",
+    "config.camtrapdp_example.yml"
+  )) {
+    physical <- read_config(here(path), attach_runtime = FALSE)
+    expect_equal(
+      physical$analysis_unit,
+      list(
+        resolution = "physical_location",
+        mapping_profile_id = NULL,
+        mapping_path = NULL,
+        mapping_sha256 = NULL,
+        authority_reference = NULL
+      ),
+      info = path
+    )
+    expect_equal(
+      physical$analysis_unit_resolved[c(
+        "resolution", "scheme_id", "scheme_version", "authority_reference",
+        "authority_state", "state"
+      )],
+      c(
+        list(resolution = "physical_location"),
+        analysis_unit_identity_authority(),
+        list(state = "built_in_default")
+      ),
+      info = path
+    )
+  }
 })
 
 test_that("analysis-site selection rejects unapproved current authority", {

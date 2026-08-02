@@ -85,6 +85,32 @@ test_that("Events: define_events clusters within threshold and is monotonic in t
   expect_equal(n_ev_15, 2)
   expect_lte(n_ev_60, n_ev_15)
   expect_lte(n_ev_15, nrow(ev_15))
+
+  colocated <- tibble(
+    site = c("jc_co1", "jc_co1_s1"),
+    species = c("pos", "pos"),
+    datetime = c("01/01/2020 00:00:00", "01/01/2020 00:05:00"),
+    flash = c(0, 0)
+  )
+  physical_events <- define_events(
+    colocated,
+    threshold = 15,
+    tz = "Australia/Hobart"
+  )
+  expect_equal(
+    sort(unique(physical_events$event_id)),
+    c("jc_co1_pos_1", "jc_co1_s1_pos_1")
+  )
+
+  mapping <- read.csv(here(
+    "docs", "goals", "009-analysis-site-vertical-slice",
+    "judbury_analysis_site_mapping.csv"
+  ))
+  physical_events$analysis_site <- mapping$analysis_site_id[
+    match(physical_events$site, mapping$physical_location_id)
+  ]
+  expect_equal(unique(physical_events$analysis_site), "jc_co1")
+  expect_equal(length(unique(physical_events$event_id)), 2L)
 })
 
 test_that("Events: summarise_events counts distinct event_id per day", {

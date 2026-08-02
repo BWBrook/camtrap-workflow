@@ -1,6 +1,6 @@
 import::from(
-  "testthat", test_that, expect_equal, expect_false, expect_named,
-  expect_true
+  "testthat", test_that, expect_equal, expect_error, expect_false,
+  expect_identical, expect_named, expect_true
 )
 import::from("here", here)
 source(here("R", "config_identity.R"))
@@ -39,7 +39,12 @@ goal009_membership_digest <- function(event_id, source_ids) {
 }
 goal009_fixture <- function() {
   mapping <- goal009_mapping()
-  physical <- mapping$physical_location_id
+  physical_site <- read.csv(
+    here("data", "jc_site.csv"),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  physical <- as.character(physical_site$site)
   deployment <- paste0("judbury_dep_", physical)
   predecessor <- rep(NA_character_, length(physical))
   successor <- predecessor
@@ -71,7 +76,7 @@ goal009_fixture <- function() {
   )
   validation <- list(
     inputs = list(
-      site = data.frame(site = physical, stringsAsFactors = FALSE),
+      site = physical_site,
       op = operation, obs = obs, taxa = data.frame(short = c("pos", "wal"))
     ),
     lineage = list(
@@ -149,10 +154,20 @@ goal009_fixture <- function() {
 }
 test_that("resolution preserves exact membership and chronology-based concurrency", {
   fixture <- goal009_fixture()
+  physical_before <- serialize(list(
+    site = fixture$validation_state$inputs$site,
+    obs = fixture$validation_state$inputs$obs,
+    event_lineage = fixture$validation_state$event_lineage
+  ), NULL)
   state <- do.call(
     resolve_selected_resolution,
     fixture[c("config", "snapshot", "validation_state", "entity_state")]
   )
+  expect_identical(serialize(list(
+    site = fixture$validation_state$inputs$site,
+    obs = fixture$validation_state$inputs$obs,
+    event_lineage = fixture$validation_state$event_lineage
+  ), NULL), physical_before)
   expected <- fixture$mapping[c("physical_location_id", "analysis_site_id")]
   names(expected)[[2]] <- "analysis_unit_id"
   actual <- state$membership[
@@ -195,6 +210,35 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
     "physical_latitude", "physical_longitude", "representative_latitude",
     "representative_longitude", "coordinate_basis"
   ) %in% names(state$membership)))
+  source_index <- match(
+    state$membership$physical_location_id,
+    fixture$validation_state$inputs$site$site
+  )
+  expect_equal(
+    state$membership$physical_latitude,
+    fixture$validation_state$inputs$site$lat[source_index]
+  )
+  expect_equal(
+    state$membership$physical_longitude,
+    fixture$validation_state$inputs$site$lon[source_index]
+  )
+  mapping_index <- match(
+    state$membership$physical_location_id,
+    fixture$mapping$physical_location_id
+  )
+  synthetic <- grepl(
+    "^synthetic_fixed_midpoint",
+    fixture$mapping$coordinate_basis[mapping_index]
+  )
+  expect_true(any(synthetic))
+  expect_equal(
+    state$membership$representative_latitude[synthetic],
+    fixture$mapping$representative_latitude[mapping_index][synthetic]
+  )
+  expect_equal(
+    state$membership$representative_longitude[synthetic],
+    fixture$mapping$representative_longitude[mapping_index][synthetic]
+  )
   handover <- state$operation[
     state$operation$analysis_unit_id == "jc_co1" &
       state$operation$operation == 1, ,
@@ -215,6 +259,29 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
   expect_true(isTRUE(concurrent_state$integrity_ok))
   expect_false(isTRUE(concurrent_state$route_eligible))
   expect_true(any(grepl("concurrent", concurrent_state$reasons)))
+})
+
+test_that("duplicate physical rows hard-stop the selected mapping reader", {
+  fixture <- goal009_fixture()
+  record <- fixture$snapshot$inventory[[1L]]
+  mapping_path <- file.path(fixture$snapshot$staging_dir, record$path)
+  duplicate <- fixture$mapping
+  duplicate$physical_location_id[[2L]] <- duplicate$physical_location_id[[1L]]
+  utils::write.csv(duplicate, mapping_path, row.names = FALSE, na = "")
+  duplicate_sha256 <- sha256_file(mapping_path)
+  fixture$snapshot$inventory[[1L]]$sha256 <- duplicate_sha256
+
+  selection <- analysis_unit_selection(fixture$config)
+  selection$mapping_sha256 <- duplicate_sha256
+  rlang::local_bindings(
+    analysis_unit_selection = function(config) selection,
+    .env = environment(selected_resolution_read_mapping)
+  )
+
+  expect_error(
+    selected_resolution_read_mapping(fixture$config, fixture$snapshot),
+    "incomplete or duplicate membership"
+  )
 })
 
 test_that("incomplete or orphaned membership hard stops without inference", {
