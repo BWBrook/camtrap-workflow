@@ -1,5 +1,9 @@
 # Decisions
 
+Entries before 2026-08-02 are historical design provenance and do not define
+the current product surface. Goal 011 supersedes earlier module, output, and
+delivery decisions where they conflict.
+
 This file records key decisions that shape the project. Add entries whenever a choice is:
 - hard to reverse,
 - affects architecture or scientific interpretation,
@@ -10,6 +14,32 @@ Use the format:
 - Decision
 - Rationale
 - Consequences / follow-ups
+
+---
+
+## 2026-08-02 - Adopt the lean Goal 011 current contract
+
+Decision:
+- Support one seven-stage workflow and one `camtrap-run-bundle/2.0` contract.
+- Retain observed community summaries, confirmed effort, physical-location
+  event diagnostics, coarse day/night, sampling accumulation, event-gap
+  sensitivity, and a point map.
+- Make `physical_location` the generic analytical unit and allow
+  `analysis_site` only through an exact approved mapping.
+- Publish one HTML report plus separate audit and machine-readable evidence.
+
+Rationale:
+- The accumulated product surface cost more to validate, maintain, explain,
+  and release than its present ecological value justified.
+- The retained workflow answers the current observational questions while
+  preserving source identity, effort, event lineage, and bounded claims.
+
+Consequences / follow-ups:
+- Old internal contracts have no migration reader; regenerate current outputs
+  from source data.
+- Every candidate module publishes an explicit status and claim limit.
+- A manual exact-SHA release must independently reconstruct the accepted
+  Judbury foundation and comparison oracle.
 
 ---
 
@@ -194,7 +224,7 @@ Rationale:
 - Simplifies alignment checks between detection and effort.
 
 Consequences / follow-ups:
-- Documented in `docs/reference/detection_history_schema_v0.1.md`.
+- The historical table schema remains available in Git history.
 - Alignment checks will enforce `detected == 1` only when `effort == 1`.
 
 ---

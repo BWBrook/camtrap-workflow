@@ -21,9 +21,8 @@ test_that("fixed-clock allocations remain unique and filesystem-safe", {
   expect_true(is_safe_run_id(second))
 })
 
-test_that("run IDs and compatibility labels reject path syntax", {
+test_that("run IDs reject path syntax", {
   expect_error(assert_safe_run_id("../escape"), "Unsafe")
   expect_error(assert_safe_run_id("/absolute"), "Unsafe")
   expect_error(assert_safe_run_id("a/b"), "Unsafe")
-  expect_true(is_safe_run_id(safe_compatibility_label("Judbury run 1")))
 })

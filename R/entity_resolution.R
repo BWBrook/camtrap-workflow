@@ -1525,7 +1525,7 @@ resolve_four_table_entities <- function(
       findings <- add_integrity_finding(
         findings,
         "crosswalk.source_key_mismatch",
-        "Approved crosswalk keys do not exactly cover legacy site identifiers.",
+        "Approved crosswalk keys do not exactly cover source site identifiers.",
         "site"
       )
     }
@@ -1731,8 +1731,8 @@ resolve_four_table_entities <- function(
         source_namespace = "four_table:site",
         source_identifier = site,
         resolution_state = "resolved",
-        evidence_state = "compatibility_identity",
-        evidence_basis = "exact_legacy_site_identifier",
+        evidence_state = "direct_source_identity",
+        evidence_basis = "exact_four_table_site_identifier",
         source_inventory_path = inventory_path
       )
     }
@@ -2463,7 +2463,7 @@ validate_entity_record_digests <- function(frame) {
 
 reconstruct_entity_state <- function(root) {
   config_path <- file.path(root, "provenance", "config.raw.yml")
-  config <- read_config(config_path, attach_runtime = FALSE)
+  config <- read_config(config_path)
   snapshot <- portable_validation_snapshot(root, config)
   validation_state <- prepare_validation_preflight(
     config,

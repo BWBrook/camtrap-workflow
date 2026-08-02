@@ -150,7 +150,7 @@ test_that("CamtrapDP unknowns and endpoints are never silently fabricated", {
     include_audit = TRUE
   )
   defaults <- out$.audit$semantic_defaults
-  rules <- vapply(defaults, `[[`, character(1), "legacy_rule")
+  rules <- vapply(defaults, `[[`, character(1), "source_rule")
 
   expect_true(is.na(out$obs$datetime[[1]]))
   expect_true(is.na(out$obs$count[[1]]))
@@ -158,9 +158,9 @@ test_that("CamtrapDP unknowns and endpoints are never silently fabricated", {
   expect_equal(
     sort(rules),
     sort(c(
-      "legacy.copy_media_timestamp",
-      "legacy.fill_count_one",
-      "legacy.fill_flash_zero"
+      "adapter.copy_media_timestamp",
+      "adapter.fill_count_one",
+      "adapter.fill_flash_zero"
     ))
   )
   expect_true(all(vapply(
@@ -191,7 +191,7 @@ test_that("CamtrapDP unknowns and endpoints are never silently fabricated", {
   expect_true(any(vapply(
     defaults,
     function(record) {
-      identical(record$legacy_rule, "legacy.copy_deployment_endpoint") &&
+      identical(record$source_rule, "adapter.copy_deployment_endpoint") &&
         identical(record$production_applicable, FALSE)
     },
     logical(1)

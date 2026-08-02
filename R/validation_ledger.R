@@ -309,7 +309,7 @@ validation_decisions <- function(config) {
 #'
 #' @param config Effective configuration.
 #' @param snapshot Immutable source snapshot.
-#' @param four_table_reader Reader for one legacy CSV table.
+#' @param four_table_reader Reader for one four-table CSV source.
 #' @param camtrapdp_reader Reader for one Camtrap DP package.
 #' @param camtrapdp_adapter Adapter from Camtrap DP to internal tables.
 #' @return Validation state and analysis-ready input tables.
@@ -1020,7 +1020,7 @@ reconstruct_validation_state <- function(root) {
   if (!file.exists(config_path)) {
     stop("Portable validation reconstruction has no raw configuration.")
   }
-  config <- read_config(config_path, attach_runtime = FALSE)
+  config <- read_config(config_path)
   snapshot <- portable_validation_snapshot(root, config)
   prepare_validation_preflight(
     config,

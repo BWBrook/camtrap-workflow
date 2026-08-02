@@ -1,32 +1,18 @@
 #!/usr/bin/env Rscript
 
-if (!exists("resolve_selected_resolution", mode = "function")) {
-  selected_resolution_file <- file.path(here::here(), "R", "selected_resolution.R")
-  if (file.exists(selected_resolution_file)) source(selected_resolution_file, local = .GlobalEnv)
-}
-
-load_evidence_helpers <- function(project_root) {
+load_runner_helpers <- function(project_root) {
+  helpers <- new.env(parent = globalenv())
   files <- c(
-    "R/config_identity.R",
     "R/fixity.R",
-    "R/run_identity.R",
+    "R/config_identity.R",
     "R/config.R",
-    "R/entity_resolution.R",
-    "R/source_inventory.R",
-    "R/custom_funcs.R",
-    "R/qc_schema.R",
-    "R/camtrapdp_adapter.R",
-    "R/input_loader.R",
-    "R/source_row_lineage.R",
-    "R/repair_ledger.R",
-    "R/event_outputs.R",
-    "R/selected_resolution.R",
-    "R/validation_ledger.R",
-    "R/run_bundle.R"
+    "R/run_identity.R",
+    "R/source_inventory.R"
   )
   for (file in files) {
-    source(file.path(project_root, file), local = .GlobalEnv)
+    sys.source(file.path(project_root, file), envir = helpers)
   }
+  helpers
 }
 
 parse_full_run_args <- function(args) {
@@ -36,17 +22,13 @@ parse_full_run_args <- function(args) {
   index <- 1L
   while (index <= length(args)) {
     argument <- args[[index]]
-    if (identical(argument, "--config")) {
-      if (index == length(args)) {
-        stop("--config requires a path.")
+    if (argument %in% c("--config", "--verify-bundle")) {
+      if (index == length(args)) stop(argument, " requires a path.")
+      if (identical(argument, "--config")) {
+        config <- args[[index + 1L]]
+      } else {
+        verify_bundle <- args[[index + 1L]]
       }
-      config <- args[[index + 1L]]
-      index <- index + 2L
-    } else if (identical(argument, "--verify-bundle")) {
-      if (index == length(args)) {
-        stop("--verify-bundle requires a path.")
-      }
-      verify_bundle <- args[[index + 1L]]
       index <- index + 2L
     } else if (identical(argument, "--validate-only")) {
       validation_only <- TRUE
@@ -55,7 +37,7 @@ parse_full_run_args <- function(args) {
       stop("Unknown argument: ", argument)
     }
   }
-  if (!is.null(verify_bundle) && isTRUE(validation_only)) {
+  if (!is.null(verify_bundle) && validation_only) {
     stop("--verify-bundle and --validate-only cannot be combined.")
   }
   list(
@@ -65,15 +47,37 @@ parse_full_run_args <- function(args) {
   )
 }
 
-restore_environment <- function(previous) {
-  for (name in names(previous)) {
-    value <- previous[[name]]
-    if (is.na(value)) {
-      Sys.unsetenv(name)
-    } else {
-      do.call(Sys.setenv, stats::setNames(list(value), name))
-    }
+publish_validation_preview <- function(
+    validation,
+    outputs_root,
+    run_id,
+    helpers) {
+  staging <- validation$ingest$request$staging_dir
+  record <- list(
+    validation_preview_schema = "camtrap-validation-preview/2.0",
+    run_id = run_id,
+    status = if (isTRUE(validation$state$can_analyze)) "ready" else "blocked",
+    can_analyze = isTRUE(validation$state$can_analyze),
+    finding_count = as.integer(length(validation$state$findings)),
+    proposal_count = as.integer(length(validation$state$proposals)),
+    changed_field_count = as.integer(length(validation$state$changed_fields))
+  )
+  helpers$atomic_write_json(
+    record,
+    file.path(staging, "validation_preview.json")
+  )
+  final <- file.path(outputs_root, "preflight", run_id)
+  if (file.exists(final)) stop("Validation preview already exists: ", run_id)
+  dir.create(dirname(final), recursive = TRUE, showWarnings = FALSE)
+  if (!file.rename(staging, final)) {
+    stop("Atomic validation-preview publication failed.")
   }
+  list(
+    mode = "validation_only",
+    run_id = run_id,
+    preview = final,
+    analysis_ready = record$can_analyze
+  )
 }
 
 run_full_evidence_run <- function(
@@ -81,246 +85,109 @@ run_full_evidence_run <- function(
     run_id = NULL,
     validation_only = FALSE,
     clock = Sys.time,
-    token = default_run_token,
-    fail_at = Sys.getenv("CAMTRAP_TEST_FAIL_AT", unset = ""),
-    fetch = default_remote_fetch,
-    project_root = here::here()) {
+    token = NULL,
+    fetch = NULL,
+    project_root = here::here(),
+    target_store = NULL,
+    reporter = "balanced") {
   project_root <- normalizePath(project_root, winslash = "/", mustWork = TRUE)
-  old_working_dir <- setwd(project_root)
-  on.exit(setwd(old_working_dir), add = TRUE)
-
-  source_config_path <- resolve_project_path(config_path, project_root)
-  bootstrap_config_path <- tempfile("camtrap-config-", fileext = ".yml")
-  snapshot_config_file(source_config_path, bootstrap_config_path)
-  on.exit(unlink(bootstrap_config_path, force = TRUE), add = TRUE)
-
-  resolved_config <- read_config(bootstrap_config_path, attach_runtime = FALSE)
-  entity_resolution_selection(resolved_config, require_explicit = TRUE)
-  deployment_evidence_selection(resolved_config, require_explicit = TRUE)
-  output_root_path <- resolve_project_path(resolved_config$paths$outputs, project_root)
-  run_id <- if (is.null(run_id)) allocate_run_id(clock = clock, token = token) else run_id
-  assert_safe_run_id(run_id)
-
-  run_final_dir <- file.path(output_root_path, "runs", run_id)
-  preview_final_dir <- file.path(output_root_path, "preflight", run_id)
-  staging_dir <- if (isTRUE(validation_only)) {
-    file.path(output_root_path, "preflight", ".staging", run_id)
+  old_working_directory <- setwd(project_root)
+  on.exit(setwd(old_working_directory), add = TRUE)
+  helpers <- load_runner_helpers(project_root)
+  if (is.null(token)) token <- helpers$default_run_token
+  if (is.null(fetch)) fetch <- helpers$default_remote_fetch
+  config_path <- helpers$resolve_project_path(config_path, project_root)
+  bootstrap_config <- helpers$read_config(config_path)
+  outputs_root <- helpers$resolve_project_path(
+    bootstrap_config$paths$outputs,
+    project_root
+  )
+  dir.create(outputs_root, recursive = TRUE, showWarnings = FALSE)
+  outputs_root <- normalizePath(outputs_root, winslash = "/", mustWork = TRUE)
+  run_id <- if (is.null(run_id)) {
+    helpers$allocate_run_id(clock = clock, token = token)
   } else {
-    file.path(output_root_path, "runs", ".staging", run_id)
+    helpers$assert_safe_run_id(run_id)
   }
-  runtime_path <- file.path(output_root_path, ".runtime", paste0(run_id, ".json"))
-  if (file.exists(run_final_dir) || file.exists(preview_final_dir)) {
-    stop("Refusing invocation identity collision: ", run_id)
+  staging <- if (isTRUE(validation_only)) {
+    file.path(outputs_root, "preflight", ".staging", run_id)
+  } else {
+    file.path(outputs_root, "runs", ".staging", run_id)
   }
-  if (file.exists(staging_dir)) {
-    stop("Refusing run ID collision with existing staging directory: ", run_id)
+  target_store <- if (is.null(target_store)) {
+    file.path(outputs_root, ".targets-goal011")
+  } else {
+    normalizePath(target_store, winslash = "/", mustWork = FALSE)
   }
-
-  dir.create(staging_dir, recursive = TRUE, showWarnings = FALSE)
-  raw_config_path <- file.path(staging_dir, "provenance", "config.raw.yml")
-  snapshot_config_file(bootstrap_config_path, raw_config_path)
+  request <- list(
+    request_schema = "camtrap-workflow-request/2.0",
+    run_id = run_id,
+    created_utc = format(clock(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    config_path = config_path,
+    project_root = project_root,
+    outputs_root = outputs_root,
+    staging_dir = staging,
+    target_store = target_store,
+    fetch = fetch
+  )
+  target_environment <- new.env(parent = globalenv())
+  target_environment$workflow_request <- request
   published <- FALSE
   on.exit({
-    unlink(runtime_path, force = TRUE)
-    if (!published && dir.exists(staging_dir)) {
-      unlink(staging_dir, recursive = TRUE, force = TRUE)
+    if (!published && dir.exists(staging)) {
+      unlink(staging, recursive = TRUE, force = TRUE)
     }
   }, add = TRUE)
 
-  snapshot <- materialize_source_snapshot(
-    resolved_config,
-    staging_dir,
-    project_root = project_root,
-    fetch = fetch
-  )
-  snapshot$staging_dir <- staging_dir
-  config_hashes <- config_fingerprints(raw_config_path, resolved_config)
-  engine <- compute_engine_identity(project_root)
-  fingerprints <- list(
-    source = snapshot$source_sha256,
-    config = list(
-      raw = config_hashes$raw_sha256,
-      resolved = config_hashes$resolved_sha256
-    ),
-    engine = engine$engine_sha256
-  )
-  fingerprints$composite <- composite_fingerprint(
-    fingerprints$source,
-    fingerprints$config$resolved,
-    fingerprints$engine
-  )
-
-  context <- list(
-    context_schema = "camtrap-evidence-context/1.0",
-    supported_full_run = TRUE,
-    execution_mode = if (isTRUE(validation_only)) {
-      "validation_only"
-    } else {
-      "full"
-    },
-    run_id = run_id,
-    legacy_run_label = resolved_config$run_id,
-    created_utc = format(clock(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    staging_dir = staging_dir,
-    outputs_root = output_root_path,
-    config_file = raw_config_path,
-    config_source_name = basename(source_config_path),
-    snapshot = snapshot,
-    engine = engine,
-    fingerprints = fingerprints,
-    provenance = list(
-      source_inventory = file.path(staging_dir, "provenance", "source_inventory.json"),
-      raw_config = raw_config_path,
-      effective_config = file.path(staging_dir, "provenance", "effective_config.json")
-    )
-  )
-
-  write_source_inventory(snapshot, run_id, context$provenance$source_inventory)
-  write_effective_config(resolved_config, context, context$provenance$effective_config)
-
-  if (identical(fail_at, "after_snapshot")) {
-    stop("Injected failure after source snapshot.")
+  target_name <- if (isTRUE(validation_only)) {
+    "validation_stage"
+  } else {
+    "bundle_stage"
   }
-
-  validation_state <- prepare_validation_preflight(
-    resolved_config,
-    snapshot,
-    four_table_reader = read_jc_csv,
-    camtrapdp_reader = read_camtrapdp_dataset,
-    camtrapdp_adapter = camtrapdp_to_internal
+  targets::tar_make(
+    names = tidyselect::all_of(target_name),
+    reporter = reporter,
+    callr_function = NULL,
+    envir = target_environment,
+    script = file.path(project_root, "_targets.R"),
+    store = target_store
   )
-  validation_artifacts <- write_validation_artifacts(
-    validation_state,
-    staging_dir
-  )
-  entity_state <- resolve_entity_evidence(
-    resolved_config,
-    snapshot,
-    validation_state
-  )
-  entity_artifacts <- write_entity_artifacts(
-    entity_state,
-    staging_dir
-  )
-  selected_state <- NULL
-  selected_artifacts <- NULL
-  if (!is.null(analysis_unit_selection(resolved_config))) {
-    selected_state <- resolve_selected_resolution(
-      resolved_config,
-      snapshot,
-      validation_state,
-      entity_state
-    )
-    selected_artifacts <- write_selected_resolution_artifacts(
-      selected_state,
-      staging_dir
-    )
-  }
-  analysis_ready <- isTRUE(validation_state$can_analyze) &&
-    isTRUE(entity_state$can_analyze) &&
-    (is.null(selected_state) || isTRUE(selected_state$integrity_ok))
-  context$validation <- list(
-    validation_schema = "camtrap-validation-context/1.0",
-    can_analyze = analysis_ready,
-    artifacts = validation_artifacts,
-    validated_inputs_sha256 = sha256_file(
-      validation_artifacts$validated_inputs
-    )
-  )
-  context$entity_resolution <- list(
-    entity_resolution_context_schema =
-      "camtrap-entity-resolution-context/1.0",
-    can_analyze = entity_state$can_analyze,
-    artifacts = entity_artifacts
-  )
-  if (!is.null(selected_state)) {
-    context$selected_resolution <- list(
-      selected_resolution_context_schema = "camtrap-selected-resolution-context/1.0",
-      integrity_ok = selected_state$integrity_ok,
-      route_eligible = selected_state$route_eligible,
-      artifacts = as.list(selected_artifacts)
-    )
-  }
-  dir.create(dirname(runtime_path), recursive = TRUE, showWarnings = FALSE)
-  atomic_write_json(context, runtime_path)
-
-  if (identical(fail_at, "after_preflight")) {
-    stop("Injected failure after validation preflight.")
-  }
-  if (isTRUE(validation_only)) {
-    final_dir <- publish_preflight_record(
-      staging_dir,
-      output_root_path,
-      run_id
+  result <- if (isTRUE(validation_only)) {
+    validation <- targets::tar_read(validation_stage, store = target_store)
+    value <- publish_validation_preview(
+      validation,
+      outputs_root,
+      run_id,
+      helpers
     )
     published <- TRUE
-    result <- list(
-      mode = "validation_only",
-      run_id = run_id,
-      preview = final_dir,
-      analysis_ready = analysis_ready,
-      fingerprints = fingerprints
+    value
+  } else {
+    bundle <- targets::tar_read(bundle_stage, store = target_store)
+    published <- TRUE
+    list(
+      mode = "full",
+      run_id = bundle$run_id,
+      bundle = bundle$bundle,
+      latest = bundle$latest
     )
-    cat(canonical_json(result, pretty = TRUE), "\n")
-    if (!isTRUE(analysis_ready)) {
-      stop(
-        "Validation preview published but analysis is blocked: ",
-        final_dir
-      )
-    }
-    return(invisible(result))
   }
-  if (!isTRUE(analysis_ready)) {
-    stop("Validation preflight blocked the full run before analysis.")
-  }
-
-  environment_names <- c("CAMTRAP_CONFIG", "CAMTRAP_EVIDENCE_CONTEXT")
-  previous <- Sys.getenv(environment_names, unset = NA_character_)
-  on.exit(restore_environment(previous), add = TRUE)
-  Sys.setenv(
-    CAMTRAP_CONFIG = raw_config_path,
-    CAMTRAP_EVIDENCE_CONTEXT = runtime_path
-  )
-
-  targets::tar_make(callr_function = NULL)
-  if (!identical(sha256_file(raw_config_path), fingerprints$config$raw)) {
-    stop("Raw configuration snapshot integrity mismatch.")
-  }
-  verify_source_snapshot(snapshot, staging_dir)
-  if (identical(fail_at, "after_pipeline")) {
-    stop("Injected failure after pipeline and before bundle publication.")
-  }
-
-  manifest <- manifest_path(staging_dir)
-  if (!file.exists(manifest)) {
-    stop("Full target graph did not produce run_manifest.json.")
-  }
-  final_dir <- publish_run_bundle(
-    staging_dir,
-    output_root_path,
-    run_id,
-    fail_after_publish = identical(fail_at, "after_publish")
-  )
-  published <- TRUE
-
-  result <- list(
-    mode = "full",
-    run_id = run_id,
-    bundle = final_dir,
-    latest = latest_pointer_path(output_root_path),
-    fingerprints = fingerprints
-  )
-  cat(canonical_json(result, pretty = TRUE), "\n")
+  cat(helpers$canonical_json(result, pretty = TRUE), "\n")
   invisible(result)
 }
 
 main <- function() {
   project_root <- here::here()
-  load_evidence_helpers(project_root)
   args <- parse_full_run_args(commandArgs(trailingOnly = TRUE))
   if (!is.null(args$verify_bundle)) {
-    result <- verify_run_bundle(args$verify_bundle)
-    cat(canonical_json(result, pretty = TRUE), "\n")
+    status <- system2(
+      "Rscript",
+      c(
+        file.path(project_root, "scripts", "verify_published_bundle.R"),
+        args$verify_bundle
+      )
+    )
+    if (!identical(status, 0L)) stop("Independent bundle verification failed.")
   } else {
     run_full_evidence_run(
       config_path = args$config,
@@ -330,6 +197,4 @@ main <- function() {
   }
 }
 
-if (sys.nframe() == 0L) {
-  main()
-}
+if (sys.nframe() == 0L) main()

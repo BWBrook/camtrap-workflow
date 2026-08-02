@@ -1,124 +1,68 @@
 # Architecture
 
-## Architectural style
+## Product Boundary
 
-This repository is an R analysis project built around:
-- `targets` for pipeline orchestration and reproducibility,
-- modular R functions under `R/`,
-- and a rendered report (Quarto/Rmd) as a first-class pipeline artefact.
+Camtrap Workflow is an R analysis project, not a package or hosted service. It
+accepts already-labelled records and publishes a local ecological evidence
+bundle. `targets` provides orchestration; Quarto renders one HTML report.
 
-The design goal is **traceable scientific computation**:
-- each derived object has clear provenance,
-- outputs are produced from upstream validated inputs,
-- and the pipeline can be re-run deterministically in a locked environment.
+## Data Flow
 
-## Repository layout (target state)
+```text
+workflow request
+  -> immutable ingest
+  -> validation and controlled repair
+  -> entity, deployment, effort, and spatial foundation
+  -> physical-location events and source membership
+  -> eligible ecological modules and status records
+  -> HTML report
+  -> internal verification and atomic publication
+  -> independent emitted-bundle reconstruction
+```
 
-- `R/`
-  - Reusable functions, grouped by concern (I/O, QC, effort, events, metrics, models, community).
-- `_targets.R`
-  - The pipeline definition (targets).
-- `analysis/`
-  - Report source(s) (e.g., `report.qmd`) and small helper scripts.
-- `data/`
-  - Exemplar dataset (Judbury) and documentation (data dictionary).
-- `scripts/`
-  - Maintenance scripts (e.g., data dictionary generation).
-- `tests/`
-  - `testthat` unit tests + optional smoke/integration checks.
-- `docs/`
-  - Product/engineering harness, roadmap, decisions, and workflow rules.
-- `outputs/` (gitignored)
-  - Pipeline artefacts (tables, figures, report, model objects).
+`_targets.R` is a seven-target composer. `R/workflow_stages.R` owns the stage
+boundaries. Scientific arithmetic and evidence validation stay in focused
+modules under `R/`.
 
-## Core data flow
+## Contracts
 
-1) Inputs
-- `jc_site.csv` (site covariates)
-- `jc_op.csv` (effort on/off)
-- `jc_obs.csv` (detections)
-- `jc_taxa.csv` (traits)
+- `camtrap-workflow-request/2.0` carries run identity, paths, creation time,
+  target store, and acquisition function into the graph.
+- `camtrap-workflow-stage/2.0` identifies each returned stage value.
+- `camtrap-module-status/2.0` records eligibility and outcome per module.
+- `camtrap-run-bundle/2.0` is the only supported completed-run manifest.
+- `camtrap-run-completion/2.0` binds a published run to its manifest digest.
 
-2) Standardisation
-- Column name harmonisation (snake_case)
-- Datetime parsing with explicit timezone
-- Type coercion where safe, otherwise fail
+Historical bundles remain evidence but are not read through compatibility
+dispatch. Regenerate a current bundle from immutable sources when needed.
 
-3) QC (fail-fast)
-- Key alignment: obs.site ∈ site.site; obs.species ∈ taxa.short; op columns align to site IDs
-- Effort validity: 0/1 only, no NAs (unless explicitly allowed as downtime)
-- Datetime plausibility: clock drift diagnostics
+## Integrity Boundary
 
-4) Derived core tables
-- `op_long` (date, site, on_off)
-- `trap_nights` / `trap_days` (effort per site)
-- `obs_filtered` (detections during operational periods)
-- `obs_events` (detections tagged with event_id)
-- `events_per_day` (site × species × date event counts)
-- `detection_histories` (site × occasion × species matrices)
-- `community_matrix` (site × species abundance/presence)
+The publisher performs one internal verification before publication. It then
+renames the staged directory into `outputs/runs/<run_id>/`, writes
+`COMPLETE.json`, verifies again at the publication boundary, and atomically
+updates `outputs/latest`.
 
-5) Analyses
-- MVP: RAI, diel summaries, rarefaction, effort plots
-- Beta: occupancy models (unmarked)
-- 1.0: community and trait analyses
+The independent verifier reads only emitted artefacts. It checks payload
+fixity, source/event lineage, physical-location identity and source fields,
+selected event conservation, presence/richness arithmetic, Jaccard semantics,
+module status, and report existence. The Judbury release also checks fixed
+foundation counts and the accepted 81-pair Jaccard oracle.
 
-6) Outputs
-- Write tables to `outputs/tables/`
-- Write figures to `outputs/figures/`
-- Write models to `outputs/models/`
-- Render report to `outputs/report/`
-- Save session info to `outputs/session_info.txt`
+## Scientific Boundary
 
-## Interfaces and module responsibilities
+The pipeline distinguishes observation from inference:
 
-Suggested functional modules (implemented as R scripts under `R/`):
+- effort is confirmed active time; unknown operation is not filled;
+- events are deterministic groupings of source detections under a configured
+  gap rule;
+- presence and richness are observed, effort- and detection-bounded values;
+- Jaccard is descriptive detected composition;
+- event detection rate is not abundance or density;
+- day/night is a coarse clock-evidence category;
+- accumulation is a sampling diagnostic; and
+- maps display supplied physical points and approved grouping overlays only.
 
-- `R/io_read.R`
-  - Read inputs; standardise names; parse datetimes.
-- `R/qc_validate.R`
-  - Data contract checks; informative errors/warnings.
-- `R/effort.R`
-  - Pivot effort matrix; compute effort summaries; join effort to detections.
-- `R/events.R`
-  - Independent-event clustering; event-spacing diagnostics.
-- `R/metrics_descriptive.R`
-  - RAI and uncertainty; diel summaries; accumulation curves.
-- `R/community.R`
-  - Community matrices; alpha/beta diversity; distance–decay.
-- `R/traits.R`
-  - Trait cleaning; functional diversity; trait–environment workflows.
-- `R/models_occupancy_unmarked.R`
-  - Detection history builder; occupancy model fitting; predictions; diagnostics.
-- `R/reporting_helpers.R`
-  - Small helper utilities for report rendering and output writing.
-
-Each module must be testable independently.
-
-## targets pipeline strategy
-
-- Keep `_targets.R` declarative: targets call functions; functions do the work.
-- Use `format = "file"` for saved artefacts (figures, report, exported tables).
-- Prefer `tarchetypes` for report rendering:
-  - report reads upstream targets using `tar_read()`/`tar_load()`.
-- Separate “heavy” analyses (e.g., spatial, multispecies models) into optional branches or conditional execution, so CI can run a minimal subset reliably.
-
-## Configuration
-
-The workflow must centralise user-modifiable parameters, such as:
-- timezone,
-- event threshold (minutes),
-- definition of sampling occasion (day/week),
-- inclusion/exclusion rules (e.g., species filters),
-- formulas for occupancy models.
-
-Preferred approaches:
-- a `config.yml` read by the pipeline, OR
-- a single `params` list defined near the top of `_targets.R`.
-
-## Traceability
-
-Every run must produce:
-- session info (`sessionInfo()`),
-- a small run manifest (timestamp, git commit hash if available, config snapshot),
-- and output artefacts whose filenames include stable identifiers (not random strings).
+Nominal station may be retained in entity provenance, but only
+`physical_location` and an explicitly approved `analysis_site` are analytical
+routes.

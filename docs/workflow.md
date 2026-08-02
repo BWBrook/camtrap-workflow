@@ -1,138 +1,83 @@
-# Workflow: Artefact Review Cycle
+# Workflow
 
-This document specifies how development and scientific output validation must be done in this repository.
-Code that runs is not enough. Outputs must be technically correct, reproducible, and ecologically coherent.
+## Supported Run Path
 
-## 1) When this workflow applies
+Use the publisher for validation previews and complete runs:
 
-Apply the workflow whenever you:
-- change data ingestion / QC logic,
-- change the definition of effort, events, or derived tables,
-- add or modify an analysis method (metrics, models, diversity),
-- or produce a new report section and associated artefacts.
+```sh
+Rscript scripts/run_full_evidence_run.R --validate-only --config config.yml
+Rscript scripts/run_full_evidence_run.R --config config.yml
+```
 
-## 2) Standard iteration loop (engineering + science)
+The runner creates one explicit `camtrap-workflow-request/2.0` value and passes
+it into a private targets environment. Stages exchange their returned values
+directly; environment variables and intermediate runtime JSON are not part of
+the stage contract.
 
-### Step A — Plan
-- Update `docs/roadmap.md` if priorities changed.
-- Create/append a log entry under `docs/log/` describing:
-  - the intended change,
-  - expected artefacts,
-  - and expected sanity checks.
+## Seven Stages
 
-### Step B — Implement
-- Implement in small increments.
-- Keep functions modular and testable.
-- Avoid hard-coded parameters outside the central configuration.
+1. `ingest_stage` captures the raw configuration and immutable source files,
+   then computes source, resolved-config, engine, and composite fingerprints.
+2. `validation_stage` validates the input contract and records findings,
+   proposal decisions, changed fields, and source-row lineage.
+3. `foundation_stage` resolves entity/deployment evidence and the selected
+   spatial unit, including confirmed operation.
+4. `events_stage` forms operational detection events at physical locations and
+   records every contributing source row.
+5. `modules_stage` runs each eligible retained ecological summary and writes a
+   status for every candidate module.
+6. `report_stage` renders one concise HTML ecological report from precomputed
+   machine-readable results.
+7. `bundle_stage` writes the current manifest, verifies the staged bundle,
+   publishes it atomically, writes completion evidence, and advances
+   `outputs/latest` only after final verification.
 
-### Step C — Build artefacts
-Run the pipeline (or relevant subset) to generate artefacts.
+Validation, entity/effort resolution, event construction, and selected spatial
+resolution are each computed once and reused downstream.
 
-Expected artefacts (by milestone):
-- MVP:
-  - QC summaries
-  - effort plots
-  - event-spacing plot
-  - RAI table + plot
-  - diel table + plot
-  - rarefaction plot
-  - rendered report
-- Beta:
-  - detection histories
-  - occupancy model objects + summaries + plots
-- 1.0:
-  - community matrices
-  - alpha/beta diversity outputs
-  - functional diversity outputs
+## Failure Semantics
 
-### Step D — Sanity checks (domain + technical)
-Sanity checks must be explicit, not implicit.
+Input or lineage integrity failures stop the run. Ecological eligibility is
+fail-soft: an unavailable module is `omitted`, while valid independent modules
+continue. A technical module error is `failed`; any failed module prevents a
+completed publication and leaves `outputs/latest` unchanged.
 
-#### Technical sanity
-- No errors or warnings that indicate partial failure.
-- No `NA` explosions or silent row drops without explanation.
-- Outputs written where expected; filenames stable.
+A mapped dataset with no operational events remains structurally valid. It
+publishes empty core tables with `completed_with_warnings` where appropriate.
 
-#### Domain sanity (examples)
-Effort:
-- Total effort per site is non-negative and plausible.
-- Effort coverage matches input date ranges.
+## Spatial Semantics
 
-Events:
-- Increasing the event threshold should not increase the number of independent events for identical input.
-- Event counts should be less than or equal to raw detection row counts.
+Events are always formed at resolved physical locations before grouping. The
+selected analytical resolution is either:
 
-RAI:
-- RAI values are non-negative.
-- Species with zero events have zero RAI.
+- `physical_location`; or
+- `analysis_site` with one exact approved membership mapping.
 
-Diel:
-- Proportions sum to 1 within grouping units.
-- If using flash as a night proxy, document its limitations.
+No grouping is inferred from identifiers, coordinates, proximity, chronology,
+or operation patterns. Supplied physical coordinates and covariates remain
+attached to physical locations. Representative grouped coordinates are for map
+orientation only.
 
-Occupancy (Beta+):
-- Detection histories align with effort (no detections on inactive days).
-- Model convergence diagnostics are checked and surfaced.
+## Artefact Review
 
-Encode as:
-- unit tests (`tests/testthat/`),
-- or dedicated sanity scripts under `tests/` if they are more integration-like.
+For a change that affects scientific output:
 
-### Step E — Interpretation (mandatory “lab notebook” step)
-For each major artefact (figure/table/model output):
-- Add a short section to `docs/interpretation_notes.md` (create if missing) with:
-  - Artefact ID and path (e.g., `outputs/figures/rai_species.png`)
-  - 2–5 bullets:
-    - what it shows,
-    - what it suggests,
-    - what looks surprising or concerning,
-    - next questions.
+1. run the smallest focused tests at the changed seam;
+2. run `Rscript scripts/run_lint.R` and the complete fast suite;
+3. inspect the HTML report, module-status records, and affected tables or
+   figures from a small fixture run;
+4. run the independent emitted-bundle verifier; and
+5. use the manual exact-SHA Judbury release only after review.
 
-This is required even if results “look fine”.
+Do not use a full release to debug ordinary unit failures.
 
-### Step F — Iterate
-- If sanity fails: fix logic/tests, rebuild.
-- If interpretation raises questions: add follow-up tasks to roadmap, implement, rebuild.
-- Stop only when artefacts are coherent and tests capture the main assumptions.
+## Development Commands
 
-## 3) Quality gates before a PI review ZIP
+```sh
+Rscript scripts/run_lint.R
+Rscript scripts/run_tests.R --profile fast
+actionlint .github/workflows/ci.yml
+```
 
-Before handing a snapshot back for PI review:
-- `renv.lock` is updated and complete
-- lint passes (`Rscript scripts/run_lint.R`)
-- tests pass (`Rscript scripts/run_tests.R`)
-- tests pass locally
-- lint is clean (or documented exceptions)
-- pipeline runs end-to-end on exemplar data
-- `docs/log/` has an entry summarising what changed
-- `docs/decisions.md` reflects any major decisions
-- `docs/interpretation_notes.md` exists and has notes for new/changed artefacts
-
-## 4) Artefact checklist (what to inspect)
-
-For each run, the agent must inspect:
-- Rendered report (does it render? do figures show?)
-- Key plots:
-  - effort summaries
-  - event-spacing
-  - RAI (species and site)
-  - diel summaries
-  - rarefaction
-- Key tables:
-  - QC outputs (counts, missingness, exclusions)
-  - trap effort summaries
-  - events_per_day summaries
-- Model summaries (Beta+):
-  - convergence
-  - parameter estimates
-  - predicted occupancy/detection
-
-Record findings in `docs/interpretation_notes.md` and/or the phase log.
-
-## 5) Relationship to other docs
-
-- `docs/product_brief.md` defines what we are building and what is out of scope.
-- `docs/architecture.md` describes modules, interfaces, and data flow.
-- `docs/roadmap.md` defines milestones and priorities.
-- `docs/decisions.md` records key irreversible choices.
-- `docs/release_checklist.md` defines what must be true before tagging a release.
+The fast suite must remain below two minutes. It includes a compact real
+publication smoke; there is no separate local release-test tier.

@@ -300,10 +300,6 @@ analysis_site_mapping_selection <- function(config) { # nolint: object_length_li
   selection
 }
 
-# Compatibility name for callers that describe this as an analysis-unit source
-# rather than an analysis-site mapping.
-analysis_unit_mapping_selection <- analysis_site_mapping_selection # nolint: object_length_linter.
-
 snapshot_analysis_site_mapping <- function(config, snapshot_root, project_root) {
   selection <- analysis_site_mapping_selection(config)
   if (is.null(selection)) {
@@ -636,8 +632,8 @@ engine_file_paths <- function(project_root = here::here()) {
     "_targets.R",
     sort(fs::path_rel(Sys.glob(file.path(project_root, "R", "*.R")), start = project_root)),
     "analysis/report.qmd",
-    "analysis/methods.qmd",
     "scripts/run_full_evidence_run.R",
+    "scripts/verify_published_bundle.R",
     sort(fs::path_rel(
       Sys.glob(file.path(project_root, "config.*.yml")),
       start = project_root

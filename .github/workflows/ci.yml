@@ -28,8 +28,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libglpk40 \
-            libglpk-dev \
             libjq-dev \
             libnode-dev \
             libuv1-dev \
@@ -54,14 +52,20 @@ jobs:
       - name: Restore packages (renv)
         uses: r-lib/actions/setup-renv@v2
 
+      - name: Setup Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Check workflow syntax
+        uses: docker://rhysd/actionlint:1.7.7
+
       - name: Lint
         run: Rscript scripts/run_lint.R
 
       - name: Fast tests
         run: Rscript scripts/run_tests.R --profile fast
 
-      - name: Pipeline smoke test
-        run: Rscript -e 'targets::tar_make(names = "input_contract_validation", callr_function = NULL)'
+      - name: End-to-end publication smoke
+        run: Rscript -e 'testthat::test_file("tests/testthat/test_workflow_end_to_end.R", reporter = "summary")'
 
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.profile == 'release'
@@ -76,8 +80,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libglpk40 \
-            libglpk-dev \
             libjq-dev \
             libnode-dev \
             libuv1-dev \
@@ -103,23 +105,32 @@ jobs:
       - name: Restore packages (renv)
         uses: r-lib/actions/setup-renv@v2
 
-      - name: Release tests
-        run: Rscript scripts/run_tests.R --profile release
-
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      - name: Install TinyTeX (PDF reports)
-        run: quarto install tinytex --no-prompt
-
-      - name: Full immutable evidence run
-        run: Rscript scripts/run_full_evidence_run.R --config config.yml
-
-      - name: Verify published evidence bundle
+      - name: Full Judbury publisher
         run: |
+          /usr/bin/time -p -o publisher.time \
+            Rscript scripts/run_full_evidence_run.R --config config.yml
           RUN_ID="$(tr -d '\n' < outputs/latest)"
-          Rscript scripts/run_full_evidence_run.R \
-            --verify-bundle "outputs/runs/${RUN_ID}"
+          echo "RUN_ID=${RUN_ID}" >> "$GITHUB_ENV"
+
+      - name: Independent published-bundle reconstruction
+        run: |
+          /usr/bin/time -p -o verifier.time \
+            Rscript scripts/verify_published_bundle.R \
+              "outputs/runs/${RUN_ID}" \
+              --oracle tests/fixtures/goal011/judbury_selected_jaccard_oracle.csv
+
+      - name: Record release timings
+        if: always()
+        run: |
+          {
+            printf 'publisher\n'
+            test -f publisher.time && cat publisher.time || printf 'not completed\n'
+            printf '\nindependent verifier\n'
+            test -f verifier.time && cat verifier.time || printf 'not completed\n'
+          } > release-timings.txt
 
       - name: Upload artefacts
         if: always()
@@ -131,3 +142,4 @@ jobs:
             outputs/latest
             outputs/runs/*/
             !outputs/runs/.staging/
+            release-timings.txt

@@ -30,8 +30,8 @@ goal009_mapping_selection <- function() {
 }
 
 test_that("current configs preserve mapped and physical analysis authorities", {
-  for (path in c("config.yml", "config.camtrapdp_export.yml")) {
-    mapped <- read_config(here(path), attach_runtime = FALSE)
+  for (path in "config.yml") {
+    mapped <- read_config(here(path))
     expect_equal(mapped$analysis_unit, goal009_mapping_selection(), info = path)
     expect_equal(mapped$analysis_unit_resolved$resolution, "analysis_site", info = path)
     expect_equal(mapped$analysis_unit_resolved$scheme_id, "judbury-analysis-site", info = path)
@@ -45,7 +45,7 @@ test_that("current configs preserve mapped and physical analysis authorities", {
     "config.forest_example.yml",
     "config.camtrapdp_example.yml"
   )) {
-    physical <- read_config(here(path), attach_runtime = FALSE)
+    physical <- read_config(here(path))
     expect_equal(
       physical$analysis_unit,
       list(
@@ -82,8 +82,8 @@ test_that("raw YAML differs while equivalent resolved configuration matches", {
   fixture <- here("tests", "testthat", "fixtures", "goal005")
   first_path <- file.path(fixture, "config_equivalent_a.yml")
   second_path <- file.path(fixture, "config_equivalent_b.yml")
-  first <- read_config(first_path, attach_runtime = FALSE)
-  second <- read_config(second_path, attach_runtime = FALSE)
+  first <- read_config(first_path)
+  second <- read_config(second_path)
 
   first_hash <- config_fingerprints(first_path, first)
   second_hash <- config_fingerprints(second_path, second)
@@ -104,13 +104,13 @@ test_that("configuration execution remains bound to the immutable raw snapshot",
     source
   )
   snapshot_record <- snapshot_config_file(source, snapshot)
-  expected <- read_config(snapshot, attach_runtime = FALSE)
+  expected <- read_config(snapshot)
 
   write("# concurrent live-config edit", source, append = TRUE)
 
   expect_false(identical(sha256_file(source), snapshot_record$sha256))
   expect_equal(sha256_file(snapshot), snapshot_record$sha256)
-  expect_equal(read_config(snapshot, attach_runtime = FALSE), expected)
+  expect_equal(read_config(snapshot), expected)
   expect_error(
     snapshot_config_file(source, snapshot),
     "snapshot already exists"
@@ -118,18 +118,18 @@ test_that("configuration execution remains bound to the immutable raw snapshot",
 })
 
 test_that("current repair authority is explicit", {
-  config <- read_config(here("config.yml"), attach_runtime = FALSE)
+  config <- read_config(here("config.yml"))
   expect_equal(config$validation, list(repair_decisions = list()))
 })
 
 test_that("repair decision configuration rejects broad authority", {
-  config <- read_config(here("config.yml"), attach_runtime = FALSE)
+  config <- read_config(here("config.yml"))
   config$validation <- list(apply_all = TRUE)
   expect_error(validate_config(config), "repair_decisions")
 })
 
 test_that("current entity-resolution authority is exact", {
-  selected <- read_config(here("config.yml"), attach_runtime = FALSE)
+  selected <- read_config(here("config.yml"))
   expect_equal(
     names(selected$entity_resolution),
     c("profile_id", "sidecar_path", "sidecar_sha256", "authority_reference")
@@ -145,13 +145,13 @@ test_that("current entity-resolution authority is exact", {
 })
 
 test_that("entity-resolution configuration rejects unapproved authority", {
-  config <- read_config(here("config.yml"), attach_runtime = FALSE)
+  config <- read_config(here("config.yml"))
   config$entity_resolution$authority_reference <- "pending"
   expect_error(validate_config(config), "approved authority")
 })
 
 test_that("current deployment-evidence authority is exact", {
-  config <- read_config(here("config.yml"), attach_runtime = FALSE)
+  config <- read_config(here("config.yml"))
   fields <- c(
     "profile_id",
     "service_sidecar_path",
@@ -176,7 +176,17 @@ test_that("current deployment-evidence authority is exact", {
 })
 
 test_that("deployment-evidence configuration rejects unapproved authority", {
-  config <- read_config(here("config.yml"), attach_runtime = FALSE)
+  config <- read_config(here("config.yml"))
   config$deployment_evidence$authority_reference <- "approved"
   expect_error(validate_config(config), "exact approved authority")
+})
+
+test_that("only current analytical resolutions and fields are accepted", {
+  config <- read_config(here("config.template_example.yml"))
+  config$analysis_unit$resolution <- "nominal_station"
+  expect_error(validate_config(config), "physical_location or analysis_site")
+
+  path <- tempfile(fileext = ".yml")
+  writeLines(c("input_mode: four_table", "occupancy: {}"), path)
+  expect_error(read_config(path), "removed or unknown")
 })

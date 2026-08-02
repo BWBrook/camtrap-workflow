@@ -1,452 +1,136 @@
 ---
-title: "camtrap-workflow report"
+title: "Camera-trap ecological summary"
 format:
   html:
-    toc: true
     embed-resources: true
-  pdf:
     toc: true
 params:
   inputs_path: null
-  rarefaction_path: null
-  effort_histogram_path: null
-  effort_heatmap_path: null
-  time_qc_plot_path: null
-  event_spacing_path: null
-  event_threshold_sensitivity_path: null
-  rai_species_path: null
-  diel_overall_path: null
-  alpha_diversity_path: null
-  beta_diversity_path: null
-  functional_diversity_path: null
-  trait_env_path: null
-  site_map_path: null
-  run_dir: null
+execute:
+  echo: false
+  warning: false
+  message: false
 ---
 
 ```{r}
-stopifnot(!is.null(params$inputs_path))
 inputs <- readRDS(params$inputs_path)
-repo_root <- here::here()
-evidence_run_id <- if (!is.null(inputs$params$evidence_run$id)) {
-  inputs$params$evidence_run$id
-} else {
-  "partial / unpublished"
+bundle_root <- dirname(dirname(params$inputs_path))
+read_output <- function(name) {
+  path <- inputs$outputs[[name]]
+  if (is.null(path)) return(NULL)
+  utils::read.csv(file.path(bundle_root, path), check.names = FALSE)
 }
-run_dir_display <- if (!is.null(inputs$params$evidence_run$id)) {
-  configured_outputs <- inputs$params$paths$outputs
-  if (fs::is_absolute_path(configured_outputs)) {
-    configured_outputs <- basename(configured_outputs)
-  }
-  file.path(configured_outputs, "runs", evidence_run_id)
-} else {
-  tryCatch(
-    fs::path_rel(params$run_dir, start = repo_root),
-    error = function(e) params$run_dir
+status_table <- do.call(rbind, lapply(inputs$module_status, function(record) {
+  data.frame(
+    analysis = gsub("_", " ", record$module),
+    status = gsub("_", " ", record$status),
+    resolution = gsub("_", " ", record$actual_resolution),
+    explanation = if (is.null(record$reason)) {
+      "Completed as specified."
+    } else {
+      record$reason
+    },
+    stringsAsFactors = FALSE
   )
-}
-selected_status <- inputs$selected_resolution_status
-has_selected_resolution <- !is.null(selected_status)
-is_judbury_selected <- has_selected_resolution &&
-  identical(selected_status$scheme_id, "judbury-analysis-site") &&
-  identical(selected_status$scheme_version, "1.0.0-proposed")
+}))
 ```
 
-## Snapshot
+## Ecological result
 
-- Sites: `r inputs$n_sites`
-- Observations (raw rows): `r inputs$n_obs_raw`
-- Observations (filtered to active effort days): `r inputs$n_obs_filtered`
-- Input schema version: `r inputs$schema_version`
-- Evidence run ID: `r evidence_run_id`
-- Compatibility label: `r inputs$params$run_id`
-- Input mode: `r inputs$params$input_mode`
-
-## QC summary
+This run retained `r inputs$event_count` independent detection events from
+`r inputs$physical_location_count` physical camera locations. The core spatial
+summaries use `r gsub("_", " ", inputs$resolution)` resolution across
+`r inputs$analysis_unit_count` analytical units.
 
 ```{r}
-qc_totals <- data.frame(
-  total_obs = sum(inputs$time_qc_summary$total_obs),
-  parse_fail = sum(inputs$time_qc_summary$parse_fail),
-  dst_gap = sum(inputs$time_qc_summary$dst_gap),
-  backward_jumps = sum(inputs$time_qc_summary$backward_jumps)
-)
-knitr::kable(qc_totals)
-```
-
-## Effort (trap nights)
-
-```{r}
-knitr::kable(inputs$effort_summary)
-```
-
-```{r}
-stopifnot(!is.null(params$effort_histogram_path))
-knitr::include_graphics(params$effort_histogram_path)
-```
-
-```{r}
-stopifnot(!is.null(params$effort_heatmap_path))
-knitr::include_graphics(params$effort_heatmap_path)
-```
-
-**Interpretation (what to conclude):** Effort varies across sites; comparisons of detections or indices should account for differences in trap nights.  
-**Caution (what not to conclude):** Low detections at low‑effort sites are not evidence of low abundance.
-
-## Time handling & limitations
-
-Timezone configured: `r inputs$params$timezone`  
-Fixed offset hours (ignore DST): `r ifelse(is.null(inputs$params$timezone_fixed_offset_hours), "none", inputs$params$timezone_fixed_offset_hours)`  
-Backward-jump threshold (hours): `r inputs$params$time_qc$backward_jump_threshold_hours`
-
-Datetime strings are parsed in the configured timezone. If a fixed offset is set, DST gaps are ignored.
-Backward jumps are flagged for review rather than automatically corrected.
-
-```{r}
-knitr::kable(inputs$time_qc_summary)
-```
-
-```{r}
-stopifnot(!is.null(params$time_qc_plot_path))
-knitr::include_graphics(params$time_qc_plot_path)
-```
-
-```{r}
-flagged_rows <- nrow(inputs$time_qc_flags)
-if (flagged_rows > 0) {
-  knitr::kable(utils::head(inputs$time_qc_flags, 20))
-} else {
-  cat("No time QC flags detected.")
+richness <- read_output("observed_richness")
+if (!is.null(richness)) {
+  show <- richness[c("analysis_unit_id", "observed_richness")]
+  names(show) <- c("Analysis unit", "Observed species")
+  knitr::kable(show)
 }
 ```
 
-**Interpretation (what to conclude):** Time‑QC tables identify potential clock issues (parse failures, DST gaps, backward jumps) for review.  
-**Caution (what not to conclude):** Flagged rows are not automatically corrected; interpret downstream timing outputs with these issues in mind.
-
-## Event definition & spacing diagnostics
-
-Operational detection events are defined by clustering detections of the same species at the same site
-with a gap threshold of `r inputs$params$event_threshold_minutes` minutes.
+Observed richness is the number of species detected in the supplied,
+effort-filtered records. It is not an estimate of species that went undetected.
 
 ```{r}
-total_events <- sum(inputs$events_per_day$events)
-median_gap <- median(inputs$event_spacing$gap_hours, na.rm = TRUE)
-data.frame(
-  total_events = total_events,
-  median_gap_hours = round(median_gap, 2)
-) |>
-  knitr::kable()
-```
-
-```{r}
-stopifnot(!is.null(params$event_spacing_path))
-knitr::include_graphics(params$event_spacing_path)
-```
-
-Note: the event spacing plot uses a log10 x-axis to resolve short-interval spikes.
-
-**Interpretation (what to conclude):** Short‑interval spikes indicate repeated detections that are collapsed by the chosen event gap.  
-**Caution (what not to conclude):** Event counts are sensitive to the chosen gap; compare sensitivity outputs before drawing conclusions.
-
-## Event threshold sensitivity
-
-```{r}
-knitr::kable(inputs$event_threshold_sensitivity)
-```
-
-```{r}
-stopifnot(!is.null(params$event_threshold_sensitivity_path))
-knitr::include_graphics(params$event_threshold_sensitivity_path)
-```
-
-**Interpretation (what to conclude):** If event totals are stable across thresholds, results are robust to the gap choice.  
-**Caution (what not to conclude):** Large changes across thresholds imply that event‑based metrics should be interpreted with extra caution.
-
-## Occasion length sensitivity
-
-```{r}
-knitr::kable(inputs$occasion_length_sensitivity)
-```
-
-```{r}
-occ_plot <- file.path(params$run_dir, "figures", "occasion_length_sensitivity.png")
-if (file.exists(occ_plot)) {
-  knitr::include_graphics(occ_plot)
-}
-```
-
-## Community matrices (presence/abundance)
-
-```{r}
-community_summary <- data.frame(
-  sites = nrow(inputs$community_abundance),
-  species = ncol(inputs$community_abundance) - 1
-)
-knitr::kable(community_summary)
-```
-
-**Interpretation (what to conclude):** Community matrices summarise detections as presence/absence and event counts by site.  
-**Caution (what not to conclude):** These matrices reflect detections, not true abundances; rare or cryptic taxa may be under‑represented.
-
-## Alpha diversity (per site)
-
-```{r}
-knitr::kable(inputs$alpha_diversity)
-```
-
-```{r}
-if (!is.null(params$alpha_diversity_path)) {
-  knitr::include_graphics(params$alpha_diversity_path)
-}
-```
-
-**Interpretation (what to conclude):** Richness differences highlight sites with more detected species.  
-**Caution (what not to conclude):** Richness is detection‑limited; lower richness can reflect lower effort or detectability.
-
-## Beta diversity (spatial distance–decay)
-
-```{r}
-knitr::kable(utils::head(inputs$beta_diversity, 12))
-```
-
-```{r}
-if (!is.null(params$beta_diversity_path)) {
-  knitr::include_graphics(params$beta_diversity_path)
-}
-```
-
-**Interpretation (what to conclude):** The distance–decay plot summarises how community dissimilarity changes with site distance.  
-**Caution (what not to conclude):** Spatial patterns can be confounded by habitat covariates not modelled explicitly.
-
-```{r, results='asis'}
-if (has_selected_resolution) {
-  cat("\n\n## Selected analysis resolution\n\n")
-  if (isTRUE(selected_status$route_eligible)) {
-    if (is_judbury_selected) {
-      cat(paste(
-        "For Judbury, the selected mapping combines 13 physical locations into nine analysis sites;",
-        "four coordinates are fixed synthetic midpoints used only for mapping and separation.\n\n"
-      ))
-    }
-    cat(paste(
-      "Selected results were derived after physical-location events were fixed; physical covariates were not pooled.",
-      "Effort means confirmed active site-days, richness is observed and detection-limited.",
-      "Jaccard turnover is descriptive and based on observed presences; it is not standardized for unequal confirmed effort, sampling completeness, or species detectability.\n\n"
-    ))
-    cat("### Effort and coverage\n\n")
-    print(knitr::kable(inputs$selected_effort_coverage))
-    cat("\n\n### Community presence\n\n")
-    print(knitr::kable(inputs$selected_community_presence))
-    cat("\n\n### Observed richness\n\n")
-    print(knitr::kable(inputs$selected_observed_richness))
-    cat("\n\n### Descriptive Jaccard turnover\n\n")
-    print(knitr::kable(inputs$selected_jaccard))
+jaccard <- read_output("jaccard")
+if (!is.null(jaccard)) {
+  finite <- jaccard$jaccard_dissimilarity[
+    is.finite(jaccard$jaccard_dissimilarity)
+  ]
+  if (length(finite) > 0L) {
+    cat(
+      "Observed-composition Jaccard dissimilarity ranged from ",
+      sprintf("%.3f", min(finite)), " to ", sprintf("%.3f", max(finite)),
+      ".\n",
+      sep = ""
+    )
   } else {
-    reasons <- unlist(selected_status$reasons, use.names = FALSE)
-    reasons <- reasons[!is.na(reasons) & nzchar(reasons)]
-    if (!length(reasons)) reasons <- "No eligible selected route was recorded."
-    cat(paste(
-      "An explicit selected analysis resolution was recorded, but the route is",
-      "ineligible for ecological tables. Recorded reasons:\n\n"
-    ))
-    cat(paste0("- ", reasons, collapse = "\n"), "\n")
+    cat("No pairwise Jaccard value was estimable from the detected community.\n")
   }
 }
 ```
 
-## Rarefaction
+Jaccard values describe turnover in detected composition. They are not
+standardized for unequal effort, sampling completeness, or detectability and
+do not establish environmental causes.
+
+## Sampling context
+
+The evidence contains `r inputs$operation_state_counts[["active"]]` confirmed
+active analysis-unit days, `r inputs$operation_state_counts[["inactive"]]`
+confirmed inactive days, and `r inputs$operation_state_counts[["unknown"]]`
+days with unknown operation. Unknown operation was not counted as effort.
 
 ```{r}
-stopifnot(!is.null(params$rarefaction_path))
-knitr::include_graphics(params$rarefaction_path)
-```
-
-**Interpretation (what to conclude):** A curve that approaches a plateau suggests sampling completeness.  
-**Caution (what not to conclude):** Rarefaction compares sites within this survey; it should not be used for cross‑study comparisons without standardised effort.
-
-## Traits coverage & functional diversity
-
-```{r}
-traits_missing <- inputs$traits_missing
-if (nrow(traits_missing) > 0) {
-  knitr::kable(traits_missing)
-} else {
-  cat("All community species have trait records.")
+rates <- read_output("operational_event_detection_rate")
+if (!is.null(rates) && nrow(rates) > 0L) {
+  rates <- rates[order(
+    rates$events_per_100_active_days,
+    decreasing = TRUE,
+    na.last = TRUE
+  ), ]
+  show <- utils::head(rates, 15L)
+  names(show) <- c(
+    "Physical location", "Species", "Events", "Confirmed active days",
+    "Events per 100 active days"
+  )
+  knitr::kable(show, digits = 2)
 }
 ```
 
-```{r}
-knitr::kable(inputs$functional_diversity)
-```
+Operational-event detection rates describe detections per confirmed active
+camera day. They must not be interpreted as abundance or density.
 
 ```{r}
-if (!is.null(params$functional_diversity_path)) {
-  knitr::include_graphics(params$functional_diversity_path)
+if (identical(inputs$scheme_id, "judbury-analysis-site")) {
+  cat(paste(
+    "The nine-site Judbury grouping is explicit and purpose-specific. It",
+    "groups 13 physical locations using approved, non-overlapping replacement",
+    "histories; it is not a generic default. Physical covariates were not",
+    "pooled, and representative mapped positions are orientation aids only."
+  ))
 }
 ```
 
-**Interpretation (what to conclude):** Functional diversity metrics reflect trait breadth among detected species per site.  
-**Caution (what not to conclude):** Missing or “unknown” traits can suppress FD metrics; interpret low values alongside `traits_missing`.
-
-## Trait–environment associations
+## Analysis status
 
 ```{r}
-assoc <- inputs$trait_env_associations
-assoc <- assoc[order(abs(assoc$rho), decreasing = TRUE), ]
-assoc_sig <- assoc[!is.na(assoc$p_adj) & assoc$p_adj <= 0.1, ]
-if (nrow(assoc_sig) > 0) {
-  knitr::kable(utils::head(assoc_sig, 12))
-} else {
-  cat("No trait–environment associations pass FDR (BH, 0.1). Showing strongest unadjusted correlations.\n\n")
-  knitr::kable(utils::head(assoc, 12))
-}
+knitr::kable(status_table)
 ```
 
-```{r}
-if (!is.null(params$trait_env_path)) {
-  knitr::include_graphics(params$trait_env_path)
-}
-```
+An omitted analysis lacked the evidence needed for a defensible result. A
+completed-with-warnings result remains usable within the explanation shown
+above. Detailed source, repair, entity, effort, event-membership, configuration,
+and fixity evidence is kept separately in the audit bundle.
 
-**Interpretation (what to conclude):** Trait–environment correlations identify candidate associations to investigate.  
-**Caution (what not to conclude):** Correlations are exploratory and do not imply causation; multiple testing is controlled via FDR.
+## Limits
 
-## Spatial overview (site map)
-
-```{r}
-if (!is.null(params$site_map_path)) {
-  knitr::include_graphics(params$site_map_path)
-}
-```
-
-Note: the map background is an interpolated surface from site covariates (default `ndvi`) and is intended for visual context only.
-North arrow and scale bar are added by default; site labels are optional via `spatial_map.label_sites`.
-
-**Interpretation (what to conclude):** The map provides spatial context for the sites and covariate gradients.  
-**Caution (what not to conclude):** The surface is interpolated from points and should not be treated as a measured raster.
-
-## Relative abundance index (pooled)
-
-RAI is defined as operational detection events per trap night, pooled over total survey effort across all included sites (Poisson confidence intervals).
-
-```{r}
-knitr::kable(inputs$rai_species)
-```
-
-```{r}
-stopifnot(!is.null(params$rai_species_path))
-knitr::include_graphics(params$rai_species_path)
-```
-
-**Interpretation (what to conclude):** RAI compares relative detection rates across species within this survey.  
-**Caution (what not to conclude):** RAI is not an estimate of density and should not be compared across surveys without matched effort and detectability.
-
-## Diel activity (site x period)
-
-```{r}
-knitr::kable(utils::head(inputs$diel_site, 20))
-```
-
-```{r}
-stopifnot(!is.null(params$diel_overall_path))
-knitr::include_graphics(params$diel_overall_path)
-```
-
-**Interpretation (what to conclude):** Diel proportions summarise event timing under the configured day/night method.  
-**Caution (what not to conclude):** Flash‑based diel classification can diverge from true solar time if camera settings differ.
-
-## Exploratory summaries
-
-These legacy-inspired convenience outputs are derived from the same standardised workflow tables used elsewhere in this run. They are included as descriptive summaries rather than as separate Camelot-compatibility outputs.
-
-### Species summary
-
-```{r}
-knitr::kable(utils::head(inputs$species_summary, 12))
-```
-
-### First detection wait time
-
-```{r}
-knitr::kable(inputs$first_detection_wait_time_species)
-```
-
-### Multi-species images
-
-```{r}
-if (nrow(inputs$multi_species_images) > 0) {
-  knitr::kable(utils::head(inputs$multi_species_images, 12))
-} else {
-  cat("No multi-species images were detected in this run.")
-}
-```
-
-**Interpretation (what to conclude):** These summaries provide compact views of detection breadth, time-to-first-detection, and images containing multiple taxa.  
-**Caution (what not to conclude):** They are exploratory descriptive outputs and should not be interpreted as direct evidence of interaction strength, absolute abundance, or survey comparability outside the current standardised workflow.
-
-## Occupancy (single-season)
-
-```{r}
-occ_diag <- inputs$occupancy_summary[, c(
-  "species",
-  "n_sites",
-  "n_sites_detected",
-  "n_sites_all_zero",
-  "naive_occupancy",
-  "naive_occupancy_lower",
-  "naive_occupancy_upper"
-)]
-knitr::kable(occ_diag)
-```
-
-```{r}
-occ_summary <- inputs$occupancy_summary[, c(
-  "species",
-  "psi",
-  "psi_lower",
-  "psi_upper",
-  "psi_ci_method",
-  "p",
-  "p_lower",
-  "p_upper"
-)]
-knitr::kable(occ_summary)
-```
-
-```{r}
-knitr::kable(utils::head(inputs$occupancy_aic, 12))
-```
-
-```{r}
-if (!is.null(inputs$occupancy_species)) {
-  for (sp in inputs$occupancy_species) {
-    fig_path <- file.path(params$run_dir, "figures", paste0("occupancy_pred_", sp, ".png"))
-    if (file.exists(fig_path)) {
-      knitr::include_graphics(fig_path)
-    }
-  }
-}
-```
-
-Note: `psi` in the summary table is the occupancy estimate at mean covariate values (state intercept). `psi` confidence intervals use a profile-likelihood method when available; naive occupancy provides an exact binomial interval based on the number of sites with any detections.
-
-**Interpretation (what to conclude):** Occupancy estimates reflect the probability a site is occupied given imperfect detection.  
-**Caution (what not to conclude):** Single-season models assume closure and do not model population change; wide intervals can reflect limited site counts or all-zero sites as much as low detectability.
-
-## Limitations & assumptions
-
-- Datetimes are interpreted in the configured timezone; DST gaps are flagged unless a fixed offset is specified.
-- Operational detection events depend on the gap threshold; sensitivity analysis is provided above to assess robustness.
-- Diel proportions use the configured method (`flash` or `clock`) and do not account for sunrise/sunset variation.
-- RAI reflects relative detection rates, not absolute abundance.
-- Occupancy models are single-season and illustrative; uncertainty is constrained by the number of sites and the presence of all-zero sites.
-- Trait analyses use cleaned taxa metadata; species with missing trait values are dropped from functional diversity.
-- Trait–environment associations are exploratory Spearman correlations on abundance-weighted trait proportions.
-- Spatial maps use interpolated site covariates (e.g., NDVI) for context and do not represent continuous measured surfaces.
-
-## Provenance
-
-Run outputs are stored under: `r run_dir_display`  
-Run manifest: `r file.path(run_dir_display, "run_manifest.json")`  
-Validation and lineage evidence: `r file.path(run_dir_display, "provenance", "phase2")`
-Session info: `r file.path(run_dir_display, "session_info.txt")`
+- Camera-trap non-detection does not prove ecological absence.
+- Coarse day/night categories do not support fine-scale diel inference.
+- Species accumulation describes sampling accumulation, not unseen richness.
+- Point maps show supplied physical locations and do not interpolate habitat.
+- No result in this report estimates abundance, density, population trend, or
+  causal habitat response.

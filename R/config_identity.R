@@ -65,7 +65,7 @@ snapshot_config_file <- function(source, destination) {
 }
 
 equivalence_config <- function(config) {
-  config$evidence_run <- NULL
+  config$analysis_unit_resolved <- NULL
   config$schema_version_path <- "<schema-version>"
   config$paths$outputs <- "<outputs-root>"
   for (name in names(config$paths$inputs)) {
@@ -96,32 +96,13 @@ composite_fingerprint <- function(source_sha256, resolved_config_sha256, engine_
   )))
 }
 
-attach_evidence_context <- function(config, context) {
-  if (is.null(context)) {
-    return(config)
-  }
-
-  config$evidence_run <- list(
-    id = context$run_id,
-    invocation_created_utc = context$created_utc,
-    legacy_run_label = context$legacy_run_label,
-    source_sha256 = context$fingerprints$source,
-    config_raw_sha256 = context$fingerprints$config$raw,
-    config_resolved_sha256 = context$fingerprints$config$resolved,
-    engine_sha256 = context$fingerprints$engine,
-    composite_sha256 = context$fingerprints$composite
-  )
-  config
-}
-
-write_effective_config <- function(config, context, path) {
-  effective <- attach_evidence_context(config, context)
+write_effective_config <- function(config, run, path) {
   record <- list(
-    effective_config_schema = "camtrap-effective-config/1.0",
-    run_id = context$run_id,
-    legacy_run_label = context$legacy_run_label,
-    fingerprints = context$fingerprints$config,
-    config = effective
+    effective_config_schema = "camtrap-effective-config/2.0",
+    run_id = run$run_id,
+    created_utc = run$created_utc,
+    fingerprints = run$fingerprints$config,
+    config = config
   )
   atomic_write_json(canonicalize_value(record), path)
 }

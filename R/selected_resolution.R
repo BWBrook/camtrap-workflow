@@ -99,45 +99,6 @@ selected_resolution_physical_ids <- function(entity_state, validation_state) { #
   character()
 }
 
-selected_resolution_nominal_membership <- function( # nolint: object_length_linter.
-    entity_state, physical_ids) {
-  if (!is.list(entity_state) || !is.data.frame(entity_state$records) ||
-        !is.data.frame(entity_state$links)) return(NULL)
-  records <- entity_state$records
-  links <- entity_state$links
-  needed_records <- c("entity_type", "entity_id", "source_identifier", "resolution_state")
-  needed_links <- c("link_type", "source_entity_id", "target_entity_id")
-  if (!all(needed_records %in% names(records)) || !all(needed_links %in% names(links))) {
-    stop("Nominal membership authority is malformed.")
-  }
-  nominal <- records[records$entity_type == "nominal_grid_station" &
-                       records$resolution_state == "resolved", , drop = FALSE]
-  physical <- records[records$entity_type == "physical_location" &
-                        records$resolution_state == "resolved", , drop = FALSE]
-  links <- links[links$link_type == "physical_location_to_nominal_grid_station", , drop = FALSE]
-  if (nrow(nominal) == 0L || nrow(links) == 0L) return(NULL)
-  if (anyDuplicated(physical$entity_id) ||
-        anyDuplicated(physical$source_identifier) ||
-        anyDuplicated(nominal$entity_id) ||
-        any(!physical_ids %in% physical$source_identifier)) {
-    stop("Nominal membership authority has duplicate or incomplete entity records.")
-  }
-  if ("resolution_state" %in% names(links) &&
-        any(links$resolution_state != "resolved")) {
-    stop("Nominal membership authority contains an unresolved link.")
-  }
-  source_map <- stats::setNames(as.character(physical$source_identifier), physical$entity_id)
-  target_map <- stats::setNames(as.character(nominal$source_identifier), nominal$entity_id)
-  links$physical_location_id <- unname(source_map[links$source_entity_id])
-  links$analysis_unit_id <- unname(target_map[links$target_entity_id])
-  if (anyNA(links$physical_location_id) || anyNA(links$analysis_unit_id) ||
-        anyDuplicated(links$physical_location_id) ||
-        !setequal(links$physical_location_id, physical_ids)) {
-    stop("Nominal membership authority is duplicate, conflicting, or orphaned.")
-  }
-  links[c("physical_location_id", "analysis_unit_id")]
-}
-
 selected_resolution_deployment_for_date <- function( # nolint: object_length_linter.
     entity_state,
     physical_location_id,
@@ -562,33 +523,8 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
     integrity_ok <- FALSE
     reasons <- c(reasons, "no_resolved_physical_locations")
   }
-  route_only_reasons <- character()
-  nominal_membership <- NULL
   authority_reference <- selection$authority_reference
-  if (identical(selection$resolution, "nominal_station")) {
-    nominal_membership <- tryCatch(
-      selected_resolution_nominal_membership(entity_state, physical_ids),
-      error = function(e) {
-        integrity_ok <<- FALSE
-        reasons <<- c(reasons, conditionMessage(e))
-        NULL
-      }
-    )
-    if (is.null(nominal_membership)) {
-      if (integrity_ok) route_only_reasons <- "nominal_station_membership_authority_unavailable"
-      membership <- data.frame(physical_location_id = physical_ids,
-                               analysis_unit_id = NA_character_, stringsAsFactors = FALSE)
-      scheme_id <- selection$scheme_id
-      scheme_version <- selection$scheme_version
-    } else if (!is.null(nominal_membership)) {
-      membership <- nominal_membership
-      scheme_id <- selection$scheme_id
-      scheme_version <- selection$scheme_version
-      authority_reference <- entity_state$summary$authority_reference %||%
-        entity_state$summary$ledger_content_sha256 %||%
-        "goal007-authoritative-entity-links"
-    }
-  } else if (is.null(mapping)) {
+  if (is.null(mapping)) {
     membership <- data.frame(physical_location_id = physical_ids,
                              analysis_unit_id = physical_ids,
                              stringsAsFactors = FALSE)
@@ -606,7 +542,7 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
     scheme_version <- unique(mapping$scheme_version)[[1]]
   }
   if (anyDuplicated(membership$physical_location_id) ||
-        (anyNA(membership$analysis_unit_id) && length(route_only_reasons) == 0L)) {
+        anyNA(membership$analysis_unit_id)) {
     integrity_ok <- FALSE
     reasons <- c(reasons, "duplicate_or_malformed_membership")
   }
@@ -619,9 +555,9 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
   membership$authority_reference <- authority_reference
   membership$representative_latitude <- membership$physical_latitude
   membership$representative_longitude <- membership$physical_longitude
-  membership$coordinate_basis <- if (identical(selection$resolution, "nominal_station")) {
-    "no_representative_coordinate_in_nominal_membership_authority"
-  } else if (identical(selection$resolution, "physical_location") || is.null(mapping)) {
+  membership$coordinate_basis <- if (
+    identical(selection$resolution, "physical_location") || is.null(mapping)
+  ) {
     "actual_physical_location_coordinates"
   } else {
     mapping$coordinate_basis[match(membership$physical_location_id,
@@ -646,10 +582,6 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
         mapping$physical_location_id
       )
     ]
-  }
-  if (identical(selection$resolution, "nominal_station")) {
-    membership$representative_latitude <- NA_real_
-    membership$representative_longitude <- NA_real_
   }
   resolved_membership <- membership[!is.na(membership$analysis_unit_id), , drop = FALSE]
   operation <- tryCatch(
@@ -690,9 +622,8 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
     }
   )
   concurrency <- concurrency_state$reasons
-  reasons <- c(reasons, concurrency, route_only_reasons)
-  route_eligible <- integrity_ok && length(concurrency) == 0L &&
-    length(route_only_reasons) == 0L
+  reasons <- c(reasons, concurrency)
+  route_eligible <- integrity_ok && length(concurrency) == 0L
   status <- if (!integrity_ok) "integrity_failure" else if (!route_eligible) "ineligible" else "eligible"
   summary <- list(
     selected_resolution_summary_schema = "camtrap-selected-resolution-summary/1.0",
@@ -841,10 +772,8 @@ validate_selected_resolution_artifacts <- function( # nolint: object_length_lint
   if (!identical(names(membership), required_membership) ||
         !identical(names(operation), required_operation) ||
         !identical(names(event_map), required_event)) stop("Selected-resolution artifact schema mismatch.")
-  nominal_unavailable <- identical(summary$resolution, "nominal_station") &&
-    identical(summary$status, "ineligible")
   if (anyDuplicated(membership$physical_location_id) ||
-        (anyNA(membership$analysis_unit_id) && !nominal_unavailable) ||
+        anyNA(membership$analysis_unit_id) ||
         anyDuplicated(event_map$event_id) || anyNA(event_map$event_id) ||
         any(!event_map$source_membership_reference %in% "provenance/phase2/event_membership.json")) {
     stop("Selected-resolution artifact identity or lineage is invalid.")
@@ -860,8 +789,8 @@ validate_selected_resolution_artifacts <- function( # nolint: object_length_lint
     contribution_count <- suppressWarnings(as.integer(operation$member_count[[i]]))
     contribution_active <- suppressWarnings(as.integer(operation$active_member_count[[i]]))
     contribution_unknown <- suppressWarnings(as.integer(operation$unknown_member_count[[i]]))
-    # Unit fixtures and legacy callers may provide no member-level evidence at
-    # all.  The writer materializes that absence as an explicit empty object;
+    # Unit fixtures may provide no member-level evidence at all. The writer
+    # materializes that absence as an explicit empty object;
     # accept it only when every reconciled count is zero, while still failing
     # closed for any non-empty or internally inconsistent contribution.
     if (identical(contribution_json, "{}") && identical(contribution_count, 0L) &&
@@ -941,7 +870,7 @@ validate_selected_resolution_artifacts <- function( # nolint: object_length_lint
     exists("reconstruct_entity_state", mode = "function") &&
     exists("read_config", mode = "function")
   if (can_reconstruct) {
-    config <- read_config(config_path, attach_runtime = FALSE)
+    config <- read_config(config_path)
     validation_state <- reconstruct_validation_state(root)
     entity_state <- reconstruct_entity_state(root)
     portable_snapshot <- portable_validation_snapshot(root, config)

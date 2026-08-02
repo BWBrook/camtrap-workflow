@@ -5,7 +5,7 @@ import::from("here", here)
 source(here("R", "custom_funcs.R"))
 source(here("R", "sensitivity_outputs.R"))
 
-test_that("compute_event_threshold_sens is monotonic for increasing thresholds", {
+test_that("event-gap sensitivity is monotonic for increasing thresholds", {
   obs_filtered <- tibble(
     site = c("A", "A", "A"),
     species = c("sp1", "sp1", "sp1"),
@@ -14,7 +14,7 @@ test_that("compute_event_threshold_sens is monotonic for increasing thresholds",
   )
   trap_nights <- tibble(site = "A", trap_nights = 1)
 
-  sensitivity <- compute_event_threshold_sens(
+  sensitivity <- compute_event_gap_sensitivity(
     obs_filtered,
     trap_nights,
     thresholds = c(5, 15, 60),

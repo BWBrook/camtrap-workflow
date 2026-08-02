@@ -1,0 +1,9 @@
+# Quarto execution dependencies are declared in _targets.R. Ignoring the
+# document prevents renv from treating every Quarto file as a Shiny document.
+analysis/report.qmd
+
+# Historical records can contain obsolete executable examples.
+docs/goals/
+docs/log/
+docs/audits/
+docs/design/

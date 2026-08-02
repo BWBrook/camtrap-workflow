@@ -16,8 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     libjpeg-dev \
     libtiff5-dev \
-    libglpk40 \
-    libglpk-dev \
     libjq-dev \
     libuv1-dev \
     libx11-dev \
@@ -33,8 +31,6 @@ RUN arch="$(dpkg --print-architecture)" \
     && dpkg -i "quarto-${QUARTO_VERSION}-linux-${arch}.deb" \
     && rm "quarto-${QUARTO_VERSION}-linux-${arch}.deb"
 
-RUN quarto install tinytex --no-prompt
-
 WORKDIR /app
 
 ENV RENV_PATHS_CACHE=/renv/cache
@@ -44,8 +40,5 @@ COPY renv/ renv/
 RUN R -e "install.packages('renv'); renv::restore(prompt = FALSE)"
 
 COPY . .
-
-ARG GIT_COMMIT=unknown
-ENV CAMTRAP_WORKFLOW_GIT_COMMIT=${GIT_COMMIT}
 
 CMD ["Rscript", "scripts/run_full_evidence_run.R", "--config", "config.yml"]

@@ -8,7 +8,12 @@
 #' @param tz Timezone for datetime parsing.
 #' @return Tibble with event totals per threshold.
 #' @export
-compute_event_threshold_sens <- function(obs_filtered, trap_nights, thresholds, tz = "Australia/Hobart") {
+compute_event_gap_sensitivity <- function( # nolint: object_length_linter.
+    obs_filtered,
+    trap_nights,
+    thresholds,
+    tz = "Australia/Hobart",
+    fixed_offset_hours = NULL) {
   import::from("dplyr", mutate, summarise, arrange)
   import::from("tibble", tibble)
 
@@ -20,14 +25,23 @@ compute_event_threshold_sens <- function(obs_filtered, trap_nights, thresholds, 
   }
 
   results <- lapply(thresholds, function(threshold) {
-    obs_events <- define_events(obs_filtered, threshold = threshold, tz = tz)
+    obs_events <- define_events(
+      obs_filtered,
+      threshold = threshold,
+      tz = tz,
+      fixed_offset_hours = fixed_offset_hours
+    )
     events_per_day <- summarise_events(obs_events)
     total_events <- sum(events_per_day$events)
 
     tibble(
       threshold_minutes = threshold,
       total_events = total_events,
-      events_per_trap_night = ifelse(total_effort > 0, total_events / total_effort, NA_real_)
+      events_per_100_active_days = ifelse(
+        total_effort > 0,
+        100 * total_events / total_effort,
+        NA_real_
+      )
     )
   })
 
@@ -41,16 +55,22 @@ compute_event_threshold_sens <- function(obs_filtered, trap_nights, thresholds, 
 #' @param out_path File path where the figure is saved.
 #' @return `out_path` invisibly.
 #' @export
-plot_event_threshold_sens <- function(sensitivity_tbl, out_path) {
+plot_event_gap_sensitivity <- function(sensitivity_tbl, out_path) {
   import::from("ggplot2", ggplot, aes, geom_line, geom_point, theme_minimal, labs, ggsave)
 
   dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
-  p <- ggplot(sensitivity_tbl, aes(x = threshold_minutes, y = events_per_trap_night)) +
+  p <- ggplot(
+    sensitivity_tbl,
+    aes(x = threshold_minutes, y = events_per_100_active_days)
+  ) +
     geom_line() +
     geom_point() +
     theme_minimal() +
-    labs(x = "Event threshold (minutes)", y = "Events per trap night")
+    labs(
+      x = "Event gap threshold (minutes)",
+      y = "Events per 100 confirmed active days"
+    )
 
   ggsave(out_path, p, width = 6, height = 4, dpi = 300)
   out_path

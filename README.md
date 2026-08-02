@@ -1,176 +1,115 @@
-# camtrap-workflow
+# Camtrap Workflow
 
-Reproducible camera-trap workflow for end-to-end analysis in R.
+Camtrap Workflow turns labelled camera-trap records, taxonomic identities,
+camera-operation evidence, and physical-location metadata into a concise HTML
+ecological report and an auditable, machine-readable run bundle.
 
-This repository provides a **targets-based** pipeline that starts from labelled camera-trap detections plus site and effort metadata, performs validation and standardisation, constructs operational detection events, and produces core ecological analyses (including community diversity and trait summaries) and a rendered report.
+The workflow starts after image labelling. It does not classify images, infer
+analytical sites from names or coordinates, or make population-level claims.
 
-The Judbury Conservation Reserve (Tasmania) dataset included in `data/` is the exemplar case study.
+## Ecological Product
 
-## What this repo is (and is not)
+The retained summaries are deliberately restrained:
 
-**It is:**
-- a reproducible analysis pipeline (`targets`)
-- a set of reusable functions (`R/`)
-- a rendered report (Quarto/Rmd) built from pipeline outputs
+- confirmed sampling effort and coverage;
+- observed species presence and observed richness;
+- descriptive Jaccard dissimilarity of detected composition;
+- physical-location operational-event detection rate;
+- coarse day/night summaries when clock evidence supports them;
+- a species-accumulation diagnostic;
+- event-gap sensitivity; and
+- a physical-location point map.
 
-**It is not:**
-- an image labelling or ML system (labelling happens upstream)
-- a database or data platform
-- a Shiny app (out of scope for now)
+Observed richness is detection-limited. Jaccard describes detected
+composition. Operational-event detection rate is not abundance or density.
+The point map uses supplied coordinates and does not create environmental
+surfaces.
 
-## Quickstart
+Every candidate module records `completed`, `completed_with_warnings`,
+`omitted`, or `failed`, together with its required evidence, actual spatial
+resolution, claim limit, and a reason when it did not complete cleanly.
 
-### 1) Prerequisites
-- R 4.6.0
-- Quarto (for report rendering). Verify with: `quarto --version`
-- LaTeX/TinyTeX (for PDF report rendering)
-- System build tools appropriate for your OS (some R packages compile from source)
+## Inputs
 
-### 2) Restore the locked environment
-From the project root, run:
+Two input modes use the same downstream checks:
 
-```r
-renv::restore(prompt = FALSE)
-```
+- four CSV tables: physical locations (`site`), daily operation (`op`),
+  labelled detections (`obs`), and taxonomic identities (`taxa`); or
+- a current Camtrap Data Package through the input adapter.
 
-If you do not have `renv` installed yet:
+The generic analytical unit is `physical_location`. An `analysis_site` may be
+selected only with an exact approved mapping. Nominal station remains survey
+metadata and is never an analytical route.
 
-```r
-install.packages("renv")
-renv::restore(prompt = FALSE)
-```
+See [the input contract](docs/reference/input_schema_v0.1.md),
+[configuration reference](docs/reference/config.md), and
+[own-data guide](docs/bring_your_own_data.md).
 
-### 3) Publish a full evidence run
+## Quick Start
 
-Use the supported publisher from the project root:
+Requirements are R 4.6, Quarto, and the locked R environment.
 
 ```sh
+Rscript bootstrap_env.R
+Rscript scripts/run_full_evidence_run.R --validate-only --config config.yml
 Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
 
-Preview validation, proposed repairs, and source-row/event lineage without
-running the analytical target graph:
+Validation-only runs publish an immutable preview under
+`outputs/preflight/<run_id>/`. They do not run ecological modules or update
+`outputs/latest`. Repairs require an exact recorded proposal decision.
+
+A successful full run publishes `outputs/runs/<run_id>/`, writes
+`COMPLETE.json` last, and atomically updates the plain-text `outputs/latest`
+pointer. The main user result is `report/report.html`; detailed evidence stays
+in `provenance/`, `tables/`, `results/`, and `run_manifest.json`.
+
+Verify a generic published bundle independently:
 
 ```sh
-Rscript scripts/run_full_evidence_run.R \
-  --validate-only --config config.yml
+RUN_ID="$(tr -d '\n' < outputs/latest)"
+Rscript scripts/verify_published_bundle.R "outputs/runs/${RUN_ID}"
 ```
 
-Validation previews are immutable under `outputs/preflight/<run_id>/`. They do
-not create `COMPLETED.json` or change `outputs/latest`. Repairs are not applied
-by default; an exact proposal ID and digest must be reviewed and recorded in
-the configuration before a later invocation can apply that proposal.
-
-To run with an alternate config file:
+The Judbury release additionally compares all 81 Jaccard values with the
+accepted Goal 010 oracle:
 
 ```sh
+Rscript scripts/verify_published_bundle.R "outputs/runs/${RUN_ID}" \
+  --oracle tests/fixtures/goal011/judbury_selected_jaccard_oracle.csv
+```
+
+Alternative maintained examples are:
+
+```sh
+Rscript scripts/run_full_evidence_run.R --config config.template_example.yml
 Rscript scripts/run_full_evidence_run.R --config config.forest_example.yml
+Rscript scripts/run_full_evidence_run.R --config config.camtrapdp_example.yml
 ```
 
-Each invocation receives a unique immutable run ID, even when its source,
-configuration, and engine fingerprints match an earlier invocation. The
-publisher snapshots the raw YAML once, and both identity calculation and the
-target graph consume that copy. Direct
-`targets::tar_make()` calls remain useful for development and partial targets,
-but they write only under `outputs/work/` and never publish `COMPLETED.json` or
-advance `outputs/latest`.
+## Development
 
-### 4) Verify and view outputs
-
-Outputs are written to `outputs/` (gitignored). Look for:
-
-* `outputs/latest` for the current validated run ID
-* `outputs/runs/<run_id>/COMPLETED.json` for the terminal trust record
-* `outputs/runs/<run_id>/report/` for the rendered report
-  - HTML: `report.html`
-  - PDF: `report.pdf`
-* `outputs/runs/<run_id>/figures/` for plots
-* `outputs/runs/<run_id>/tables/` for community matrices, diversity, and trait summaries
-* `outputs/runs/<run_id>/session_info.txt` for session provenance
-* `outputs/runs/<run_id>/provenance/config.raw.yml` for the exact consumed
-  configuration
-* `outputs/runs/<run_id>/provenance/phase2/` for source-row, validation,
-  repair, transformation, and operational-event membership evidence
-* `outputs/runs/<run_id>/run_manifest.json` for run provenance
-
-Verify any copied or in-place bundle without its original repository path:
-
-```sh
-Rscript scripts/run_full_evidence_run.R \
-  --verify-bundle outputs/runs/<run_id>
-```
-
-## Running on your own dataset
-
-This workflow assumes you already have:
-
-* site metadata (`site`)
-* camera operation/effort (`op`)
-* labelled detections (`obs`)
-* taxa/traits (`taxa`)
-
-Start with the template dataset in `data/template_dataset/` and follow the step-by-step guide:
-`docs/bring_your_own_data.md`.
-
-Camtrap DP datasets are also supported via `camtrapdp` (see the Camtrap DP section in `docs/bring_your_own_data.md`).
-You can optionally export your cleaned data back to Camtrap DP by enabling `camtrapdp_export` in `config.yml`.
-
-See `docs/product_brief.md` and `docs/reference/input_schema_v0.1.md` for required columns and formats.
-Update `config.yml` to point to your input file paths and parameters (timezone, fixed offset if DST is ignored, event threshold).
-
-## Example datasets
-
-- **Judbury exemplar** (default): `data/jc_*` with `config.yml`.
-- **Template dataset**: `data/template_dataset/` with `config.template_example.yml`.
-- **Forest example (synthetic)**: `data/forest_example/` with `config.forest_example.yml`.
-
-Run an example dataset with the publisher:
-
-```sh
-Rscript scripts/run_full_evidence_run.R --config config.forest_example.yml
-```
-
-## Development workflow
-
-* The pipeline is defined in `_targets.R`.
-* Reusable functions live in `R/`.
-* Tests live in `tests/`.
-* Project decisions and milestones live in `docs/`.
-
-Run the routine development checks locally:
+The top-level graph in `_targets.R` exposes seven stages: ingest, validate,
+foundation, events, modules, report, and publish. Stage implementations live in
+`R/workflow_stages.R`; reusable scientific and integrity functions live under
+`R/`.
 
 ```sh
 Rscript scripts/run_lint.R
 Rscript scripts/run_tests.R --profile fast
+actionlint .github/workflows/ci.yml
 ```
 
-The fast profile is also the default when no profile is supplied. Before a
-release, run the separate publication checks and create a full evidence run:
+Ordinary CI runs lint, the compact fast suite, workflow-syntax checking, and a
+small real publication smoke. The manually dispatched release runs one full
+Judbury publisher and one independent reconstruction against the accepted
+oracle.
 
-```sh
-Rscript scripts/run_tests.R --profile release
-Rscript scripts/run_full_evidence_run.R --config config.yml
-```
+See [workflow](docs/workflow.md), [architecture](docs/architecture.md),
+[bundle contract](docs/reference/run_manifest.md), and
+[container use](docs/container.md).
 
-Ordinary push and pull-request CI runs lint, the fast tests, and one small
-pipeline smoke. Report rendering, the full Judbury run, bundle verification,
-and artefact upload run only through the explicit release workflow.
+## License And Citation
 
-Container users: see `docs/container.md` for build/run instructions.
-
-Before contributing changes, please read:
-
-* `docs/workflow.md`
-* `docs/roadmap.md`
-* `docs/decisions.md`
-* `docs/teaching_module.md` (guided exercises)
-
-## License
-
-Code: MIT License (see `LICENSE`).
-
-Data (exemplar): CC-BY 4.0 (see `data_dictionary.md` for citation guidance).
-
-## Citing
-
-See `CITATION.cff` for the recommended citation metadata.
+Code is MIT licensed. The exemplar data are CC BY 4.0; see
+`data_dictionary.md` and `CITATION.cff`.

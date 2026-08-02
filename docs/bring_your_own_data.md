@@ -1,132 +1,76 @@
-# Bring your own data (four-table contract)
+# Bring Your Own Data
 
-This workflow expects four CSV tables: `site`, `op`, `obs`, and `taxa`.
-Use the template dataset in `data/template_dataset/` as a starting point.
+## Start From The Template
 
-## Example datasets in this repo
+Use `data/template_dataset/` and `config.template_example.yml` as the smallest
+working four-table example. Keep source files outside `outputs/`, which is
+reserved for captured and derived run artefacts.
 
-- `data/template_dataset/` — minimal template for validating the contract.
-- `data/forest_example/` — synthetic non-Judbury dataset used to test portability (see `config.forest_example.yml`).
+The required tables are:
 
-## Quick start
+- `site.csv`: physical-location identity, latitude, longitude, and the current
+  site metadata contract;
+- `op.csv`: one date column plus one zero/one operation column per physical
+  location;
+- `obs.csv`: labelled detections with physical location, camera time, species
+  code, and record metadata; and
+- `taxa.csv`: taxonomic identity and the `short` species code used by
+  observations.
 
-1) Copy the template folder and rename it:
+See `docs/reference/input_schema_v0.1.md` for exact columns and types.
 
-```bash
-cp -r data/template_dataset data/my_project
-```
+## Configure A Physical-Location Run
 
-2) Replace the CSV contents with your own data (keep column names and formats).
-
-3) Update `config.yml` to point to your new files:
-
-```yaml
-paths:
-  inputs:
-    site: "data/my_project/site.csv"
-    op: "data/my_project/op.csv"
-    obs: "data/my_project/obs.csv"
-    taxa: "data/my_project/taxa.csv"
-```
-
-4) Validate the inputs (fast check):
-
-```bash
-Rscript -e 'targets::tar_make(names = "input_contract_validation", callr_function = NULL)'
-```
-
-5) Run the full pipeline:
-
-```bash
-Rscript -e 'targets::tar_make(callr_function = NULL)'
-```
-
-Outputs will appear under `outputs/runs/<run_id>/` (see `config.yml`).
-
-## Contract checklist
-
-- [ ] Four tables exist: `site.csv`, `op.csv`, `obs.csv`, `taxa.csv`.
-- [ ] Required columns match the schema (see `docs/reference/input_schema_v0.1.md`).
-- [ ] `op.csv` has a `date` column formatted as `DD/MM/YYYY`.
-- [ ] `obs.csv$datetime` formatted as `DD/MM/YYYY hh:mm:ss`.
-- [ ] All `op.csv` site columns match `site.csv$site`.
-- [ ] All `obs.csv$site` values exist in `site.csv$site`.
-- [ ] All `obs.csv$species` values exist in `taxa.csv$short`.
-- [ ] `flash` values are 0/1; `count` and `imageid` are integers.
-
-## Time and effort semantics
-
-- Datetimes are interpreted in the configured `timezone`. If your data ignore daylight savings (fixed local time), set `timezone_fixed_offset_hours` (e.g., `10` for UTC+10) to avoid DST gaps.
-- Effort (`op.csv`) is day-level only: `1` means the camera operated at some point that day; `0` means fully off. Partial-day downtime is not represented.
-- Sites represent fixed camera locations; repeated deployments at the same `site` are treated as the same site for analysis.
-- Diel classification defaults to `flash` (night proxy) but can use `clock` with fixed day/night hours in `config.yml`.
-- The spatial map uses site `lat`/`lon` and interpolates a site covariate (default `ndvi`) for background context; site labels, a north arrow, and a scale bar are added for orientation.
-
-## Common validation errors and fixes
-
-- **Missing required columns**
-  - Fix: add the missing column with the correct name and type.
-
-- **Datetime parsing failures**
-  - Fix: ensure `obs.csv$datetime` uses `DD/MM/YYYY hh:mm:ss`.
-
-- **Site mismatch between `op.csv` and `site.csv`**
-  - Fix: rename `op.csv` columns to match `site.csv$site` exactly.
-
-- **Species codes not in taxa table**
-  - Fix: update `taxa.csv$short` or correct `obs.csv$species` codes.
-
-- **Effort matrix contains NA or non-0/1 values**
-  - Fix: replace with 0/1 and remove NA values.
-
-If validation fails, the error message indicates which table/column needs attention.
-
----
-
-# Camtrap DP ingestion (optional)
-
-If your data are already packaged as a Camtrap Data Package (Camtrap DP), you can ingest it directly.
-
-1) Create a config file that points to the DP `datapackage.json`:
+Copy `config.template_example.yml`, update the four input paths and timezone,
+and keep the spatial selection at its generic default:
 
 ```yaml
-input_mode: "camtrapdp"
-paths:
-  inputs:
-    camtrapdp: "path/to/datapackage.json"
+analysis_unit:
+  resolution: physical_location
+  mapping_profile_id: null
+  mapping_path: null
+  mapping_sha256: null
+  authority_reference: null
 ```
 
-2) Run the pipeline with that config:
+Do not encode camera moves as new analytical groupings unless the physical
+locations truly differ. Conversely, do not merge physical locations into a
+nominal survey station. Purpose-specific `analysis_site` grouping requires a
+reviewed, exact authority and is not inferred by the software.
+
+## Validate Before Analysis
 
 ```sh
-CAMTRAP_CONFIG=config.camtrapdp_example.yml Rscript -e 'targets::tar_make()'
+Rscript scripts/run_full_evidence_run.R \
+  --validate-only --config config.my_dataset.yml
 ```
 
-Notes:
-- The adapter maps Camtrap DP `deploymentID` to the internal `site` field.
-- Observation `eventStart` (or media `timestamp`) is used for `obs$datetime`.
-- Trait columns are included but populated with `NA` unless you extend the mapping.
+Inspect the preview findings. A normalization is applied only when the config
+records its exact proposal ID, proposal digest, decision, and optional reason.
+Integrity findings cannot be waived.
 
----
-
-# Camtrap DP export (optional)
-
-To export your cleaned data as a Camtrap Data Package, enable the export block:
-
-```yaml
-camtrapdp_export:
-  enable: true
-  name: "my-camtrapdp-export"
-  title: "My Camtrap DP export"
-  description: "Export generated by camtrap-workflow."
-  version: "1.0.1"
-  license: "CC-BY-4.0"
-```
-
-Run the pipeline (or just the export target):
+Then publish:
 
 ```sh
-Rscript -e 'targets::tar_make(names = "camtrapdp_export", callr_function = NULL)'
+Rscript scripts/run_full_evidence_run.R --config config.my_dataset.yml
 ```
 
-The export will be written to `outputs/runs/<run_id>/camtrapdp_export/`.
+## CamtrapDP Input
+
+Use `config.camtrapdp_example.yml` as the current adapter example. Local
+descriptors must reference local resources. Remote descriptors and every
+remote resource require pinned SHA-256 evidence. Deployment identity and
+physical-location identity remain separate throughout event construction.
+
+The adapter still applies the same validation, event, spatial, module-status,
+and publication contracts as four-table input.
+
+## Interpret The Result
+
+Open `report/report.html` in the latest completed bundle. Check
+`results/module_status.json` before interpreting a missing table or figure: the
+record distinguishes an ecological omission from a technical failure.
+
+Treat supplied physical covariates as attributes of those physical locations.
+The point map does not estimate values between cameras, and grouped
+representative positions do not create new environmental observations.

@@ -1,4 +1,4 @@
-# Invocation identity and supported-run context.
+# Current invocation identity.
 
 is_safe_run_id <- function(run_id) {
   is.character(run_id) &&
@@ -36,49 +36,4 @@ allocate_run_id <- function(clock = Sys.time, token = default_run_token) {
   run_id <- paste0(format(now, "%Y%m%dT%H%M%SZ", tz = "UTC"), "-", suffix)
   assert_safe_run_id(run_id)
   run_id
-}
-
-safe_compatibility_label <- function(label) {
-  if (!is.character(label) || length(label) != 1L || is.na(label) || !nzchar(label)) {
-    return("unnamed")
-  }
-  cleaned <- gsub("[^A-Za-z0-9._-]+", "-", label)
-  cleaned <- gsub("(^[-.]+|[-.]+$)", "", cleaned)
-  if (!nzchar(cleaned) || cleaned %in% c(".", "..")) {
-    cleaned <- "unnamed"
-  }
-  substr(cleaned, 1L, 96L)
-}
-
-read_run_context <- function(path = Sys.getenv("CAMTRAP_EVIDENCE_CONTEXT", unset = "")) {
-  if (!nzchar(path)) {
-    return(NULL)
-  }
-  if (!file.exists(path)) {
-    stop("Evidence run context does not exist: ", path)
-  }
-
-  context <- jsonlite::read_json(path, simplifyVector = FALSE)
-  if (!identical(context$context_schema, "camtrap-evidence-context/1.0")) {
-    stop("Unsupported evidence run context schema.")
-  }
-  assert_safe_run_id(context$run_id)
-  if (!isTRUE(context$supported_full_run)) {
-    stop("Evidence run context is not a supported full invocation.")
-  }
-  context
-}
-
-run_context_or_partial <- function(config) {
-  context <- read_run_context()
-  if (!is.null(context)) {
-    return(context)
-  }
-
-  list(
-    context_schema = "camtrap-evidence-context/1.0",
-    supported_full_run = FALSE,
-    run_id = NULL,
-    legacy_run_label = config$run_id
-  )
 }

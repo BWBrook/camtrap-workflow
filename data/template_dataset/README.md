@@ -5,7 +5,7 @@ contract. Use it as a starting point for new projects.
 
 Files:
 - `site.csv` — site metadata (2 sites)
-- `taxa.csv` — taxa/trait table (2 species)
+- `taxa.csv` — taxonomic identity table (2 species)
 - `op.csv` — effort matrix (3 dates)
 - `obs.csv` — detection records (4 rows)
 

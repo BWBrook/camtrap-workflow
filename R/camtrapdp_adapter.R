@@ -159,7 +159,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
       ordinal,
       field,
       proposed_value,
-      legacy_rule,
+      source_rule,
       affected_domains,
       blocks_analysis) {
     records[[length(records) + 1L]] <<- list(
@@ -169,7 +169,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
       original_value = NA,
       proposed_value = proposed_value,
       repair_class = "fill_unknown",
-      legacy_rule = legacy_rule,
+      source_rule = source_rule,
       affected_domains = affected_domains,
       blocks_analysis = isTRUE(blocks_analysis),
       production_applicable = FALSE
@@ -185,7 +185,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "deploymentStart",
         deployments$deploymentEnd[[index]],
-        "legacy.copy_deployment_endpoint",
+        "adapter.copy_deployment_endpoint",
         c("effort", "operational_events", "all_analysis"),
         TRUE
       )
@@ -196,7 +196,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "deploymentEnd",
         deployments$deploymentStart[[index]],
-        "legacy.copy_deployment_endpoint",
+        "adapter.copy_deployment_endpoint",
         c("effort", "operational_events", "all_analysis"),
         TRUE
       )
@@ -214,8 +214,8 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "count",
         1L,
-        "legacy.fill_count_one",
-        c("abundance_summaries"),
+        "adapter.fill_count_one",
+        c("observation_metadata"),
         FALSE
       )
     }
@@ -226,7 +226,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "flash",
         0L,
-        "legacy.fill_flash_zero",
+        "adapter.fill_flash_zero",
         c("diel_classification"),
         FALSE
       )
@@ -239,7 +239,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "eventStart",
         media$timestamp[[media_lookup[[index]]]],
-        "legacy.copy_media_timestamp",
+        "adapter.copy_media_timestamp",
         c("time_qc", "operational_events", "all_analysis"),
         TRUE
       )
@@ -251,7 +251,7 @@ camtrapdp_semantic_defaults <- function(deployments, observations, media) {
         index,
         "scientificName",
         "unknown",
-        "legacy.fill_unknown_taxon",
+        "adapter.fill_unknown_taxon",
         c("taxonomy", "all_analysis"),
         TRUE
       )
@@ -396,17 +396,7 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
       short = make_species_code(scientificName),
       class = NA_character_,
       order = NA_character_,
-      family = NA_character_,
-      diet = NA_character_,
-      sec_diet = NA_character_,
-      activity = NA_character_,
-      habitat = NA_character_,
-      status = NA_character_,
-      body_size = NA_character_,
-      sociality = NA_character_,
-      mobility = NA_character_,
-      reproductive = NA_character_,
-      litter = NA_character_
+      family = NA_character_
     )
   if (anyDuplicated(taxa_map$scientificName)) {
     stop("CamtrapDP scientific name maps to conflicting taxon representations.")
@@ -501,9 +491,7 @@ camtrapdp_to_internal <- function(dp, tz = "UTC", include_audit = FALSE) {
 
   taxa_tbl <- taxa_map |>
     select(
-      class, order, family, genus, species, common, short,
-      diet, sec_diet, activity, habitat, status, body_size,
-      sociality, mobility, reproductive, litter
+      class, order, family, genus, species, common, short
     )
 
   result <- list(site = site_tbl, taxa = taxa_tbl, op = op_tbl, obs = obs_tbl)

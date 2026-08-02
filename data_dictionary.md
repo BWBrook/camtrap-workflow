@@ -26,7 +26,7 @@ Maintainer: <Barry Brook / [barry.brook@utas.edu.au](mailto:barry.brook@utas.edu
 
 ---
 
-## 2 jc_taxa.csv  — Species traits
+## 2 jc_taxa.csv  — Taxonomic identity and source metadata
 
 | Column       | Type | Units / Levels              | Description                                                  |
 | ------------ | ---- | --------------------------- | ------------------------------------------------------------ |
@@ -47,6 +47,10 @@ Maintainer: <Barry Brook / [barry.brook@utas.edu.au](mailto:barry.brook@utas.edu
 | mobility     | chr  | mobile, sedentary           | Movement pattern.                                            |
 | reproductive | chr  | monogamous, etc.            | Reproductive behaviour.                                      |
 | litter       | chr  | small, multiple, etc.       | Typical litter size or reproductive output category.         |
+
+The current workflow requires `class`, `order`, `family`, `genus`, `species`,
+`common`, and `short`. The remaining columns are retained as immutable source
+metadata but are not required by the core ecological summaries.
 
 ---
 

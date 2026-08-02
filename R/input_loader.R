@@ -5,7 +5,7 @@
 #' @param config Configuration list.
 #' @param source_snapshot Optional verified parser-consumed source snapshot.
 #' @param include_audit Include parser-order audit tables and observation mapping.
-#' @param four_table_reader Reader for one legacy CSV table.
+#' @param four_table_reader Reader for one four-table CSV source.
 #' @param camtrapdp_reader Reader for one Camtrap DP package.
 #' @param camtrapdp_adapter Adapter from Camtrap DP to internal tables.
 #' @return List with `site`, `taxa`, `op`, `obs` tibbles and optional audit data.
@@ -69,7 +69,7 @@ load_inputs <- function(
 #' @param config Effective configuration.
 #' @param source_snapshot Verified immutable source snapshot.
 #' @param run_context Supported-run context or partial-run marker.
-#' @param four_table_reader Reader for one legacy CSV table.
+#' @param four_table_reader Reader for one four-table CSV source.
 #' @param camtrapdp_reader Reader for one Camtrap DP package.
 #' @param camtrapdp_adapter Adapter from Camtrap DP to internal tables.
 #' @return List of audit-free analytical input tables.

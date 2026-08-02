@@ -36,9 +36,7 @@ input_schema_v0_1 <- function() {
     taxa = list(
       file = "jc_taxa.csv",
       required = c(
-        "class", "order", "family", "genus", "species", "common", "short",
-        "diet", "sec_diet", "activity", "habitat", "status", "body_size",
-        "sociality", "mobility", "reproductive", "litter"
+        "class", "order", "family", "genus", "species", "common", "short"
       ),
       types = c(
         class = "chr",
@@ -47,17 +45,7 @@ input_schema_v0_1 <- function() {
         genus = "chr",
         species = "chr",
         common = "chr",
-        short = "chr",
-        diet = "chr",
-        sec_diet = "chr",
-        activity = "chr",
-        habitat = "chr",
-        status = "chr",
-        body_size = "chr",
-        sociality = "chr",
-        mobility = "chr",
-        reproductive = "chr",
-        litter = "chr"
+        short = "chr"
       ),
       non_na = c("short")
     ),

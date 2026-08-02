@@ -1,144 +1,73 @@
-# Input schema v0.1 (four-table contract)
+# Four-Table Input Contract 0.1
 
-This document defines the **required** input contract for the MVP workflow.
-Tables must match the required columns and types below. Validation is strict and fails fast.
+Schema version is `0.1.0` in `schema_version.txt`. Validation is strict for the
+required identity and analytical fields. Additional source columns are allowed
+and remain in the immutable source snapshot.
 
-Schema version: **0.1.0** (see `schema_version.txt`).
-
-## 1) `jc_site.csv` — site metadata
-
-Required columns:
-- `site` (chr) — unique site identifier
-- `lat` (dbl)
-- `lon` (dbl)
-- `type` (chr)
-- `location` (chr)
-- `cover` (chr)
-- `vegclass` (chr)
-- `elevation_m` (dbl)
-- `slope_d` (dbl)
-- `canopy_h_m` (dbl)
-- `ndvi` (dbl)
-- `nbr` (dbl)
-- `fire_flam` (chr)
-- `fire_sens` (chr)
-
-Rules:
-- `site` must be non-missing.
-
-## 2) `jc_taxa.csv` — taxa/traits
+## Site
 
 Required columns:
-- `class` (chr)
-- `order` (chr)
-- `family` (chr)
-- `genus` (chr)
-- `species` (chr)
-- `common` (chr)
-- `short` (chr)
-- `diet` (chr)
-- `sec_diet` (chr)
-- `activity` (chr)
-- `habitat` (chr)
-- `status` (chr)
-- `body_size` (chr)
-- `sociality` (chr)
-- `mobility` (chr)
-- `reproductive` (chr)
-- `litter` (chr)
 
-Rules:
-- `short` must be non-missing and is the lookup key for `obs$species`.
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `site` | character | Unique physical-location identifier; non-missing. |
+| `lat`, `lon` | double | Supplied physical coordinates. |
+| `type`, `location`, `cover`, `vegclass` | character | Source location metadata. |
+| `elevation_m`, `slope_d`, `canopy_h_m`, `ndvi`, `nbr` | double | Supplied physical-location covariates. |
+| `fire_flam`, `fire_sens` | character | Supplied fire metadata. |
 
-## 3) `jc_op.csv` — effort matrix
+These values remain attached to their physical locations. Grouping never
+pools them or treats representative group coordinates as measurements.
+
+## Taxa
+
+Required character columns are `class`, `order`, `family`, `genus`, `species`,
+`common`, and `short`. `short` is non-missing and is the exact key referenced by
+`obs.species`.
+
+Other source taxonomic or ecological columns are accepted but are not required
+by the retained summaries.
+
+## Operation
+
+`date` uses `DD/MM/YYYY`. Every other column is a physical-location identifier
+that exactly matches `site.site`. Values are `0` or `1`, with no missing values:
+
+- `1`: confirmed active on that date;
+- `0`: confirmed inactive on that date.
+
+Unknown operation may be represented in separate audited evidence; it is never
+silently converted to active effort.
+
+## Observations
 
 Required columns:
-- `date` (date; format `DD/MM/YYYY`)
-- one column per site (must match `jc_site.csv$site`)
 
-Rules:
-- All effort columns must be **0/1 only**, with no `NA`.
-- Effort column names must match the site identifiers in `jc_site.csv`.
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `index` | integer | Source record index. |
+| `site` | character | Exact physical-location key. |
+| `datetime` | datetime | `DD/MM/YYYY HH:MM:SS` camera time. |
+| `flash` | integer | Zero or one. |
+| `count` | integer | Recorded individual count. |
+| `species` | character | Exact `taxa.short` key. |
+| `filename` | character | Source media filename. |
+| `age`, `sex` | character | Source observation metadata. |
+| `imageid` | integer | Source image identifier. |
 
-## 4) `jc_obs.csv` — detection records
+Datetimes are interpreted under the configured timezone or explicit fixed
+offset. Unparseable values fail validation.
 
-Required columns:
-- `index` (int)
-- `site` (chr)
-- `datetime` (dttm; format `DD/MM/YYYY hh:mm:ss`)
-- `flash` (int, must be 0/1)
-- `count` (int)
-- `species` (chr)
-- `filename` (chr)
-- `age` (chr)
-- `sex` (chr)
-- `imageid` (int)
+## Identity And Lineage
 
-Rules:
-- `site` must exist in `jc_site.csv$site`.
-- `species` must exist in `jc_taxa.csv$short`.
-- `datetime` must be parseable (timezone handled downstream via `config.yml`).
-- `flash` must be 0/1.
+The public tables do not need internal provenance fields. In the bundle,
+`resource_id` identifies exact resource content and `source_row_id` identifies
+the parser resource plus one-based parsed row. Every observation row is linked
+to an operational event or an explicit exclusion reason.
 
-Notes:
-- `datetime` values are interpreted in the configured timezone and may be flagged if they fall in DST gaps (unless `timezone_fixed_offset_hours` is set).
-- Unparseable datetimes fail validation immediately.
-- Camtrap DP ingestion uses a mapping adapter before validation (see `docs/reference/camtrapdp_mapping_v0.1.md`).
+Camera/deployment identity, physical-location identity, nominal survey
+metadata, and purpose-specific analysis sites are distinct. The software does
+not derive one from another without explicit source evidence.
 
-## Internal source-row identity
-
-Goal 006 does not add fields to this public v0.1 contract. Supported
-preflight and full runs instead record audit identity in sidecar provenance:
-
-- `resource_id` is deterministic from logical resource identity and exact
-  content hash; and
-- `source_row_id` is deterministic from `resource_id` and the one-based
-  parsed record ordinal.
-
-The ordinal is the order presented by the parser. It is not a physical file
-line number or a stable semantic entity identifier across content-changing
-runs. Every parser-consumed row receives one ledger record and disposition.
-Observation rows additionally link to retained operational detection events
-or carry an explicit exclusion rule and reason.
-
-Goal 007 likewise does not add a public field or analytical table. Entity
-evidence is stored in separate provenance records. A legacy four-table `site`
-key remains the scientific key and resolves only to a compatibility
-`physical_location` unless an exact approved sidecar supplies additional
-audit evidence. Nominal station, deployment, and `analysis_site` are never
-inferred from suffixes, coordinates, proximity, effort runs, or observation
-dates.
-
-Goal 008 also leaves the public v0.1 input contract unchanged. Its approved
-Judbury service history and deployment ledger are immutable non-parser
-evidence, not fifth and sixth analytical tables. The closed service reader
-normalizes 75 ordered date cells from 13 exact raw aliases, retains all 62
-supplied `run_days` literals and their missing states in row digests, and
-reconciles them with 13 approved deployment records. `data/jc_op.csv` remains
-the daily-operation authority; `run_days` is audit-only metadata and cannot
-generate or validate effort. The resulting deployment identity, spans, and
-four directed chronology relations are provenance only. The same 13 legacy
-physical `site` keys remain the scientific inputs, and `analysis_site`
-remains unselected.
-
-Goal 009 also adds no public table or field. Its optional analysis-site mapping
-is immutable non-parser evidence with a separately inventoried source role;
-it never becomes a parser input. The selected branch assigns already-defined
-operational detection events after event construction, so it does not
-recluster observations or change source-row event membership. Explicit
-mapping, built-in physical identity, and authoritative nominal membership are
-the only supported routes; grouping is never inferred. The four Judbury
-synthetic midpoints are for mapping and separation only. Physical-site
-covariates remain attached to physical locations and are not pooled or
-extracted at those midpoint coordinates. A public analysis-unit schema,
-profile API, and migration policy remain deferred.
-
-## Validation failures
-
-Validation fails early with explicit table/column messages and suggested fixes.
-The supported runner also writes structured Phase 2 findings and repair state
-to an immutable validation preview. Integrity findings cannot be waived.
-Semantic repairs default to preview without application and require an exact
-proposal-specific decision. See `R/qc_schema.R`,
-`R/source_row_lineage.R`, and `R/validation_ledger.R` for implementation
-details.
+CamtrapDP input is converted to this internal meaning before the same
+validation gates. See `docs/reference/camtrapdp_input.md`.

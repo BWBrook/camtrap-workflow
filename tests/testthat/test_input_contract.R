@@ -21,6 +21,16 @@ test_that("input contract passes for valid fixtures", {
   expect_silent(validate_input_contract(site, op, obs, taxa, tz = "Australia/Hobart"))
 })
 
+test_that("taxonomic identity does not require unused ecological metadata", {
+  site <- read_fixture(fixture_path("valid", "jc_site.csv"))
+  taxa <- read_fixture(fixture_path("valid", "jc_taxa.csv")) |>
+    dplyr::select(class, order, family, genus, species, common, short)
+  op <- read_fixture(fixture_path("valid", "jc_op.csv"))
+  obs <- read_fixture(fixture_path("valid", "jc_obs.csv"))
+
+  expect_silent(validate_input_contract(site, op, obs, taxa, tz = "Australia/Hobart"))
+})
+
 test_that("input contract fails on missing site columns", {
   site <- read_fixture(fixture_path("invalid", "jc_site_missing_col.csv"))
   taxa <- read_fixture(fixture_path("valid", "jc_taxa.csv"))
@@ -68,4 +78,3 @@ test_that("input contract fails on unparseable datetime values", {
     "unparseable datetimes"
   )
 })
-

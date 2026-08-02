@@ -540,7 +540,7 @@ build_camtrapdp_proposals <- function(audit, lineage) {
       stop("CamtrapDP semantic default has unverifiable source-row lineage.")
     }
     make_repair_proposal(
-      rule_id = default$legacy_rule,
+      rule_id = default$source_rule,
       rule_version = "1.0",
       resource_id = resource$resource_id[[1]],
       source_row_id = row$source_row_id[[1]],
@@ -550,10 +550,10 @@ build_camtrapdp_proposals <- function(audit, lineage) {
       original_value = default$original_value,
       proposed_value = default$proposed_value,
       repair_class = default$repair_class,
-      algorithm_version = "legacy-classification/1.0",
+      algorithm_version = "camtrapdp-semantic-default/2.0",
       rationale = paste(
-        "Legacy adapter fill classified for preview only;",
-        "Goal 006 supplies no production application authority."
+        "Adapter default classified for preview only;",
+        "the current workflow supplies no production application authority."
       ),
       affected_domains = default$affected_domains,
       blocks_analysis = default$blocks_analysis,
