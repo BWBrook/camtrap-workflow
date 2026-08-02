@@ -49,3 +49,26 @@ the expensive real-data evidence run an explicit release action.
 Append only material decisions, measured results, independent review findings,
 repairs, publication SHAs, and CI evidence here. Do not narrate every edit or
 test invocation.
+
+### 2026-08-02 - Task 1 test-value audit
+
+- Accounted for all 33 current test files once in `Audit.md`; the inventory
+  reconciles to 179 `test_that()` blocks and 7,556 lines.
+- Froze the default-subtraction decisions: delete ten plot-existence groups,
+  historical manifest/preview compatibility, unused resolution-mode matrices,
+  static DAG preservation, repeated checksum-reclosure permutations, and
+  repeated production-runner fixture construction.
+- Reserved fast coverage for small current ecological, input-safety,
+  provenance, claim-limit, and protected-physical-output contracts.
+- Reserved release coverage for exactly one ready and one blocked current
+  validation runner, one current publish/copy/reopen bundle, one ordinary
+  payload mutation, and one failed publication that preserves the prior
+  latest. The real Judbury evidence build remains a single later release action
+  rather than test setup.
+- Cross-walked every non-negotiable invariant in `Goal.md` to retained fast,
+  release, and independent reconstruction evidence. Test counts remain
+  implementation-volume descriptors, not a quality claim.
+- Deferred production schema dispatch, runner decomposition, resolution-mode
+  policy, provenance-boundary consolidation, target-graph modularity, and
+  semantic plot testing to later architecture work; no production behavior was
+  authorized or changed.
