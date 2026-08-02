@@ -2,7 +2,7 @@
 
 Date: 2026-08-02
 
-State: `IMPLEMENTED_AWAITING_EXACT_CI_AND_RELEASE`
+State: `COMPLETE_PUBLISHED`
 
 ## Purpose
 
@@ -117,6 +117,28 @@ Goal 010 is complete when:
 9. Broader architecture debt is recorded without being implemented.
 
 Runtime targets are decision evidence, not brittle timing assertions.
+
+## Closeout evidence
+
+Implementation `ee084d8ad439483149435a9db6471b126dca1907` passed ordinary
+exact-SHA workflow `30731537537`: the fast-test step took 21 seconds and the
+whole job took 3 minutes 2 seconds, against limits of two and ten minutes.
+
+Manual exact-SHA workflow `30731649136` then passed release tests, one full
+Judbury evidence run, published-bundle verification, and artefact upload. The
+full run took 33 minutes 43 seconds and verification took 5 minutes 37 seconds.
+Its immutable bundle is
+`20260802T040631Z-9e69f0844de14465`, with manifest SHA-256
+`f2773aed6d5ddca99be5afb5b7e96d75f6f5be603a2be10f7f15cc2cfd7b95cb`.
+
+Independent reconstruction from that uploaded bundle reproduced the approved
+13-to-nine membership, four midpoint coordinates, all 9,639 operation rows,
+the one approved `jc_co1` handover, retained `jc_pm14` gaps, all 11,572 events
+and 15,672 source-row memberships, presence OR, richness row sums, and all 81
+Judbury Jaccard cells. Protected analyses retained 13 physical locations and
+the rendered report exposed the intended claim limits. Judbury has no empty
+selected community, so the empty-union Jaccard convention is evidenced by the
+exact-SHA fast suite rather than this real-data artefact.
 
 ## Stopping rule
 

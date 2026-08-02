@@ -785,8 +785,15 @@ Consequences / follow-ups:
   Historical schemas, nominal-station compatibility, plot existence, repeated
   reclosure, and duplicated production-runner matrices have no retained current
   beneficiary.
-- Exact-SHA ordinary CI, the manual release workflow, and independent emitted-
-  bundle reconstruction remain the publication gate.
+- Exact-SHA ordinary workflow `30731537537` passed with a 21-second fast-test
+  step and 3-minute-2-second complete job. Manual release workflow
+  `30731649136` passed the full Judbury run, verifier, and artefact upload at
+  the same implementation SHA.
+- Independent reconstruction from emitted run
+  `20260802T040631Z-9e69f0844de14465` reproduced the 13-to-nine mapping, 9,639
+  operation rows, 11,572 events, 15,672 source memberships, presence OR,
+  richness row sums, all 81 observed Jaccard cells, protected physical outputs,
+  and visible report limits. Goal 010 is complete and published.
 - Production repair remains deferred for zero-row selected-event preview
   serialization and CamtrapDP deployment lineage that omits the physical-
   location identifier required by grouped-site concurrency.

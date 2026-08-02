@@ -199,7 +199,10 @@ current publication contracts run explicitly at release, and the real Judbury
 evidence run is no longer repeated inside test fixtures. The surface fell from
 7,556 to 4,929 lines and from 26 executed production-runner invocations to two.
 Independent review found no Goal010-introduced scientific or data-integrity
-loss. Exact-SHA CI, manual release, and emitted-bundle reconstruction remain
-pending. The next architecture decision should address the fail-closed zero-row
-preview serializer and missing physical-location identity in CamtrapDP
+loss. Exact-SHA ordinary workflow `30731537537` passed in 3 minutes 2 seconds;
+manual release workflow `30731649136` passed one full Judbury build, bundle
+verification, and artefact upload; and independent reconstruction from emitted
+run `20260802T040631Z-9e69f0844de14465` passed. Goal 010 is complete and
+published. The next architecture decision should address the fail-closed zero-
+row preview serializer and missing physical-location identity in CamtrapDP
 deployment lineage, without reopening deleted historical coverage.

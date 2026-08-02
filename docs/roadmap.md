@@ -1217,18 +1217,22 @@ inference, pooled covariates, or generalized grouping is claimed.
   release.
 - [x] Complete one independent review and one focused repair, with no material
   ecological or data-integrity loss found.
-- [ ] Pass exact-SHA ordinary CI within the two-minute fast-test and ten-minute
+- [x] Pass exact-SHA ordinary CI within the two-minute fast-test and ten-minute
   whole-job bars.
-- [ ] Pass the manual exact-SHA release workflow and independently reconstruct
+- [x] Pass the manual exact-SHA release workflow and independently reconstruct
   the required ecological evidence from its emitted bundle.
 
 The implemented surface has fallen from 7,556 to 4,929 test lines and from 26
 executed production-runner invocations to two validation-only release calls.
-The final local fast attempt took 5.19 seconds but lacked four locked packages;
-dependency-complete CI remains authoritative. Two fail-closed production debts
-are deferred: zero-row selected-event preview serialization and missing
-physical-location identity in CamtrapDP deployment lineage for authentic
-grouped-site concurrency.
+Exact-SHA ordinary workflow `30731537537` passed with 21-second fast tests and a
+3-minute-2-second job. Manual release workflow `30731649136` passed the full
+Judbury run, verifier, and artefact upload; independent reconstruction from run
+`20260802T040631Z-9e69f0844de14465` confirmed the 13-to-nine mapping, operation,
+event, presence, richness, Jaccard, protected-output, and report-limit evidence.
+Goal 010 is complete and published. Two fail-closed production debts are
+deferred: zero-row selected-event preview serialization and missing physical-
+location identity in CamtrapDP deployment lineage for authentic grouped-site
+concurrency.
 
 ---
 

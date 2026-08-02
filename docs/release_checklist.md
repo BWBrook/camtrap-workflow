@@ -17,9 +17,11 @@ This checklist defines what must be true before tagging a release (e.g., v0.1.0,
   (`Rscript scripts/run_tests.R --profile release`).
 - [x] Lint passes (`lintr`) or exceptions are documented and minimal.
 - [x] One small pipeline smoke runs separately in ordinary CI.
-- [ ] The exact release SHA passes the manual release workflow, including the
+- [x] The exact release SHA passes the manual release workflow, including the
   full Judbury evidence run, bundle verification, and artefact upload.
-- [ ] No new warnings/errors introduced (or documented as known limitations).
+- [x] No new workflow or test errors. Workflows `30731537537` and
+  `30731649136` emitted one documented, non-blocking GitHub Node 20 deprecation
+  annotation for `actions/checkout@v4` and `actions/upload-artifact@v4`.
 
 ## 3) Scientific sanity
 

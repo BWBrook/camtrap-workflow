@@ -112,23 +112,23 @@ An unlisted production edit is a stop condition, not permission to widen scope.
 
 ## Task 5: Verify, review, publish, and close
 
-- [ ] Run lint, the fast profile, one target smoke, and `actionlint`.
-- [ ] Measure fast test and total ordinary CI duration against the 4,315.2-second
+- [x] Run lint, the fast profile, one target smoke, and `actionlint`.
+- [x] Measure fast test and total ordinary CI duration against the 4,315.2-second
   baseline; do not encode the duration as a flaky test.
 - [x] Obtain one independent scientific and engineering review of the actual
   diff and retained audit.
 - [x] Apply at most one focused material repair and rerun affected checks.
-- [ ] Commit and push the accepted implementation with subject
+- [x] Commit and push the accepted implementation with subject
   `test: simplify and tier the test suite`.
-- [ ] Require exact-SHA push CI success.
-- [ ] Manually dispatch the release profile on that exact main SHA and require
+- [x] Require exact-SHA push CI success.
+- [x] Manually dispatch the release profile on that exact main SHA and require
   release tests, full evidence, bundle verification, and artifact upload to
   succeed.
-- [ ] Independently reconstruct from the emitted release bundle the 13-to-nine
+- [x] Independently reconstruct from the emitted release bundle the 13-to-nine
   mapping, active/inactive/unknown operation union and gaps, same-day handover,
   event conservation, presence OR collapse, richness row sums, Jaccard values
   and edge cases, protected physical outputs, and rendered claim limits.
-- [ ] Record exact SHAs, run IDs, durations, deleted/retained decisions,
+- [x] Record exact SHAs, run IDs, durations, deleted/retained decisions,
   scientific limits, residual architecture debt, and the next decision.
 
 ## Acceptance summary
