@@ -163,26 +163,15 @@ run_foundation_stage <- function(validation) {
   if (!isTRUE(entity$can_analyze)) {
     stop("Entity or deployment integrity blocked analysis.")
   }
-  selected <- resolve_selected_resolution(
-    ingest$config,
-    ingest$snapshot,
-    validation$state,
-    entity
-  )
-  selected_artifacts <- write_selected_resolution_artifacts(
-    selected,
-    ingest$request$staging_dir
-  )
-  if (!isTRUE(selected$integrity_ok)) {
-    stop("Selected-resolution integrity blocked analysis.")
-  }
+  op_long <- pivot_op_long(validation$state$inputs$op)
+  trap_nights <- calc_trap_nights(op_long)
   stage_record(
     "foundation",
     validation = validation,
     entity = entity,
     entity_artifacts = entity_artifacts,
-    selected = selected,
-    selected_artifacts = as.list(selected_artifacts)
+    op_long = op_long,
+    trap_nights = trap_nights
   )
 }
 
@@ -232,13 +221,34 @@ run_events_stage <- function(foundation) {
   stopifnot(identical(foundation$stage, "foundation"))
   validation <- foundation$validation
   ingest <- validation$ingest
-  event_lineage <- validation$state$event_lineage
-  validate_event_lineage(event_lineage, validation$state$lineage)
+  event_lineage <- build_event_lineage(
+    validation$state$inputs$obs,
+    validation$state$inputs$op,
+    validation$state$lineage,
+    threshold = ingest$config$event_threshold_minutes,
+    tz = ingest$config$timezone,
+    fixed_offset_hours = ingest$config$timezone_fixed_offset_hours
+  )
+  validate_event_lineage(event_lineage, event_lineage$lineage)
   validate_event_membership(
     event_lineage,
     event_lineage$obs_events,
-    validation$state$lineage
+    event_lineage$lineage
   )
+  selected <- resolve_selected_resolution(
+    ingest$config,
+    ingest$snapshot,
+    validation$state,
+    foundation$entity,
+    event_lineage
+  )
+  selected_artifacts <- write_selected_resolution_artifacts(
+    selected,
+    ingest$request$staging_dir
+  )
+  if (!isTRUE(selected$integrity_ok)) {
+    stop("Selected-resolution integrity blocked analysis.")
+  }
   physical_events <- physical_event_table(event_lineage)
   root <- ingest$request$staging_dir
   event_path <- write_stage_csv(
@@ -249,20 +259,30 @@ run_events_stage <- function(foundation) {
     event_lineage$memberships,
     file.path(root, "provenance", "event_membership.csv")
   )
-  op_long <- pivot_op_long(validation$state$inputs$op)
-  trap_nights <- calc_trap_nights(op_long)
+  source_row_ledger_path <- file.path(
+    root,
+    "provenance",
+    "source_row_ledger.json"
+  )
+  atomic_write_json(
+    source_row_ledger_document(event_lineage$lineage, "event_formation"),
+    source_row_ledger_path
+  )
   events_per_day <- summarise_events(event_lineage$obs_events)
   stage_record(
     "events",
     foundation = foundation,
     event_lineage = event_lineage,
+    selected = selected,
+    selected_artifacts = as.list(selected_artifacts),
     physical_events = physical_events,
     events_per_day = events_per_day,
-    op_long = op_long,
-    trap_nights = trap_nights,
+    op_long = foundation$op_long,
+    trap_nights = foundation$trap_nights,
     artifacts = list(
       physical_events = event_path,
-      event_membership = membership_path
+      event_membership = membership_path,
+      source_row_ledger = source_row_ledger_path
     )
   )
 }
@@ -318,16 +338,6 @@ attempt_module <- function(
 }
 
 selected_module_records <- function(selected_status, selected_paths, root) {
-  status <- selected_status$status
-  reason <- if (identical(status, "completed")) {
-    NULL
-  } else if (identical(status, "completed_with_warnings")) {
-    "No operational detection events were available; valid empty summaries were produced."
-  } else if (identical(status, "omitted")) {
-    "The selected spatial route lacked the required scientific evidence."
-  } else {
-    "Selected-resolution integrity failed."
-  }
   specification <- list(
     effort_coverage = list(
       required = c("confirmed operation", "selected spatial membership"),
@@ -356,7 +366,11 @@ selected_module_records <- function(selected_status, selected_paths, root) {
     jaccard = "jaccard"
   )
   lapply(names(specification), function(name) {
-    path <- selected_paths[[path_names[[name]]]]
+    output_name <- path_names[[name]]
+    path <- selected_paths[[output_name]]
+    output_status <- selected_status$output_status[[name]]
+    status <- output_status$status
+    reason <- output_status$reason
     outputs <- if (is.null(path)) list() else list(
       table = stage_relative_path(path, root)
     )
@@ -380,13 +394,8 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
   root <- ingest$request$staging_dir
   config <- ingest$config
   selected_paths <- write_selected_ecological_outputs(
-    foundation$selected,
-    events$event_lineage$obs_events,
-    root,
-    event_conservation = validate_selected_runtime_events(
-      foundation$selected$event_map,
-      events$event_lineage$obs_events
-    )
+    events$selected,
+    root
   )
   selected_status <- jsonlite::read_json(
     selected_paths$status,
@@ -433,54 +442,93 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
   records[[length(records) + 1L]] <- rate$record
   outputs <- c(outputs, rate$outputs)
 
-  day_night <- attempt_module(
-    "coarse_day_night",
-    c("identified physical-location events", "flash or usable clock evidence"),
-    "physical_location",
-    "Coarse day/night categories do not imply fine-scale diel timing.",
-    function() {
-      table <- calc_diel(
-        events$event_lineage$obs_events,
-        method = config$diel$method,
-        day_start_hour = config$diel$day_start_hour,
-        day_end_hour = config$diel$day_end_hour
-      )
-      path <- write_stage_csv(
-        table,
-        file.path(root, "tables", "coarse_day_night.csv")
-      )
-      status <- if (zero_events) "completed_with_warnings" else "completed"
-      reason <- if (zero_events) {
-        "No operational detection events were available; the summary is empty."
-      } else {
-        NULL
-      }
-      list(
-        record = module_record(
-          "coarse_day_night",
-          status,
-          c("identified physical-location events", "flash or usable clock evidence"),
-          "physical_location",
-          reason,
-          "Coarse day/night categories do not imply fine-scale diel timing.",
-          list(table = stage_relative_path(path, root))
+  unique_event_rows <- events$event_lineage$obs_events[
+    !duplicated(events$event_lineage$obs_events$event_id),
+    ,
+    drop = FALSE
+  ]
+  diel_usable <- if (identical(config$diel$method, "flash")) {
+    !is.na(unique_event_rows$flash) & unique_event_rows$flash %in% c(0, 1)
+  } else {
+    !is.na(unique_event_rows$dt)
+  }
+  day_night <- if (nrow(unique_event_rows) == 0L || !any(diel_usable)) {
+    list(
+      record = module_record(
+        "coarse_day_night",
+        "omitted",
+        c("identified physical-location events", "flash or usable clock evidence"),
+        "physical_location",
+        paste0(
+          "No independent event had usable ", config$diel$method,
+          " evidence for day/night classification."
         ),
-        outputs = list(coarse_day_night = path)
-      )
-    }
-  )
+        "Coarse day/night categories do not imply fine-scale diel timing."
+      ),
+      outputs = list()
+    )
+  } else {
+    attempt_module(
+      "coarse_day_night",
+      c("identified physical-location events", "flash or usable clock evidence"),
+      "physical_location",
+      "Coarse day/night categories do not imply fine-scale diel timing.",
+      function() {
+        table <- calc_diel(
+          events$event_lineage$obs_events,
+          method = config$diel$method,
+          day_start_hour = config$diel$day_start_hour,
+          day_end_hour = config$diel$day_end_hour
+        )
+        path <- write_stage_csv(
+          table,
+          file.path(root, "tables", "coarse_day_night.csv")
+        )
+        status <- if (sum(diel_usable) < length(diel_usable)) {
+          "completed_with_warnings"
+        } else {
+          "completed"
+        }
+        reason <- if (identical(status, "completed_with_warnings")) paste0(
+          "Classified ", sum(diel_usable), " of ", length(diel_usable),
+          " independent events; missing ", config$diel$method,
+          " evidence was excluded."
+        ) else NULL
+        list(
+          record = module_record(
+            "coarse_day_night",
+            status,
+            c("identified physical-location events", "flash or usable clock evidence"),
+            "physical_location",
+            reason,
+            "Coarse day/night categories do not imply fine-scale diel timing.",
+            list(table = stage_relative_path(path, root))
+          ),
+          outputs = list(coarse_day_night = path)
+        )
+      }
+    )
+  }
   records[[length(records) + 1L]] <- day_night$record
   outputs <- c(outputs, day_night$outputs)
 
-  physical_locations <- unique(events$events_per_day$site)
-  accumulation <- if (length(physical_locations) < 2L) {
+  physical_locations <- sort(unique(as.character(
+    events$trap_nights$site[events$trap_nights$trap_nights >= 1L]
+  )), method = "radix")
+  detected_locations <- unique(as.character(events$events_per_day$site))
+  zero_detection_locations <- setdiff(physical_locations, detected_locations)
+  accumulation <- if (length(physical_locations) < 2L ||
+                        nrow(events$events_per_day) == 0L) {
     list(
       record = module_record(
         "species_accumulation",
         "omitted",
         c("events from at least two physical locations"),
         "physical_location",
-        "Fewer than two physical locations had operational detection events.",
+        paste(
+          "Species accumulation requires at least two confirmed-active physical",
+          "locations and at least one operational detection event."
+        ),
         "Sampling accumulation is not an unseen-richness estimate."
       ),
       outputs = list()
@@ -492,7 +540,10 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
       "physical_location",
       "Sampling accumulation is not an unseen-richness estimate.",
       function() {
-        table <- compute_species_accumulation(events$events_per_day)
+        table <- compute_species_accumulation(
+          events$events_per_day,
+          physical_locations
+        )
         table_path <- write_stage_csv(
           table,
           file.path(root, "tables", "species_accumulation.csv")
@@ -508,9 +559,17 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
         list(
           record = module_record(
             "species_accumulation",
-            "completed",
+            if (length(zero_detection_locations)) {
+              "completed_with_warnings"
+            } else {
+              "completed"
+            },
             c("events from at least two physical locations"),
             "physical_location",
+            reason = if (length(zero_detection_locations)) paste0(
+              "Included confirmed-active locations with zero detections: ",
+              paste(zero_detection_locations, collapse = ", "), "."
+            ) else NULL,
             claim_limit = "Sampling accumulation is not an unseen-richness estimate.",
             outputs = relative
           ),
@@ -526,10 +585,15 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
   outputs <- c(outputs, accumulation$outputs)
 
   site <- validation$state$inputs$site
-  coordinates_available <- all(c("lat", "lon") %in% names(site)) &&
-    any(!is.na(suppressWarnings(as.numeric(site$lat))) &
-          !is.na(suppressWarnings(as.numeric(site$lon))))
-  point_map <- if (!coordinates_available) {
+  coordinate_ok <- if (all(c("lat", "lon") %in% names(site))) {
+    is.finite(suppressWarnings(as.numeric(site$lat))) &
+      is.finite(suppressWarnings(as.numeric(site$lon)))
+  } else {
+    rep(FALSE, nrow(site))
+  }
+  mapped_count <- sum(coordinate_ok)
+  total_count <- nrow(site)
+  point_map <- if (mapped_count == 0L) {
     list(
       record = module_record(
         "point_map",
@@ -551,15 +615,27 @@ run_modules_stage <- function(events) { # nolint: object_length_linter.
         path <- plot_physical_location_map(
           site,
           file.path(root, "figures", "physical_location_map.png"),
-          membership = foundation$selected$membership,
+          membership = if (isTRUE(events$selected$route_eligible)) {
+            events$selected$membership
+          } else {
+            NULL
+          },
           label_locations = config$map$label_locations
         )
         list(
           record = module_record(
             "point_map",
-            "completed",
+            if (mapped_count < total_count) {
+              "completed_with_warnings"
+            } else {
+              "completed"
+            },
             c("physical-location coordinates"),
             "physical_location",
+            reason = if (mapped_count < total_count) paste0(
+              "Mapped ", mapped_count, " of ", total_count,
+              " physical locations; locations without both coordinates were excluded."
+            ) else NULL,
             claim_limit = paste(
               "The map shows supplied points only and does not interpolate",
               "a surface."
@@ -650,12 +726,12 @@ run_report_stage <- function(modules) {
   input_path <- file.path(report_dir, "report_inputs.rds")
   saveRDS(list(
     run_id = ingest$run$run_id,
-    resolution = events$foundation$selected$summary$resolution,
-    scheme_id = events$foundation$selected$summary$scheme_id,
-    scheme_version = events$foundation$selected$summary$scheme_version,
-    physical_location_count = events$foundation$selected$summary$physical_location_count,
-    analysis_unit_count = events$foundation$selected$summary$analysis_unit_count,
-    operation_state_counts = events$foundation$selected$summary$operation_state_counts,
+    resolution = events$selected$summary$resolution,
+    scheme_id = events$selected$summary$scheme_id,
+    scheme_version = events$selected$summary$scheme_version,
+    physical_location_count = events$selected$summary$physical_location_count,
+    analysis_unit_count = events$selected$summary$analysis_unit_count,
+    operation_state_counts = events$selected$summary$operation_state_counts,
     event_count = nrow(events$physical_events),
     source_membership_count = nrow(events$event_lineage$memberships),
     module_status = modules$records,
@@ -708,12 +784,13 @@ run_bundle_stage <- function(report) {
   session_path <- file.path(root, "provenance", "session_info.txt")
   writeLines(capture.output(sessionInfo()), session_path)
   manifest <- write_current_manifest(report, session_path)
-  verify_current_bundle(root, require_ready = FALSE)
-  atomic_replace_text("verified", file.path(root, "READY"))
+  receipt <- verify_current_bundle(root, require_ready = FALSE)
+  atomic_write_json(receipt, file.path(root, "READY"))
   final <- publish_current_bundle(
     root,
     ingest$request$outputs_root,
-    ingest$run$run_id
+    ingest$run$run_id,
+    receipt
   )
   stage_record(
     "publish",

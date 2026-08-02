@@ -1,0 +1,3 @@
+analysis_site_mapping_schema,scheme_id,scheme_version,authority_state,analysis_site_id,physical_location_id,representative_latitude,representative_longitude,coordinate_basis
+camtrap-analysis-site-mapping/1.0,generic-two-camera,1.0.0,test_fixture,combined,jc_a,-42.905,147.305,explicit_fixture_representative
+camtrap-analysis-site-mapping/1.0,generic-two-camera,1.0.0,test_fixture,combined,jc_b,-42.905,147.305,explicit_fixture_representative

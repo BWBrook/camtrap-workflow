@@ -20,6 +20,18 @@ read_output <- function(name) {
   if (is.null(path)) return(NULL)
   utils::read.csv(file.path(bundle_root, path), check.names = FALSE)
 }
+output_path <- function(name) {
+  path <- inputs$outputs[[name]]
+  if (is.null(path)) return(NULL)
+  file.path(bundle_root, path)
+}
+module_record <- function(name) {
+  inputs$module_status[[which(vapply(
+    inputs$module_status,
+    function(record) identical(record$module, name),
+    logical(1)
+  ))[[1L]]]]
+}
 status_table <- do.call(rbind, lapply(inputs$module_status, function(record) {
   data.frame(
     analysis = gsub("_", " ", record$module),
@@ -38,21 +50,48 @@ status_table <- do.call(rbind, lapply(inputs$module_status, function(record) {
 ## Ecological result
 
 This run retained `r inputs$event_count` independent detection events from
-`r inputs$physical_location_count` physical camera locations. The core spatial
-summaries use `r gsub("_", " ", inputs$resolution)` resolution across
+`r inputs$physical_location_count` physical camera locations. The requested
+spatial resolution was `r gsub("_", " ", inputs$resolution)` across
 `r inputs$analysis_unit_count` analytical units.
 
 ```{r}
+attention <- status_table[status_table$status != "completed", , drop = FALSE]
+if (nrow(attention) > 0L) {
+  knitr::kable(attention, caption = "Warnings and omitted analyses")
+}
+```
+
+```{r}
+effort <- read_output("effort_coverage")
 richness <- read_output("observed_richness")
-if (!is.null(richness)) {
-  show <- richness[c("analysis_unit_id", "observed_richness")]
-  names(show) <- c("Analysis unit", "Observed species")
+if (!is.null(effort)) {
+  show <- effort[c(
+    "analysis_unit_id", "confirmed_active_days", "unknown_days"
+  )]
+  if (!is.null(richness)) {
+    show <- merge(
+      show,
+      richness[c("analysis_unit_id", "observed_richness")],
+      by = "analysis_unit_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+  } else {
+    show$observed_richness <- NA_integer_
+  }
+  show$eligible_for_community <- show$confirmed_active_days >= 1L
+  names(show) <- c(
+    "Analysis unit", "Confirmed active days", "Unknown days",
+    "Observed species", "Included in community summaries"
+  )
   knitr::kable(show)
 }
 ```
 
 Observed richness is the number of species detected in the supplied,
-effort-filtered records. It is not an estimate of species that went undetected.
+effort-filtered records. Units without a confirmed active day are excluded,
+not treated as absences. A sampled unit with no detections has zero observed
+richness. This is not an estimate of species that went undetected.
 
 ```{r}
 jaccard <- read_output("jaccard")
@@ -103,6 +142,55 @@ if (!is.null(rates) && nrow(rates) > 0L) {
 
 Operational-event detection rates describe detections per confirmed active
 camera day. They must not be interpreted as abundance or density.
+
+### Coarse day and night
+
+```{r}
+diel <- read_output("coarse_day_night")
+if (!is.null(diel) && nrow(diel) > 0L) {
+  names(diel) <- c(
+    "Physical location", "Species", "Period", "Events", "Proportion"
+  )
+  knitr::kable(diel, digits = 3)
+} else {
+  cat(module_record("coarse_day_night")$reason)
+}
+```
+
+### Species accumulation
+
+```{r}
+accumulation <- read_output("species_accumulation")
+if (!is.null(accumulation)) {
+  knitr::kable(accumulation, digits = 2)
+  knitr::include_graphics(output_path("species_accumulation_plot"))
+} else {
+  cat(module_record("species_accumulation")$reason)
+}
+```
+
+### Physical locations
+
+```{r}
+map_path <- output_path("point_map")
+if (!is.null(map_path)) {
+  knitr::include_graphics(map_path)
+} else {
+  cat(module_record("point_map")$reason)
+}
+```
+
+### Event-gap sensitivity
+
+```{r}
+gap <- read_output("event_gap_sensitivity")
+if (!is.null(gap)) {
+  knitr::kable(gap, digits = 2)
+  knitr::include_graphics(output_path("event_gap_sensitivity_plot"))
+} else {
+  cat(module_record("event_gap_sensitivity")$reason)
+}
+```
 
 ```{r}
 if (identical(inputs$scheme_id, "judbury-analysis-site")) {

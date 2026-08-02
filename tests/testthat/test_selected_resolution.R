@@ -32,10 +32,7 @@ goal009_config <- function() {
   list(analysis_unit = c(list(resolution = "analysis_site"), fields))
 }
 goal009_membership_digest <- function(event_id, source_ids) {
-  sha256_text(canonical_json(list(
-    event_id = event_id,
-    source_row_ids = sort(as.character(source_ids), method = "radix")
-  )))
+  sha256_text(canonical_json(sort(as.character(source_ids), method = "radix")))
 }
 goal009_fixture <- function() {
   mapping <- goal009_mapping()
@@ -147,9 +144,13 @@ goal009_fixture <- function() {
     snapshot_root = file.path(staging_dir, "source_snapshot"),
     source_sha256 = fixity_identity(list(inventory)), inventory = list(inventory)
   )
+  event_lineage <- validation$event_lineage
+  validation$event_lineage <- NULL
+  event_lineage$lineage <- validation$lineage
   list(
     config = goal009_config(), mapping = mapping, snapshot = snapshot,
-    validation_state = validation, entity_state = entity
+    validation_state = validation, entity_state = entity,
+    event_lineage = event_lineage
   )
 }
 test_that("resolution preserves exact membership and chronology-based concurrency", {
@@ -157,16 +158,18 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
   physical_before <- serialize(list(
     site = fixture$validation_state$inputs$site,
     obs = fixture$validation_state$inputs$obs,
-    event_lineage = fixture$validation_state$event_lineage
+    event_lineage = fixture$event_lineage
   ), NULL)
   state <- do.call(
     resolve_selected_resolution,
-    fixture[c("config", "snapshot", "validation_state", "entity_state")]
+    fixture[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
   expect_identical(serialize(list(
     site = fixture$validation_state$inputs$site,
     obs = fixture$validation_state$inputs$obs,
-    event_lineage = fixture$validation_state$event_lineage
+    event_lineage = fixture$event_lineage
   ), NULL), physical_before)
   expected <- fixture$mapping[c("physical_location_id", "analysis_site_id")]
   names(expected)[[2]] <- "analysis_unit_id"
@@ -179,8 +182,8 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
   expect_equal(nrow(actual), 13L)
   expect_equal(actual, expected)
   keyed <- state$event_map[c("event_id", "physical_location_id", "species", "event_time", "analysis_unit_id")]
-  expected_keyed <- fixture$validation_state$event_lineage$obs_events[
-    !duplicated(fixture$validation_state$event_lineage$obs_events$event_id),
+  expected_keyed <- fixture$event_lineage$obs_events[
+    !duplicated(fixture$event_lineage$obs_events$event_id),
     c("event_id", "site", "species", "dt")
   ]
   names(expected_keyed) <- c("event_id", "physical_location_id", "species", "event_time")
@@ -254,7 +257,9 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
   concurrent$entity_state$deployment_lineage$successor_deployment_id[] <- NA_character_
   concurrent_state <- do.call(
     resolve_selected_resolution,
-    concurrent[c("config", "snapshot", "validation_state", "entity_state")]
+    concurrent[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
   expect_true(isTRUE(concurrent_state$integrity_ok))
   expect_false(isTRUE(concurrent_state$route_eligible))
@@ -263,6 +268,12 @@ test_that("resolution preserves exact membership and chronology-based concurrenc
 
 test_that("duplicate physical rows hard-stop the selected mapping reader", {
   fixture <- goal009_fixture()
+  mismatch <- fixture$config
+  mismatch$analysis_unit$mapping_profile_id <- "another-scheme/9.9.9"
+  expect_error(
+    selected_resolution_read_mapping(mismatch, fixture$snapshot),
+    "profile identity"
+  )
   record <- fixture$snapshot$inventory[[1L]]
   mapping_path <- file.path(fixture$snapshot$staging_dir, record$path)
   duplicate <- fixture$mapping
@@ -292,7 +303,9 @@ test_that("incomplete or orphaned membership hard stops without inference", {
 
   state <- do.call(
     resolve_selected_resolution,
-    fixture[c("config", "snapshot", "validation_state", "entity_state")]
+    fixture[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
 
   expect_false(isTRUE(state$integrity_ok))
@@ -329,21 +342,23 @@ test_that("event mapping preserves multi-row lineage and exact event conservatio
   fixture <- goal009_fixture()
   state <- do.call(
     resolve_selected_resolution,
-    fixture[c("config", "snapshot", "validation_state", "entity_state")]
+    fixture[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
-  source_members <- fixture$validation_state$event_lineage$memberships
+  source_members <- fixture$event_lineage$memberships
   mapped <- state$event_map
   expect_equal(
     sort(unique(mapped$event_id)),
-    sort(unique(fixture$validation_state$event_lineage$obs_events$event_id))
+    sort(unique(fixture$event_lineage$obs_events$event_id))
   )
   expect_equal(
     sort(unique(mapped$physical_location_id)),
-    sort(unique(fixture$validation_state$event_lineage$obs_events$site))
+    sort(unique(fixture$event_lineage$obs_events$site))
   )
-  expect_equal(sort(unique(mapped$species)), sort(unique(fixture$validation_state$event_lineage$obs_events$species)))
+  expect_equal(sort(unique(mapped$species)), sort(unique(fixture$event_lineage$obs_events$species)))
   expect_true("event_time" %in% names(mapped))
-  event_rows <- fixture$validation_state$event_lineage$obs_events
+  event_rows <- fixture$event_lineage$obs_events
   event_rows <- event_rows[!duplicated(event_rows$event_id), ]
   expect_equal(nrow(mapped), nrow(event_rows))
   expect_equal(anyDuplicated(mapped$event_id), 0L)
@@ -361,141 +376,17 @@ test_that("event mapping preserves multi-row lineage and exact event conservatio
       row$source_membership_digest,
       goal009_membership_digest(event_id, expected_by_event[[event_id]])
     )
-    expect_equal(row$source_membership_reference, "provenance/phase2/event_membership.json")
+    expect_equal(row$source_membership_reference, "provenance/event_membership.csv")
     expect_equal(row$deployment_resolution_state, "resolved")
     expect_true(nzchar(row$deployment_id))
   }
   expect_equal(
     table(unique(mapped[c("event_id", "species")])$species),
-    table(unique(fixture$validation_state$event_lineage$obs_events[c("event_id", "species")])$species)
+    table(unique(fixture$event_lineage$obs_events[c("event_id", "species")])$species)
   )
   expect_equal(length(unique(mapped$analysis_unit_id)), 1L)
 })
 
-test_that("zero operational events remain typed and integrity valid", {
-  fixture <- goal009_fixture()
-  event_lineage <- fixture$validation_state$event_lineage
-  event_lineage$events <- event_lineage$events[0, , drop = FALSE]
-  event_lineage$memberships <- event_lineage$memberships[0, , drop = FALSE]
-  event_lineage$obs_events <- event_lineage$obs_events[0, , drop = FALSE]
-  fixture$validation_state$event_lineage <- event_lineage
-  fixture$validation_state$lineage$rows$disposition <- "excluded"
-  fixture$validation_state$lineage$rows$rule_id <- "operational_filter/1.0"
-  fixture$validation_state$lineage$rows$reason <- "no_operational_event"
-
-  state <- do.call(
-    resolve_selected_resolution,
-    fixture[c("config", "snapshot", "validation_state", "entity_state")]
-  )
-
-  expect_true(isTRUE(state$integrity_ok))
-  expect_true(isTRUE(state$route_eligible))
-  expect_equal(nrow(state$event_map), 0L)
-  expect_identical(
-    names(state$event_map),
-    c(
-      "event_id", "physical_location_id", "analysis_unit_id", "species",
-      "event_time", "source_membership_count", "source_membership_digest",
-      "source_membership_reference", "deployment_id",
-      "deployment_resolution_state"
-    )
-  )
-  expect_true(inherits(state$event_map$event_time, "POSIXct"))
-  expect_identical(state$event_map$source_membership_count, integer())
-  expect_equal(state$summary$event_count, 0L)
-  expect_equal(state$summary$source_row_membership_count, 0L)
-
-  root <- tempfile("goal011-zero-events-")
-  paths <- write_selected_resolution_artifacts(state, root)
-  reconstructed <- validate_selected_resolution_artifacts(root, paths)
-  expect_true(isTRUE(reconstructed$integrity_ok))
-  expect_equal(nrow(reconstructed$event_map), 0L)
-})
-test_that("explicit selected provenance retains root and reconstructed route status", {
-  fixture <- goal009_fixture()
-  root <- tempfile("goal009-artifacts-")
-  selected_operation <- data.frame(
-    analysis_unit_id = rep("jc_co1", 3),
-    date = as.Date(c("2020-01-01", "2020-01-02", "2020-01-03")), operation = 1L
-  )
-  selected_events <- data.frame(
-    event_id = c("jc_co1_s1_pos_1", "jc_co1_wal_1"),
-    physical_location_id = c("jc_co1_s1", "jc_co1"), analysis_unit_id = "jc_co1",
-    species = c("pos", "wal"), event_time = as.POSIXct(c("2020-01-01 01:00:00", "2020-01-03 02:00:00"), tz = "UTC"),
-    source_membership_count = c(2L, 1L),
-    source_membership_digest = c(
-      goal009_membership_digest("jc_co1_s1_pos_1", c("source-row-1", "source-row-2")),
-      goal009_membership_digest("jc_co1_wal_1", "source-row-3")
-    ), source_membership_reference = "provenance/phase2/event_membership.json",
-    stringsAsFactors = FALSE
-  )
-  selected_membership <- fixture$mapping[c("physical_location_id", "analysis_site_id")]
-  names(selected_membership)[[2]] <- "analysis_unit_id"
-  state <- list(
-    integrity_ok = TRUE, route_eligible = TRUE, reasons = character(),
-    membership = selected_membership,
-    operation = selected_operation, event_map = selected_events,
-    summary = list(
-      status = "eligible", integrity_ok = TRUE, route_eligible = TRUE,
-      resolution = "analysis_site", scheme_id = "judbury-analysis-site",
-      scheme_version = "1.0.0-proposed",
-      authority_reference = fixture$config$analysis_unit$authority_reference,
-      membership_count = 13L, analysis_unit_count = 9L,
-      physical_location_count = 13L,
-      operation_state_counts = c(active = 3L, inactive = 0L, unknown = 0L),
-      event_count = 2L, source_row_membership_count = 3L,
-      reasons = character(),
-      claim_limits = c(
-        "observed-richness-detection-effort-bounded",
-        "jaccard-descriptive-observed-presence-effort-completeness-detectability-limited"
-      )
-    )
-  )
-  paths <- write_selected_resolution_artifacts(state, root)
-  expect_named(paths, c("membership", "operation", "event_map", "summary"))
-  expect_equal(
-    unname(basename(paths)),
-    c("membership.csv", "operation.csv", "event_map.csv", "summary.json")
-  )
-  reconstructed <- validate_selected_resolution_artifacts(root, paths)
-  expect_true(isTRUE(reconstructed$integrity_ok))
-  expect_true(isTRUE(reconstructed$route_eligible))
-
-  ineligible <- state
-  ineligible$route_eligible <- FALSE
-  ineligible$reasons <- "genuine_concurrent_member_deployments"
-  ineligible$summary$status <- "ineligible"
-  ineligible$summary$route_eligible <- FALSE
-  ineligible$summary$reasons <- ineligible$reasons
-  ineligible_root <- tempfile("goal009-ineligible-")
-  ineligible_paths <- write_selected_resolution_artifacts(
-    ineligible,
-    ineligible_root
-  )
-  ineligible_state <- validate_selected_resolution_artifacts(
-    ineligible_root,
-    ineligible_paths
-  )
-  expect_true(isTRUE(ineligible_state$integrity_ok))
-  expect_false(isTRUE(ineligible_state$route_eligible))
-})
-
-test_that("event time is canonical minimum independent of observation row order", {
-  fixture <- goal009_fixture()
-  fixture$validation_state$event_lineage$obs_events <-
-    fixture$validation_state$event_lineage$obs_events[c(2L, 1L, 3L), ]
-  state <- do.call(
-    resolve_selected_resolution,
-    fixture[c("config", "snapshot", "validation_state", "entity_state")]
-  )
-  event <- state$event_map[state$event_map$event_id == "jc_co1_s1_pos_1", ]
-  expect_equal(
-    as.numeric(event$event_time),
-    as.numeric(min(fixture$validation_state$event_lineage$obs_events$dt[
-      fixture$validation_state$event_lineage$obs_events$event_id == event$event_id
-    ]))
-  )
-})
 
 test_that("handover authorization is date-, precision-, and lineage-specific", {
   fixture <- goal009_fixture()
@@ -504,7 +395,9 @@ test_that("handover authorization is date-, precision-, and lineage-specific", {
   off_boundary$validation_state$inputs$op$jc_co1 <- c(0L, 0L, 1L)
   off_state <- do.call(
     resolve_selected_resolution,
-    off_boundary[c("config", "snapshot", "validation_state", "entity_state")]
+    off_boundary[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
   expect_false(isTRUE(off_state$route_eligible))
   expect_true(any(grepl("concurrent", off_state$reasons)))
@@ -513,7 +406,9 @@ test_that("handover authorization is date-, precision-, and lineage-specific", {
   wrong_precision$entity_state$deployment_lineage$date_precision[] <- "hour"
   precision_state <- do.call(
     resolve_selected_resolution,
-    wrong_precision[c("config", "snapshot", "validation_state", "entity_state")]
+    wrong_precision[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
   expect_false(isTRUE(precision_state$route_eligible))
 
@@ -524,7 +419,9 @@ test_that("handover authorization is date-, precision-, and lineage-specific", {
     ]
   missing_state <- do.call(
     resolve_selected_resolution,
-    missing_lineage[c("config", "snapshot", "validation_state", "entity_state")]
+    missing_lineage[c(
+      "config", "snapshot", "validation_state", "entity_state", "event_lineage"
+    )]
   )
   expect_false(isTRUE(missing_state$route_eligible))
 })

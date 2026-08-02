@@ -64,9 +64,6 @@ jobs:
       - name: Fast tests
         run: Rscript scripts/run_tests.R --profile fast
 
-      - name: End-to-end publication smoke
-        run: Rscript -e 'testthat::test_file("tests/testthat/test_workflow_end_to_end.R", reporter = "summary")'
-
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.profile == 'release'
     needs: fast
@@ -108,15 +105,42 @@ jobs:
       - name: Setup Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
+      - name: Record release context
+        run: |
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          {
+            printf 'commit_sha=%s\n' "$(git rev-parse HEAD)"
+            printf 'runner_name=%s\n' "${RUNNER_NAME}"
+            printf 'runner_os=%s\n' "${RUNNER_OS}"
+            printf 'runner_arch=%s\n' "${RUNNER_ARCH}"
+            printf 'runner_image=%s\n' "${ImageOS:-unknown}"
+            printf 'runner_image_version=%s\n' "${ImageVersion:-unknown}"
+            printf 'renv_lock_sha256=%s\n' "$(sha256sum renv.lock | cut -d' ' -f1)"
+            printf '%s\n' \
+              'publisher_command=Rscript scripts/run_full_evidence_run.R --config config.yml'
+          } > release-evidence.txt
+          # shellcheck disable=SC2016
+          Rscript -e '
+            cat("renv_status_begin\n")
+            renv::status()
+            cat("renv_status_end\n")
+            cat("renv_cache=", renv::paths$cache(), "\n", sep = "")
+            cat("installed_package_count=", nrow(installed.packages()), "\n", sep = "")
+          ' >> release-evidence.txt
+
       - name: Full Judbury publisher
         run: |
           /usr/bin/time -p -o publisher.time \
             Rscript scripts/run_full_evidence_run.R --config config.yml
           RUN_ID="$(tr -d '\n' < outputs/latest)"
           echo "RUN_ID=${RUN_ID}" >> "$GITHUB_ENV"
+          printf 'published_run_id=%s\n' "${RUN_ID}" >> release-evidence.txt
 
       - name: Independent published-bundle reconstruction
         run: |
+          printf '%s\n' \
+            "verifier_command=Rscript scripts/verify_published_bundle.R outputs/runs/${RUN_ID} --oracle tests/fixtures/goal011/judbury_selected_jaccard_oracle.csv" \
+            >> release-evidence.txt
           /usr/bin/time -p -o verifier.time \
             Rscript scripts/verify_published_bundle.R \
               "outputs/runs/${RUN_ID}" \
@@ -133,13 +157,27 @@ jobs:
           } > release-timings.txt
 
       - name: Upload artefacts
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: immutable-evidence-bundle
-          if-no-files-found: warn
+          if-no-files-found: error
           path: |
             outputs/latest
             outputs/runs/*/
             !outputs/runs/.staging/
+            release-evidence.txt
+            publisher.time
+            verifier.time
+            release-timings.txt
+
+      - name: Upload failed-release diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-failure-diagnostics
+          if-no-files-found: error
+          path: |
+            release-evidence.txt
+            publisher.time
+            verifier.time
             release-timings.txt

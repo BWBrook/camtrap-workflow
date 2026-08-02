@@ -34,8 +34,11 @@ test_that("current configs preserve mapped and physical analysis authorities", {
     mapped <- read_config(here(path))
     expect_equal(mapped$analysis_unit, goal009_mapping_selection(), info = path)
     expect_equal(mapped$analysis_unit_resolved$resolution, "analysis_site", info = path)
-    expect_equal(mapped$analysis_unit_resolved$scheme_id, "judbury-analysis-site", info = path)
-    expect_equal(mapped$analysis_unit_resolved$scheme_version, "1.0.0-proposed", info = path)
+    expect_equal(
+      mapped$analysis_unit_resolved$mapping_profile_id,
+      "judbury-analysis-site/1.0.0-proposed",
+      info = path
+    )
     expect_equal(mapped$analysis_unit_resolved$mapping_sha256,
                  goal009_mapping_selection()$mapping_sha256, info = path)
   }
@@ -72,10 +75,20 @@ test_that("current configs preserve mapped and physical analysis authorities", {
   }
 })
 
-test_that("analysis-site selection rejects unapproved current authority", {
-  bad_authority <- list(analysis_unit = goal009_mapping_selection())
-  bad_authority$analysis_unit$authority_reference <- "not-approved"
-  expect_error(analysis_unit_selection(bad_authority), "authority")
+test_that("analysis-site selection accepts any explicit immutable mapping contract", {
+  generic <- list(analysis_unit = list(
+    resolution = "analysis_site",
+    mapping_profile_id = "generic-two-camera/1.0.0",
+    mapping_path = "tests/fixtures/goal011/generic_analysis_site_mapping.csv",
+    mapping_sha256 = paste(rep("a", 64L), collapse = ""),
+    authority_reference = "test-fixture-generic-two-camera/1.0.0"
+  ))
+
+  selected <- analysis_unit_selection(generic)
+
+  expect_equal(selected$mapping_profile_id, "generic-two-camera/1.0.0")
+  expect_equal(selected$state, "selected_mapping")
+  expect_false("scheme_id" %in% names(selected))
 })
 
 test_that("raw YAML differs while equivalent resolved configuration matches", {

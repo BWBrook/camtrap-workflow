@@ -44,26 +44,32 @@ test_that("physical events retain CamtrapDP deployment membership", {
   source(here("R", "custom_funcs.R"), local = TRUE)
   source(here("R", "event_outputs.R"), local = TRUE)
   obs <- data.frame(
-    index = 1:2,
-    site = c("loc_a", "loc_b"),
-    physical_location_id = c("loc_a", "loc_b"),
-    deployment_id = c("dep_a", "dep_b"),
-    species = c("sp1", "sp1"),
-    datetime = c("01/01/2020 01:00:00", "01/01/2020 01:05:00"),
+    index = 1:4,
+    site = c("loc_a", "loc_b", "loc_a", "loc_b"),
+    physical_location_id = c("loc_a", "loc_b", "loc_a", "loc_b"),
+    deployment_id = c("dep_a", "dep_b", "dep_a", "dep_b"),
+    species = rep("sp1", 4),
+    datetime = c(
+      "01/01/2020 01:00:00", "01/01/2020 01:05:00",
+      "unparseable", "02/01/2020 01:05:00"
+    ),
     stringsAsFactors = FALSE
   )
   op <- data.frame(
-    date = "01/01/2020", loc_a = 1L, loc_b = 1L,
+    date = c("01/01/2020", "02/01/2020"),
+    loc_a = c(1L, 1L), loc_b = c(1L, 0L),
     check.names = FALSE
   )
   lineage <- list(
     rows = data.frame(
-      logical_name = "observations", source_row_id = c("source-a", "source-b"),
+      logical_name = "observations",
+      source_row_id = c("source-a", "source-b", "source-c", "source-d"),
       disposition = "retained", rule_id = "", reason = "",
       stringsAsFactors = FALSE
     ),
     observation_map = data.frame(
-      internal_index = 1:2, source_row_id = c("source-a", "source-b"),
+      internal_index = 1:4,
+      source_row_id = c("source-a", "source-b", "source-c", "source-d"),
       stringsAsFactors = FALSE
     )
   )
@@ -80,4 +86,8 @@ test_that("physical events retain CamtrapDP deployment membership", {
     c("loc_a", "loc_b")
   )
   expect_equal(nrow(result$memberships), nrow(result$obs_events))
+  rules <- stats::setNames(result$lineage$rows$rule_id,
+                           result$lineage$rows$source_row_id)
+  expect_equal(rules[["source-c"]], "event.unparseable_time/1.0")
+  expect_equal(rules[["source-d"]], "effort.not_operational/1.0")
 })

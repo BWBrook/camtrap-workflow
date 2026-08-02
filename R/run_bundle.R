@@ -2,6 +2,7 @@
 
 current_manifest_schema <- "camtrap-run-bundle/2.0"
 current_completion_schema <- "camtrap-run-completion/2.0"
+verification_receipt_schema <- "camtrap-internal-verification-receipt/1.0"
 
 manifest_path <- function(bundle_dir) {
   file.path(bundle_dir, "run_manifest.json")
@@ -50,7 +51,7 @@ write_current_manifest <- function(report, session_info_path) {
     run_id = ingest$run$run_id,
     status = "completed",
     created_utc = ingest$run$created_utc,
-    spatial_resolution = foundation$selected$summary$resolution,
+    spatial_resolution = events$selected$summary$resolution,
     fingerprints = ingest$run$fingerprints,
     engine = ingest$engine,
     config = list(
@@ -67,10 +68,7 @@ write_current_manifest <- function(report, session_info_path) {
     audit = list(
       validation = relative_artifacts(validation$artifacts, root),
       entity = relative_artifacts(foundation$entity_artifacts, root),
-      selected_resolution = relative_artifacts(
-        foundation$selected_artifacts,
-        root
-      ),
+      selected_resolution = relative_artifacts(events$selected_artifacts, root),
       events = relative_artifacts(events$artifacts, root)
     ),
     module_status = stage_relative_path(modules$module_status, root),
@@ -246,7 +244,36 @@ verify_event_consequences <- function(bundle_dir, manifest) {
       stop("Physical event source membership does not reconcile.")
     }
   }
-  list(events = events, memberships = memberships)
+  ledger <- jsonlite::read_json(bundle_path(
+    bundle_dir,
+    manifest$audit$events$source_row_ledger,
+    "Final source-row ledger"
+  ), simplifyVector = TRUE)
+  rows <- ledger$records
+  required_rows <- c(
+    "row_schema", "source_row_id", "resource_id", "logical_name",
+    "record_ordinal", "disposition", "rule_id", "reason"
+  )
+  if (!identical(ledger$source_row_ledger_schema,
+                 "camtrap-source-row-ledger/1.0") ||
+        !identical(ledger$disposition_scope, "event_formation") ||
+        !is.data.frame(rows) || !identical(names(rows), required_rows) ||
+        anyDuplicated(rows$source_row_id) ||
+        any(!rows$disposition %in% c("retained", "excluded"))) {
+    stop("Final source-row ledger is malformed.")
+  }
+  observation_rows <- rows$logical_name %in% c("obs", "observations")
+  retained <- rows$source_row_id[
+    observation_rows & rows$disposition == "retained"
+  ]
+  excluded <- observation_rows & rows$disposition == "excluded"
+  if (!setequal(retained, memberships$source_row_id) ||
+        any(!memberships$source_row_id %in% rows$source_row_id) ||
+        any(!nzchar(rows$rule_id[excluded])) ||
+        any(!nzchar(rows$reason[excluded]))) {
+    stop("Final source-row dispositions do not reconcile to event membership.")
+  }
+  list(events = events, memberships = memberships, source_rows = rows)
 }
 
 selected_output_path <- function(bundle_dir, manifest, name) {
@@ -255,85 +282,194 @@ selected_output_path <- function(bundle_dir, manifest, name) {
   bundle_path(bundle_dir, relative, paste("Selected output", name))
 }
 
-verify_selected_ecology <- function(bundle_dir, manifest, event_evidence) {
-  presence_path <- selected_output_path(
+normalize_selected_operation_evidence <- function(value) { # nolint: object_length_linter.
+  value$member_states_json <- as.character(value$member_states_json)
+  value$deployment_states_json <- as.character(value$deployment_states_json)
+  value$date <- as.character(as.Date(value$date))
+  handover <- as.character(value$handover_date)
+  handover[!nzchar(handover)] <- NA_character_
+  value$handover_date <- as.character(as.Date(handover))
+  value$operation <- suppressWarnings(as.numeric(value$operation))
+  integer_fields <- c(
+    "member_count", "active_member_count", "unknown_member_count",
+    "resolved_deployment_count"
+  )
+  value[integer_fields] <- lapply(value[integer_fields], as.integer)
+  value <- value[order(value$analysis_unit_id, value$date, method = "radix"), ]
+  rownames(value) <- NULL
+  value
+}
+
+verify_selected_route_evidence <- function( # nolint: object_length_linter.
     bundle_dir,
     manifest,
-    "community_presence"
+    membership,
+    operation,
+    event_map,
+    inputs) {
+  selected <- manifest$audit$selected_resolution
+  summary <- jsonlite::read_json(bundle_path(
+    bundle_dir,
+    selected$summary,
+    "Selected-resolution summary"
+  ), simplifyVector = FALSE)
+  deployment_lineage <- utils::read.csv(bundle_path(
+    bundle_dir,
+    manifest$audit$entity$deployment_lineage,
+    "Deployment lineage"
+  ), stringsAsFactors = FALSE, na.strings = "")
+  entity_state <- list(deployment_lineage = deployment_lineage)
+  expected <- build_selected_effort_coverage(
+    selected_resolution_pivot_operation(inputs$op),
+    membership,
+    entity_state
   )
-  richness_path <- selected_output_path(
+  classified <- selected_resolution_classify_concurrency(
+    membership,
+    entity_state,
+    expected
+  )
+  if (length(classified$integrity) > 0L) {
+    stop("Selected operation has conflicting deployment evidence.")
+  }
+  expected <- normalize_selected_operation_evidence(
+    selected_resolution_prepare_operation(classified$operation)
+  )
+  observed <- normalize_selected_operation_evidence(operation)
+  comparison <- all.equal(
+    observed,
+    expected,
+    tolerance = 0,
+    check.attributes = FALSE
+  )
+  if (!isTRUE(comparison)) {
+    stop(
+      "Selected operation does not reconstruct from physical effort: ",
+      paste(comparison, collapse = "; ")
+    )
+  }
+  artifact_paths <- c(
+    membership = selected$membership,
+    operation = selected$operation,
+    event_map = selected$event_map
+  )
+  artifact_sha256 <- vapply(artifact_paths, function(path) {
+    sha256_file(bundle_path(bundle_dir, path, "Selected-resolution artifact"))
+  }, character(1))
+  recorded_sha256 <- unlist(summary$artifact_sha256, use.names = TRUE)
+  route_eligible <- length(classified$reasons) == 0L
+  expected_status <- if (route_eligible) "eligible" else "ineligible"
+  expected_counts <- c(
+    active = sum(observed$operation == 1, na.rm = TRUE),
+    inactive = sum(observed$operation == 0, na.rm = TRUE),
+    unknown = sum(is.na(observed$operation))
+  )
+  summary_reasons <- unlist(summary$reasons, use.names = FALSE)
+  if (!identical(summary$selected_resolution_summary_schema,
+                 "camtrap-selected-resolution-summary/1.0") ||
+        !isTRUE(summary$integrity_ok) ||
+        !identical(summary$route_eligible, route_eligible) ||
+        !identical(summary$status, expected_status) ||
+        !setequal(summary_reasons, classified$reasons) ||
+        !identical(recorded_sha256[names(artifact_sha256)], artifact_sha256) ||
+        !identical(as.integer(unlist(summary$operation_state_counts)),
+                   as.integer(expected_counts)) ||
+        as.integer(summary$membership_count) != nrow(membership) ||
+        as.integer(summary$analysis_unit_count) !=
+          length(unique(membership$analysis_unit_id)) ||
+        as.integer(summary$physical_location_count) !=
+          length(unique(membership$physical_location_id)) ||
+        as.integer(summary$event_count) != nrow(event_map) ||
+        as.integer(summary$source_row_membership_count) !=
+          sum(event_map$source_membership_count) ||
+        !identical(summary$resolution, manifest$spatial_resolution) ||
+        !identical(summary$scheme_id, unique(membership$scheme_id)[[1L]]) ||
+        !identical(summary$scheme_version,
+                   unique(membership$scheme_version)[[1L]]) ||
+        !identical(summary$authority_reference,
+                   unique(membership$authority_reference)[[1L]])) {
+    stop("Selected route eligibility or summary does not reconstruct.")
+  }
+  route_eligible
+}
+
+verify_selected_ecology <- function(
     bundle_dir,
     manifest,
-    "observed_richness"
+    event_evidence,
+    module_records) {
+  record_names <- vapply(module_records, `[[`, character(1), "module")
+  records <- stats::setNames(module_records, record_names)
+  output_contract <- c(
+    effort_coverage = "effort_coverage",
+    observed_presence = "community_presence",
+    observed_richness = "observed_richness",
+    jaccard = "jaccard"
   )
-  jaccard_path <- selected_output_path(bundle_dir, manifest, "jaccard")
-  if (any(vapply(
-    list(presence_path, richness_path, jaccard_path),
-    is.null,
-    logical(1)
-  ))) {
-    stop("Completed bundle lacks selected ecological core outputs.")
-  }
-  presence <- utils::read.csv(
-    presence_path,
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
-  richness <- utils::read.csv(richness_path, stringsAsFactors = FALSE)
-  jaccard <- utils::read.csv(jaccard_path, stringsAsFactors = FALSE)
-  metadata <- c(
-    "analysis_unit_id", "resolution", "scheme_id", "scheme_version",
-    "authority_reference", "analysis_unit_count", "temporal_scope_start",
-    "temporal_scope_end", "effort_definition", "claim_limit",
-    "metadata_reference"
-  )
-  species <- setdiff(names(presence), metadata)
-  matrix <- as.matrix(presence[species])
-  storage.mode(matrix) <- "integer"
-  if (anyNA(matrix) || any(!matrix %in% c(0L, 1L)) ||
-        !identical(as.character(richness$analysis_unit_id),
-                   as.character(presence$analysis_unit_id)) ||
-        !identical(as.integer(richness$observed_richness),
-                   as.integer(rowSums(matrix)))) {
-    stop("Observed presence and richness do not reconcile.")
-  }
-  expected <- compute_selected_jaccard(matrix, presence$analysis_unit_id)
-  observed <- jaccard[c(
-    "analysis_unit_id_1",
-    "analysis_unit_id_2",
-    "jaccard_dissimilarity"
-  )]
-  if (!identical(as.character(observed$analysis_unit_id_1),
-                 expected$analysis_unit_id_1) ||
-    !identical(as.character(observed$analysis_unit_id_2),
-               expected$analysis_unit_id_2) ||
-    !isTRUE(all.equal(
-      observed$jaccard_dissimilarity,
-      expected$jaccard_dissimilarity,
-      tolerance = 1e-12,
-      check.attributes = FALSE
-    ))) {
-    stop("Descriptive Jaccard output does not reconstruct from presence.")
+  paths <- lapply(output_contract, function(name) {
+    selected_output_path(bundle_dir, manifest, name)
+  })
+  for (module in names(output_contract)) {
+    state <- records[[module]]$status
+    present <- !is.null(paths[[module]])
+    if (state %in% c("completed", "completed_with_warnings") && !present) {
+      stop("Selected module payload is required by status: ", module)
+    }
+    if (identical(state, "omitted") && present) {
+      stop("Omitted selected module has a payload: ", module)
+    }
   }
 
-  selected_event <- bundle_path(
+  selected <- manifest$audit$selected_resolution
+  membership <- utils::read.csv(bundle_path(
     bundle_dir,
-    manifest$audit$selected_resolution$event_map,
-    "Selected event map"
-  )
-  event_map <- utils::read.csv(selected_event, stringsAsFactors = FALSE)
-  if (!setequal(event_map$event_id, event_evidence$events$event_id) ||
-        sum(event_map$source_membership_count) !=
-          nrow(event_evidence$memberships)) {
-    stop("Selected-resolution event conservation failed.")
-  }
-
-  membership_path <- bundle_path(
-    bundle_dir,
-    manifest$audit$selected_resolution$membership,
+    selected$membership,
     "Selected membership"
+  ), stringsAsFactors = FALSE)
+  operation <- utils::read.csv(bundle_path(
+    bundle_dir,
+    selected$operation,
+    "Selected operation"
+  ), stringsAsFactors = FALSE)
+  event_map <- utils::read.csv(bundle_path(
+    bundle_dir,
+    selected$event_map,
+    "Selected event map"
+  ), stringsAsFactors = FALSE)
+  required_event <- c(
+    "event_id", "physical_location_id", "analysis_unit_id", "species",
+    "event_time", "source_membership_count", "source_membership_digest",
+    "source_membership_reference", "deployment_id",
+    "deployment_resolution_state"
   )
-  membership <- utils::read.csv(membership_path, stringsAsFactors = FALSE)
+  if (!identical(names(event_map), required_event) ||
+        anyDuplicated(event_map$event_id) ||
+        any(!event_map$source_membership_reference %in%
+              "provenance/event_membership.csv")) {
+    stop("Selected event mapping schema or canonical membership reference is invalid.")
+  }
+  event_order <- order(event_evidence$events$event_id, method = "radix")
+  selected_order <- order(event_map$event_id, method = "radix")
+  physical <- event_evidence$events[event_order, , drop = FALSE]
+  mapped <- event_map[selected_order, , drop = FALSE]
+  rownames(physical) <- rownames(mapped) <- NULL
+  shared <- c(
+    "event_id", "physical_location_id", "species", "event_time",
+    "source_membership_count", "source_membership_digest"
+  )
+  if (!identical(mapped[shared], physical[shared]) ||
+        sum(mapped$source_membership_count) != nrow(event_evidence$memberships)) {
+    stop("Selected event mapping contradicts physical event lineage.")
+  }
+  mapped_units <- membership$analysis_unit_id[
+    match(mapped$physical_location_id, membership$physical_location_id)
+  ]
+  if (anyNA(mapped_units) ||
+        !identical(as.character(mapped$analysis_unit_id),
+                   as.character(mapped_units))) {
+    stop("Selected event mapping contradicts spatial membership.")
+  }
+
   input_path <- bundle_path(
     bundle_dir,
     manifest$audit$validation$validated_inputs,
@@ -341,21 +477,157 @@ verify_selected_ecology <- function(bundle_dir, manifest, event_evidence) {
   )
   inputs <- readRDS(input_path)
   site <- inputs$site
-  matched <- match(membership$physical_location_id, site$site)
-  if (anyNA(matched) ||
+  matched_site <- match(membership$physical_location_id, site$site)
+  if (anyNA(matched_site) ||
+    !setequal(
+      as.character(membership$physical_location_id),
+      as.character(site$site)
+    ) ||
     !isTRUE(all.equal(
       membership$physical_latitude,
-      as.numeric(site$lat[matched]),
+      as.numeric(site$lat[matched_site]),
       tolerance = 0,
       check.attributes = FALSE
     )) ||
     !isTRUE(all.equal(
       membership$physical_longitude,
-      as.numeric(site$lon[matched]),
+      as.numeric(site$lon[matched_site]),
       tolerance = 0,
       check.attributes = FALSE
     ))) {
     stop("Physical-location coordinates changed during spatial grouping.")
+  }
+
+  route_eligible <- verify_selected_route_evidence(
+    bundle_dir,
+    manifest,
+    membership,
+    operation,
+    event_map,
+    inputs
+  )
+  all_units <- sort(unique(as.character(membership$analysis_unit_id)),
+                    method = "radix")
+  operation$date <- as.Date(operation$date)
+  operation$operation <- suppressWarnings(as.numeric(operation$operation))
+  eligible_units <- sort(unique(as.character(operation$analysis_unit_id[
+    !is.na(operation$operation) & operation$operation == 1
+  ])), method = "radix")
+  core_modules <- c("observed_presence", "observed_richness", "jaccard")
+  core_present <- vapply(paths[core_modules], Negate(is.null), logical(1))
+  core_states <- vapply(records[core_modules], `[[`, character(1), "status")
+  if (length(unique(core_present)) != 1L) {
+    stop("Selected ecological core is only partially present.")
+  }
+  if (!route_eligible) {
+    selected_states <- vapply(
+      records[c("effort_coverage", core_modules)],
+      `[[`,
+      character(1),
+      "status"
+    )
+    if (any(selected_states != "omitted") ||
+          any(vapply(paths, Negate(is.null), logical(1)))) {
+      stop("Ineligible selected route published ecological output.")
+    }
+    return(invisible(TRUE))
+  }
+  if (is.null(paths$effort_coverage) ||
+        !identical(records$effort_coverage$status, "completed")) {
+    stop("Eligible selected route lacks complete effort coverage.")
+  }
+  if (!is.null(paths$effort_coverage)) {
+    effort <- utils::read.csv(paths$effort_coverage, stringsAsFactors = FALSE)
+    expected_effort <- summarise_selected_effort_coverage(operation, all_units)
+    fields <- c(
+      "analysis_unit_id", "confirmed_active_days", "confirmed_inactive_days",
+      "unknown_days", "observed_date_count"
+    )
+    if (!identical(effort[fields], expected_effort[fields])) {
+      stop("Selected effort coverage does not reconstruct from operation.")
+    }
+  }
+
+  if (length(eligible_units) == 0L) {
+    if (any(core_present) || any(core_states != "omitted")) {
+      stop("Selected ecological core was published without confirmed effort.")
+    }
+    return(invisible(TRUE))
+  }
+  if (!all(core_present) ||
+        any(!core_states %in% c("completed", "completed_with_warnings"))) {
+    stop("Eligible selected ecological core is absent or incomplete.")
+  }
+  eligible_events <- mapped[
+    mapped$analysis_unit_id %in% eligible_units,
+    ,
+    drop = FALSE
+  ]
+  species <- sort(unique(as.character(eligible_events$species)),
+                  method = "radix")
+  species <- species[!is.na(species) & nzchar(species)]
+  expected_presence <- build_selected_presence(
+    eligible_events,
+    eligible_units,
+    species
+  )
+  expected_core_status <- if (
+    length(setdiff(all_units, eligible_units)) > 0L ||
+      any(rowSums(expected_presence) == 0L)
+  ) {
+    "completed_with_warnings"
+  } else {
+    "completed"
+  }
+  if (any(core_states != expected_core_status)) {
+    stop("Selected ecological core status contradicts effort and detections.")
+  }
+  presence <- utils::read.csv(
+    paths$observed_presence,
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  metadata <- c(
+    "analysis_unit_id", "resolution", "scheme_id", "scheme_version",
+    "authority_reference", "analysis_unit_count", "temporal_scope_start",
+    "temporal_scope_end", "effort_definition", "claim_limit",
+    "metadata_reference"
+  )
+  observed_species <- setdiff(names(presence), metadata)
+  observed_presence <- as.matrix(presence[observed_species])
+  storage.mode(observed_presence) <- "integer"
+  if (!identical(as.character(presence$analysis_unit_id), eligible_units) ||
+        !identical(observed_species, species) ||
+        anyNA(observed_presence) ||
+        !identical(unname(observed_presence), unname(as.matrix(expected_presence)))) {
+    stop("Published presence does not reconstruct from selected events and effort.")
+  }
+  richness <- utils::read.csv(
+    paths$observed_richness,
+    stringsAsFactors = FALSE
+  )
+  if (!identical(as.character(richness$analysis_unit_id), eligible_units) ||
+        !identical(as.integer(richness$observed_richness),
+                   as.integer(rowSums(expected_presence)))) {
+    stop("Published richness does not reconstruct from selected events.")
+  }
+  jaccard <- utils::read.csv(paths$jaccard, stringsAsFactors = FALSE)
+  expected_jaccard <- compute_selected_jaccard(
+    expected_presence,
+    eligible_units
+  )
+  fields <- c(
+    "analysis_unit_id_1", "analysis_unit_id_2", "jaccard_dissimilarity"
+  )
+  observed <- jaccard[fields]
+  if (!identical(observed[1:2], expected_jaccard[1:2]) ||
+    !isTRUE(all.equal(
+      observed$jaccard_dissimilarity,
+      expected_jaccard$jaccard_dissimilarity,
+      tolerance = 1e-12,
+      check.attributes = FALSE
+    ))) {
+    stop("Published Jaccard does not reconstruct from selected events.")
   }
   invisible(TRUE)
 }
@@ -372,14 +644,17 @@ verify_current_bundle <- function(bundle_dir, require_ready = TRUE) {
   )), manifest$run_id)) {
     stop("Bundle directory and run identity disagree.")
   }
-  if (isTRUE(require_ready) && !file.exists(file.path(bundle_dir, "READY"))) {
-    stop("Bundle has no internal-verification marker.")
+  if (isTRUE(require_ready)) {
+    ready <- file.path(bundle_dir, "READY")
+    if (!file.exists(ready)) stop("Bundle has no internal-verification marker.")
+    receipt <- jsonlite::read_json(ready, simplifyVector = FALSE)
+    verify_publication_receipt(bundle_dir, receipt, manifest$run_id)
   }
   verify_payload_inventory(bundle_dir, manifest)
   verify_source_inventory_record(bundle_dir, manifest)
-  module_status_records(bundle_dir, manifest)
+  records <- module_status_records(bundle_dir, manifest)
   event_evidence <- verify_event_consequences(bundle_dir, manifest)
-  verify_selected_ecology(bundle_dir, manifest, event_evidence)
+  verify_selected_ecology(bundle_dir, manifest, event_evidence, records)
   bundle_path(bundle_dir, manifest$report, "HTML ecological report")
 
   completed <- completion_path(bundle_dir)
@@ -392,11 +667,39 @@ verify_current_bundle <- function(bundle_dir, require_ready = TRUE) {
     }
   }
   list(
+    verification_receipt_schema = verification_receipt_schema,
     valid = TRUE,
     run_id = manifest$run_id,
     manifest_sha256 = sha256_file(manifest_path(bundle_dir)),
     payload_files = length(manifest$payload)
   )
+}
+
+verify_publication_receipt <- function(bundle_dir, receipt, run_id) {
+  fields <- c(
+    "verification_receipt_schema", "valid", "run_id", "manifest_sha256",
+    "payload_files"
+  )
+  if (!is.list(receipt) || !identical(sort(names(receipt)), sort(fields)) ||
+        !identical(receipt$verification_receipt_schema,
+                   verification_receipt_schema) ||
+        !isTRUE(receipt$valid) || !identical(receipt$run_id, run_id) ||
+        !identical(receipt$manifest_sha256,
+                   sha256_file(manifest_path(bundle_dir)))) {
+    stop("Internal verification receipt does not bind the staged manifest.")
+  }
+  manifest <- read_current_manifest(bundle_dir)
+  if (!identical(manifest$run_id, run_id) ||
+        as.integer(receipt$payload_files) != length(manifest$payload)) {
+    stop("Internal verification receipt does not bind the staged payload count.")
+  }
+  ready <- file.path(bundle_dir, "READY")
+  if (!file.exists(ready)) stop("Internal verification receipt marker is missing.")
+  recorded <- jsonlite::read_json(ready, simplifyVector = FALSE)
+  if (!identical(canonical_json(recorded), canonical_json(receipt))) {
+    stop("Internal verification receipt marker disagrees with the passed receipt.")
+  }
+  invisible(TRUE)
 }
 
 write_completion_record <- function(bundle_dir) {
@@ -430,12 +733,10 @@ publish_current_bundle <- function(
     staging_dir,
     outputs_root,
     run_id,
+    verification_receipt,
     fail_before_latest = FALSE) {
   assert_safe_run_id(run_id)
-  staged <- verify_current_bundle(staging_dir)
-  if (!identical(staged$run_id, run_id)) {
-    stop("Staging bundle and invocation identities disagree.")
-  }
+  verify_publication_receipt(staging_dir, verification_receipt, run_id)
   final <- file.path(outputs_root, "runs", run_id)
   if (file.exists(final)) stop("Refusing to overwrite completed run: ", run_id)
   dir.create(dirname(final), recursive = TRUE, showWarnings = FALSE)
@@ -443,12 +744,12 @@ publish_current_bundle <- function(
     stop("Atomic bundle directory publication failed.")
   }
   write_completion_record(final)
-  verify_current_bundle(final)
+  verify_publication_receipt(final, verification_receipt, run_id)
   if (isTRUE(fail_before_latest)) {
     stop("Injected failure before latest-completed pointer update.")
   }
   atomic_replace_text(run_id, latest_pointer_path(outputs_root))
-  resolved <- resolve_latest_bundle(outputs_root)
+  resolved <- resolve_latest_bundle(outputs_root, verify = FALSE)
   if (!identical(normalizePath(resolved), normalizePath(final))) {
     stop("Latest-completed pointer verification failed.")
   }

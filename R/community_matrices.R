@@ -107,87 +107,6 @@ compute_selected_jaccard <- function(
   do.call(rbind, rows)
 }
 
-validate_selected_runtime_events <- function(event_map, obs_events) { # nolint: object_length_linter.
-  map_fields <- c("event_id", "physical_location_id", "species", "event_time")
-  event_fields <- c("event_id", "site", "species", "dt")
-  if (!is.data.frame(event_map) || !all(map_fields %in% names(event_map)) ||
-        !is.data.frame(obs_events) || !all(event_fields %in% names(obs_events))) {
-    stop("Selected event conservation requires preflight and runtime events.")
-  }
-  if (anyDuplicated(event_map$event_id) || anyNA(event_map$event_id)) {
-    stop("Selected preflight event identities are malformed or duplicated.")
-  }
-  groups <- split(seq_len(nrow(obs_events)), as.character(obs_events$event_id))
-  inconsistent <- vapply(groups, function(index) {
-    length(unique(obs_events$site[index])) != 1L ||
-      length(unique(obs_events$species[index])) != 1L ||
-      anyNA(obs_events$dt[index])
-  }, logical(1))
-  if (any(inconsistent)) stop("Runtime event membership is inconsistent.")
-
-  event_ids <- names(groups)
-  first <- vapply(groups, `[[`, integer(1), 1L)
-  runtime <- data.frame(
-    event_id = event_ids,
-    physical_location_id = as.character(obs_events$site[first]),
-    species = as.character(obs_events$species[first]),
-    event_time = vapply(groups, function(index) {
-      min(as.numeric(obs_events$dt[index]))
-    }, numeric(1)),
-    stringsAsFactors = FALSE
-  )
-  recorded_time <- if (inherits(event_map$event_time, "POSIXt")) {
-    as.numeric(event_map$event_time)
-  } else {
-    recorded_text <- as.character(event_map$event_time)
-    canonical_pattern <- paste0(
-      "^[0-9]{4}-[0-9]{2}-[0-9]{2}T",
-      "[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-    )
-    if (anyNA(recorded_text) || any(!grepl(canonical_pattern, recorded_text))) {
-      stop("Selected event times must use exact canonical UTC T...Z text.")
-    }
-    parsed <- as.POSIXct(
-      recorded_text,
-      format = "%Y-%m-%dT%H:%M:%SZ",
-      tz = "UTC"
-    )
-    round_trip <- format(
-      parsed,
-      format = "%Y-%m-%dT%H:%M:%SZ",
-      tz = "UTC",
-      usetz = FALSE
-    )
-    if (anyNA(parsed) || !identical(unname(round_trip), unname(recorded_text))) {
-      stop("Selected event times must use exact canonical UTC T...Z text.")
-    }
-    as.numeric(parsed)
-  }
-  recorded <- data.frame(
-    event_id = as.character(event_map$event_id),
-    physical_location_id = as.character(event_map$physical_location_id),
-    species = as.character(event_map$species),
-    event_time = recorded_time,
-    stringsAsFactors = FALSE
-  )
-  runtime <- runtime[order(runtime$event_id, method = "radix"), , drop = FALSE]
-  recorded <- recorded[order(recorded$event_id, method = "radix"), , drop = FALSE]
-  rownames(runtime) <- rownames(recorded) <- NULL
-  if (anyNA(recorded$event_time) ||
-        !identical(runtime[1:3], recorded[1:3]) ||
-        !isTRUE(all.equal(runtime$event_time, recorded$event_time,
-                          tolerance = 0, check.attributes = FALSE))) {
-    stop("Selected preflight event map does not match unchanged runtime events.")
-  }
-  counts <- table(recorded$species)
-  list(
-    checked = TRUE,
-    exact = TRUE,
-    preflight_event_count = as.integer(nrow(recorded)),
-    runtime_event_count = as.integer(nrow(runtime)),
-    per_species_event_count = stats::setNames(as.integer(counts), names(counts))
-  )
-}
 
 summarise_selected_effort_coverage <- function(operation, analysis_units) { # nolint: object_length_linter.
   if (!is.data.frame(operation) ||
@@ -268,13 +187,18 @@ selected_contributors <- function(state, analysis_units) {
   })
 }
 
-selected_common_metadata <- function(state, n, claim_limit, temporal_scope) {
+selected_common_metadata <- function(
+    state,
+    n,
+    claim_limit,
+    temporal_scope,
+    analysis_unit_count = state$summary$analysis_unit_count) {
   data.frame(
     resolution = rep(state$summary$resolution, n),
     scheme_id = rep(state$summary$scheme_id, n),
     scheme_version = rep(state$summary$scheme_version, n),
     authority_reference = rep(state$summary$authority_reference, n),
-    analysis_unit_count = rep(as.integer(state$summary$analysis_unit_count), n),
+    analysis_unit_count = rep(as.integer(analysis_unit_count), n),
     temporal_scope_start = rep(temporal_scope[[1L]], n),
     temporal_scope_end = rep(temporal_scope[[2L]], n),
     effort_definition = rep(paste(
@@ -287,15 +211,26 @@ selected_common_metadata <- function(state, n, claim_limit, temporal_scope) {
   )
 }
 
-selected_attach_metadata <- function(table, state, claim_limit, temporal_scope) {
+selected_attach_metadata <- function(
+    table,
+    state,
+    claim_limit,
+    temporal_scope,
+    analysis_unit_count = state$summary$analysis_unit_count) {
   cbind(
     table["analysis_unit_id"],
-    selected_common_metadata(state, nrow(table), claim_limit, temporal_scope),
+    selected_common_metadata(
+      state,
+      nrow(table),
+      claim_limit,
+      temporal_scope,
+      analysis_unit_count
+    ),
     table[setdiff(names(table), "analysis_unit_id")]
   )
 }
 
-selected_write_csv <- function(value, path) {
+selected_write_ecology_csv <- function(value, path) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   readr::write_csv(value, path, na = "")
   path
@@ -304,31 +239,14 @@ selected_write_csv <- function(value, path) {
 #' Write bounded selected-resolution ecological outputs
 #'
 #' @param state Validated selected-resolution state.
-#' @param obs_events Unchanged runtime physical-location events.
 #' @param root Completed-run staging directory.
-#' @param event_conservation Optional prior event-conservation result.
 #' @return Named list of four nullable CSV paths and one status path.
 #' @export
 write_selected_ecological_outputs <- function( # nolint: object_length_linter.
-    state, obs_events, root, event_conservation = NULL) {
+    state, root) {
   if (!is.list(state) || !is.list(state$summary)) {
     stop("Selected ecological outputs require validated selected provenance.")
   }
-  if (is.null(event_conservation)) {
-    event_conservation <- if (isTRUE(state$integrity_ok)) {
-      validate_selected_runtime_events(state$event_map, obs_events)
-    } else {
-      list(
-        checked = FALSE,
-        exact = FALSE,
-        reason = "selected_resolution_integrity_failure"
-      )
-    }
-  }
-  if (isTRUE(state$integrity_ok) && !isTRUE(event_conservation$exact)) {
-    stop("Event conservation did not pass.")
-  }
-
   paths <- selected_ecological_paths(root)
   analysis_units <- sort(unique(as.character(stats::na.omit(
     state$membership$analysis_unit_id
@@ -350,66 +268,187 @@ write_selected_ecological_outputs <- function( # nolint: object_length_linter.
     observed_richness = NULL,
     jaccard = NULL
   )
-  if (isTRUE(state$integrity_ok) && isTRUE(state$route_eligible)) {
-    species <- sort(unique(as.character(state$event_map$species)), method = "radix")
-    species <- species[!is.na(species) & nzchar(species)]
-    presence <- build_selected_presence(state$event_map, analysis_units, species)
-    tables <- list(
-      effort_coverage = selected_attach_metadata(
-        summarise_selected_effort_coverage(state$operation, analysis_units),
-        state, "confirmed-active-days-only-no-downtime-filling", temporal_scope
-      ),
-      community_presence = selected_attach_metadata(
-        data.frame(analysis_unit_id = analysis_units, presence,
-                   check.names = FALSE),
-        state, "observed-presence-detection-effort-bounded", temporal_scope
-      ),
-      observed_richness = selected_attach_metadata(
-        compute_selected_observed_richness(presence, analysis_units),
-        state, "observed-richness-detection-effort-bounded", temporal_scope
-      )
-    )
-    jaccard <- compute_selected_jaccard(presence, analysis_units)
-    tables$jaccard <- cbind(
-      jaccard[1:2],
-      selected_common_metadata(
-        state,
-        nrow(jaccard),
-        "jaccard-descriptive-observed-presence-effort-completeness-detectability-limited",
-        temporal_scope
-      ),
-      jaccard["jaccard_dissimilarity"]
-    )
-    output_paths <- Map(selected_write_csv, tables, paths[names(tables)])
-    output_links <- lapply(paths[names(tables)], function(path) {
-      file.path("tables", basename(path))
-    })
-  }
-
+  status_names <- c(
+    effort_coverage = "effort_coverage",
+    community_presence = "observed_presence",
+    observed_richness = "observed_richness",
+    jaccard = "jaccard"
+  )
   reasons <- state$reasons
   if (is.null(reasons) || length(reasons) == 0L) {
     reasons <- unlist(state$summary$reasons, use.names = FALSE)
   }
   reasons <- unique(as.character(reasons))
-  module_status <- if (!isTRUE(state$integrity_ok)) {
-    "failed"
+  default_reason <- if (length(reasons) > 0L) {
+    paste(reasons, collapse = "; ")
+  } else {
+    "The selected spatial route lacked the required scientific evidence."
+  }
+  output_status <- list()
+  eligible_units <- character()
+  excluded_units <- character()
+  zero_detection_units <- character()
+  if (!isTRUE(state$integrity_ok)) {
+    for (name in names(output_paths)) {
+      output_status[[status_names[[name]]]] <- list(
+        status = "failed",
+        reason = default_reason
+      )
+    }
   } else if (!isTRUE(state$route_eligible)) {
+    for (name in names(output_paths)) {
+      output_status[[status_names[[name]]]] <- list(
+        status = "omitted",
+        reason = default_reason
+      )
+    }
+  } else {
+    effort <- summarise_selected_effort_coverage(state$operation, analysis_units)
+    effort_table <- selected_attach_metadata(
+      effort,
+      state,
+      "confirmed-active-days-only-no-downtime-filling",
+      temporal_scope
+    )
+    output_paths$effort_coverage <- selected_write_ecology_csv(
+      effort_table,
+      paths$effort_coverage
+    )
+    output_links$effort_coverage <- file.path(
+      "tables",
+      basename(paths$effort_coverage)
+    )
+    output_status$effort_coverage <- list(status = "completed", reason = NULL)
+    eligible_units <- effort$analysis_unit_id[effort$confirmed_active_days >= 1L]
+    excluded_units <- setdiff(analysis_units, eligible_units)
+    if (length(eligible_units) == 0L) {
+      reason <- paste(
+        "No selected analysis unit had at least one confirmed active day;",
+        "presence, richness, and Jaccard were omitted."
+      )
+      for (name in c("community_presence", "observed_richness", "jaccard")) {
+        output_status[[status_names[[name]]]] <- list(
+          status = "omitted",
+          reason = reason
+        )
+      }
+    } else {
+      eligible_events <- state$event_map[
+        state$event_map$analysis_unit_id %in% eligible_units,
+        ,
+        drop = FALSE
+      ]
+      species <- sort(unique(as.character(eligible_events$species)),
+                      method = "radix")
+      species <- species[!is.na(species) & nzchar(species)]
+      presence <- build_selected_presence(
+        eligible_events,
+        eligible_units,
+        species
+      )
+      zero_detection_units <- eligible_units[rowSums(presence) == 0L]
+      warning_parts <- character()
+      if (length(excluded_units) > 0L) {
+        warning_parts <- c(
+          warning_parts,
+          paste0(
+            "Excluded units without a confirmed active day: ",
+            paste(excluded_units, collapse = ", "), "."
+          )
+        )
+      }
+      if (length(zero_detection_units) > 0L) {
+        warning_parts <- c(
+          warning_parts,
+          paste0(
+            "Sampled units with zero detections have zero observed richness ",
+            "and undefined empty-union Jaccard: ",
+            paste(zero_detection_units, collapse = ", "), "."
+          )
+        )
+      }
+      core_status <- if (length(warning_parts)) {
+        "completed_with_warnings"
+      } else {
+        "completed"
+      }
+      core_reason <- if (length(warning_parts)) {
+        paste(warning_parts, collapse = " ")
+      } else {
+        NULL
+      }
+      tables <- list(
+        community_presence = selected_attach_metadata(
+          data.frame(
+            analysis_unit_id = eligible_units,
+            presence,
+            check.names = FALSE
+          ),
+          state,
+          "observed-presence-detection-effort-bounded",
+          temporal_scope,
+          length(eligible_units)
+        ),
+        observed_richness = selected_attach_metadata(
+          compute_selected_observed_richness(presence, eligible_units),
+          state,
+          "observed-richness-detection-effort-bounded",
+          temporal_scope,
+          length(eligible_units)
+        )
+      )
+      jaccard <- compute_selected_jaccard(presence, eligible_units)
+      tables$jaccard <- cbind(
+        jaccard[1:2],
+        selected_common_metadata(
+          state,
+          nrow(jaccard),
+          paste0(
+            "jaccard-descriptive-observed-presence-effort-completeness-",
+            "detectability-limited"
+          ),
+          temporal_scope,
+          length(eligible_units)
+        ),
+        jaccard["jaccard_dissimilarity"]
+      )
+      written <- Map(
+        selected_write_ecology_csv,
+        tables,
+        paths[names(tables)]
+      )
+      output_paths[names(written)] <- written
+      output_links[names(written)] <- lapply(
+        paths[names(written)],
+        function(path) file.path("tables", basename(path))
+      )
+      for (name in names(written)) {
+        output_status[[status_names[[name]]]] <- list(
+          status = core_status,
+          reason = core_reason
+        )
+      }
+    }
+  }
+  statuses <- vapply(output_status, `[[`, character(1), "status")
+  module_status <- if (any(statuses == "failed")) {
+    "failed"
+  } else if (all(statuses[names(statuses) != "effort_coverage"] == "omitted")) {
     "omitted"
-  } else if (nrow(state$event_map) == 0L) {
+  } else if (any(statuses == "completed_with_warnings")) {
     "completed_with_warnings"
   } else {
     "completed"
   }
+  status_reasons <- unique(vapply(
+    output_status[statuses != "completed"],
+    function(value) value$reason,
+    character(1)
+  ))
   reason <- if (identical(module_status, "completed")) {
     NULL
-  } else if (identical(module_status, "completed_with_warnings")) {
-    "no_operational_events"
-  } else if (length(reasons) > 0L) {
-    reasons[[1L]]
-  } else if (identical(module_status, "omitted")) {
-    "scientific_prerequisites_not_met"
   } else {
-    "integrity_failure"
+    paste(status_reasons, collapse = " ")
   }
   status <- list(
     module_status_schema = "camtrap-module-status/1.0",
@@ -423,6 +462,7 @@ write_selected_ecological_outputs <- function( # nolint: object_length_linter.
     actual_resolution = state$summary$resolution,
     integrity_ok = isTRUE(state$integrity_ok),
     route_eligible = isTRUE(state$route_eligible),
+    output_status = output_status,
     reasons = as.list(reasons),
     resolution = state$summary$resolution,
     scheme_id = state$summary$scheme_id,
@@ -432,6 +472,9 @@ write_selected_ecological_outputs <- function( # nolint: object_length_linter.
     analysis_unit_count = as.integer(state$summary$analysis_unit_count),
     physical_location_count = as.integer(state$summary$physical_location_count),
     temporal_scope = list(start = temporal_scope[[1L]], end = temporal_scope[[2L]]),
+    eligible_analysis_units = as.list(eligible_units),
+    excluded_no_effort_analysis_units = as.list(excluded_units),
+    zero_detection_analysis_units = as.list(zero_detection_units),
     effort_definition = paste(
       "one confirmed active selected analysis-unit calendar day after",
       "conservative member-location union; unknown periods are not effort"
@@ -443,7 +486,6 @@ write_selected_ecological_outputs <- function( # nolint: object_length_linter.
       observed_richness = "observed-richness-detection-effort-bounded",
       jaccard = "jaccard-descriptive-observed-presence-effort-completeness-detectability-limited"
     ),
-    event_conservation = event_conservation,
     outputs = output_links
   )
   dir.create(dirname(paths$status), recursive = TRUE, showWarnings = FALSE)

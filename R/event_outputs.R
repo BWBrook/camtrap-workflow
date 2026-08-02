@@ -215,11 +215,24 @@ build_event_lineage <- function(
   mapped_source <- stats::setNames(mapping$source_row_id, mapping$internal_index)
   filtered_ids <- unname(mapped_source[as.character(obs_filtered$index)])
   event_member_ids <- unname(mapped_source[as.character(obs_events$index)])
+  parsed_time <- parse_datetime_local(
+    obs$datetime,
+    tz = tz,
+    fixed_offset_hours = fixed_offset_hours,
+    quiet = TRUE
+  )
+  unparseable_ids <- unname(mapped_source[as.character(obs$index[is.na(parsed_time)])])
   observation_names <- c("obs", "observations")
   observation_rows <- which(updated$rows$logical_name %in% observation_names)
   for (row_index in observation_rows) {
     source_row_id <- updated$rows$source_row_id[[row_index]]
-    if (!source_row_id %in% filtered_ids) {
+    if (source_row_id %in% unparseable_ids) {
+      updated$rows$disposition[[row_index]] <- "excluded"
+      updated$rows$rule_id[[row_index]] <- "event.unparseable_time/1.0"
+      updated$rows$reason[[row_index]] <- paste(
+        "Observation time cannot be used by the unchanged event-gap rule."
+      )
+    } else if (!source_row_id %in% filtered_ids) {
       updated$rows$disposition[[row_index]] <- "excluded"
       updated$rows$rule_id[[row_index]] <- "effort.not_operational/1.0"
       updated$rows$reason[[row_index]] <- paste(

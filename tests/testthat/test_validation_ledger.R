@@ -4,6 +4,7 @@ import::from(
   expect_equal,
   expect_error,
   expect_false,
+  expect_setequal,
   expect_true
 )
 import::from("here", here)
@@ -78,7 +79,7 @@ current_validation_snapshot <- function(config) {
   )
 }
 
-test_that("clean preflight reconciles rows, exclusions, and event membership", {
+test_that("clean preflight reconciles validated inputs and source lineage", {
   config <- current_validation_config(current_validation_fixture())
   materialized <- current_validation_snapshot(config)
   state <- prepare_validation_preflight(config, materialized$snapshot)
@@ -88,13 +89,8 @@ test_that("clean preflight reconciles rows, exclusions, and event membership", {
   expect_equal(length(state$applications), 0L)
   expect_equal(nrow(state$lineage$rows), 8L)
   expect_equal(sum(state$lineage$rows$logical_name == "obs"), 3L)
-  expect_equal(sum(state$lineage$rows$disposition == "excluded"), 1L)
-  expect_true(all(
-    state$lineage$rows$reason[state$lineage$rows$disposition == "excluded"] != ""
-  ))
-  expect_equal(nrow(state$event_lineage$events), 2L)
-  expect_equal(nrow(state$event_lineage$memberships), 2L)
-  expect_true(validate_event_lineage(state$event_lineage, state$lineage))
+  expect_equal(sum(state$lineage$rows$disposition == "excluded"), 0L)
+  expect_false("event_lineage" %in% names(state))
   expect_equal(state$post_validation$integrity_failures, 0L)
   expect_equal(state$parser_audit$audit_schema, "camtrap-parser-audit/1.0")
   expect_equal(names(state$inputs), c("site", "op", "obs", "taxa"))
@@ -173,7 +169,7 @@ test_that("stale authority and broken keys are non-waivable findings", {
   )))
 })
 
-test_that("current Phase 2 sidecars round-trip and reject orphan membership", {
+test_that("validation sidecars exclude event-formation evidence", {
   config <- current_validation_config(current_validation_fixture())
   materialized <- current_validation_snapshot(config)
   state <- prepare_validation_preflight(config, materialized$snapshot)
@@ -186,29 +182,14 @@ test_that("current Phase 2 sidecars round-trip and reject orphan membership", {
     file.path(root, "provenance", "source_inventory.json")
   )
   paths <- write_validation_artifacts(state, root)
+  expect_false("event_membership" %in% names(paths))
 
   expect_true(all(file.exists(unlist(paths, use.names = FALSE))))
-  expect_true(validate_validation_artifacts(
-    root,
-    paths,
-    require_analysis_ready = TRUE
+  expect_setequal(names(paths), c(
+    "resource_registry", "source_row_ledger", "validation_findings",
+    "transformations", "repair_proposals", "repair_decisions",
+    "repair_applications", "changed_fields", "post_validation",
+    "validated_inputs"
   ))
-
-  membership_path <- paths$event_membership
-  membership <- jsonlite::read_json(membership_path, simplifyVector = FALSE)
-  membership$records[[1]]$source_row_id <- paste(rep("0", 64L), collapse = "")
-  membership$records[[1]]$membership_id <- event_membership_identity(
-    membership$records[[1]]$event_id,
-    membership$records[[1]]$source_row_id
-  )
-  unlink(membership_path)
-  atomic_write_json(membership, membership_path)
-  expect_error(
-    validate_validation_artifacts(
-      root,
-      paths,
-      require_analysis_ready = TRUE
-    ),
-    "Orphan event membership"
-  )
+  expect_false(any(grepl("event", basename(unlist(paths, use.names = FALSE)))))
 })

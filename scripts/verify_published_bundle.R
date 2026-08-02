@@ -206,6 +206,305 @@ verify_physical_source <- function(bundle, inventory, inputs) {
   invisible(TRUE)
 }
 
+verify_event_ledger <- function(bundle, manifest, memberships) {
+  ledger <- jsonlite::read_json(bundle_file_independent(
+    bundle,
+    manifest$audit$events$source_row_ledger
+  ), simplifyVector = TRUE)
+  rows <- ledger$records
+  required <- c(
+    "row_schema", "source_row_id", "resource_id", "logical_name",
+    "record_ordinal", "disposition", "rule_id", "reason"
+  )
+  if (!identical(ledger$source_row_ledger_schema,
+                 "camtrap-source-row-ledger/1.0") ||
+        !identical(ledger$disposition_scope, "event_formation") ||
+        !is.data.frame(rows) || !identical(names(rows), required) ||
+        anyDuplicated(rows$source_row_id) ||
+        any(!rows$disposition %in% c("retained", "excluded"))) {
+    stop("Published final source-row ledger is malformed.")
+  }
+  observations <- rows$logical_name %in% c("obs", "observations")
+  retained <- rows$source_row_id[
+    observations & rows$disposition == "retained"
+  ]
+  excluded <- observations & rows$disposition == "excluded"
+  if (!setequal(retained, memberships$source_row_id) ||
+        any(!memberships$source_row_id %in% rows$source_row_id) ||
+        any(!nzchar(rows$rule_id[excluded])) ||
+        any(!nzchar(rows$reason[excluded]))) {
+    stop("Published source-row dispositions do not reconcile to memberships.")
+  }
+  invisible(TRUE)
+}
+
+parse_independent_date <- function(value) {
+  if (inherits(value, "Date")) return(value)
+  text <- as.character(value)
+  parsed <- suppressWarnings(as.Date(text, format = "%d/%m/%Y"))
+  missing <- is.na(parsed)
+  parsed[missing] <- suppressWarnings(as.Date(text[missing]))
+  parsed
+}
+
+deployment_at_date <- function(lineage, location, date) {
+  rows <- lineage[
+    lineage$physical_location_identifier == location &
+      lineage$resolution_state == "resolved",
+    ,
+    drop = FALSE
+  ]
+  starts <- parse_independent_date(rows$interval_start)
+  ends <- parse_independent_date(rows$interval_end)
+  rows <- rows[
+    !is.na(starts) & !is.na(ends) & starts <= date & ends >= date,
+    ,
+    drop = FALSE
+  ]
+  ids <- unique(as.character(rows$deployment_identifier))
+  ids <- ids[!is.na(ids) & nzchar(ids)]
+  if (length(ids) == 1L) ids[[1L]] else NA_character_
+}
+
+independent_concurrency <- function(lineage, active_sites, unit, date) {
+  if (length(active_sites) < 2L) {
+    return(list(class = "none", handover = as.Date(NA), reason = NULL))
+  }
+  if (length(active_sites) > 2L) {
+    return(list(
+      class = "concurrent_active_members",
+      handover = as.Date(NA),
+      reason = paste0("concurrent_active_member_count_gt_two:", unit, ":", date)
+    ))
+  }
+  pair <- lineage[
+    lineage$physical_location_identifier %in% active_sites,
+    ,
+    drop = FALSE
+  ]
+  if (nrow(pair) != 2L || anyDuplicated(pair$physical_location_identifier)) {
+    if (nrow(pair) > 2L || anyDuplicated(pair$physical_location_identifier)) {
+      stop("Published route has conflicting deployment evidence.")
+    }
+    return(list(
+      class = "concurrent_active_members",
+      handover = as.Date(NA),
+      reason = paste0("missing_deployment_evidence:", unit, ":", date)
+    ))
+  }
+  starts <- parse_independent_date(pair$interval_start)
+  ends <- parse_independent_date(pair$interval_end)
+  if (anyNA(starts) || anyNA(ends) || any(starts > ends)) {
+    stop("Published route has malformed deployment chronology.")
+  }
+  first <- pair[1L, , drop = FALSE]
+  second <- pair[2L, , drop = FALSE]
+  forward <- identical(
+    as.character(first$successor_deployment_id),
+    as.character(second$deployment_identifier)
+  ) && identical(
+    as.character(second$predecessor_deployment_id),
+    as.character(first$deployment_identifier)
+  ) && ends[[1L]] == date && starts[[2L]] == date
+  reverse <- identical(
+    as.character(second$successor_deployment_id),
+    as.character(first$deployment_identifier)
+  ) && identical(
+    as.character(first$predecessor_deployment_id),
+    as.character(second$deployment_identifier)
+  ) && ends[[2L]] == date && starts[[1L]] == date
+  exact <- all(pair$date_precision == "day") &&
+    all(pair$chronology_state ==
+          "same_date_boundary_not_full_day_overlap_or_routing_claim") &&
+    all(pair$endpoint_semantics ==
+          "inclusive_at_day_precision_unknown_time") &&
+    all(pair$resolution_state == "resolved") && (forward || reverse)
+  if (exact) {
+    list(class = "approved_same_day_handover", handover = date, reason = NULL)
+  } else {
+    list(
+      class = "concurrent_active_members",
+      handover = as.Date(NA),
+      reason = paste0("genuine_concurrent_member_deployments:", unit, ":", date)
+    )
+  }
+}
+
+verify_selected_route_independent <- function( # nolint: object_length_linter.
+    bundle,
+    manifest,
+    membership,
+    operation,
+    event_map,
+    inputs) {
+  selected <- manifest$audit$selected_resolution
+  summary <- jsonlite::read_json(bundle_file_independent(
+    bundle,
+    selected$summary
+  ), simplifyVector = FALSE)
+  lineage <- utils::read.csv(bundle_file_independent(
+    bundle,
+    manifest$audit$entity$deployment_lineage
+  ), stringsAsFactors = FALSE, na.strings = "")
+  dates <- parse_independent_date(inputs$op$date)
+  observed_dates <- parse_independent_date(operation$date)
+  if (anyNA(dates) || anyNA(observed_dates) || anyDuplicated(dates)) {
+    stop("Published selected operation dates are malformed.")
+  }
+  units <- sort(unique(as.character(membership$analysis_unit_id)), method = "radix")
+  expected_keys <- as.vector(outer(
+    units,
+    as.character(dates),
+    paste,
+    sep = "\r"
+  ))
+  observed_keys <- paste(operation$analysis_unit_id, observed_dates, sep = "\r")
+  if (anyDuplicated(observed_keys) || !setequal(observed_keys, expected_keys)) {
+    stop("Published selected operation does not cover the physical effort frame.")
+  }
+  route_reasons <- character()
+  for (index in seq_len(nrow(operation))) {
+    unit <- as.character(operation$analysis_unit_id[[index]])
+    date <- observed_dates[[index]]
+    date_index <- match(date, dates)
+    members <- sort(as.character(membership$physical_location_id[
+      membership$analysis_unit_id == unit
+    ]), method = "radix")
+    if (any(!members %in% names(inputs$op))) {
+      stop("Published membership contains a location absent from physical effort.")
+    }
+    states <- vapply(members, function(id) {
+      value <- inputs$op[[id]][[date_index]]
+      if (is.na(value)) NA_character_ else as.character(value)
+    }, character(1))
+    names(states) <- members
+    deployments <- vapply(
+      members,
+      deployment_at_date,
+      character(1),
+      lineage = lineage,
+      date = date
+    )
+    names(deployments) <- members
+    member_json <- canonical_json_independent(as.list(states))
+    deployment_json <- canonical_json_independent(as.list(deployments))
+    active_sites <- names(states)[!is.na(states) & states == "1"]
+    concurrency <- independent_concurrency(
+      lineage,
+      active_sites,
+      unit,
+      date
+    )
+    route_reasons <- c(route_reasons, concurrency$reason)
+    expected_operation <- if (length(active_sites)) {
+      1
+    } else if (all(!is.na(states) & states == "0")) {
+      0
+    } else {
+      NA_real_
+    }
+    observed_handover <- as.character(operation$handover_date[[index]])
+    if (is.na(observed_handover) || !nzchar(observed_handover)) {
+      observed_handover <- as.Date(NA)
+    } else {
+      observed_handover <- parse_independent_date(observed_handover)
+    }
+    checks <- c(
+      member_json = identical(
+        as.character(operation$member_states_json[[index]]),
+        as.character(member_json)
+      ),
+      member_digest = identical(
+        as.character(operation$member_states_digest[[index]]),
+        sha256_text_independent(member_json)
+      ),
+      member_count = as.integer(operation$member_count[[index]]) ==
+        length(members),
+      active_count = as.integer(operation$active_member_count[[index]]) ==
+        length(active_sites),
+      unknown_count = as.integer(operation$unknown_member_count[[index]]) ==
+        sum(is.na(states)),
+      deployment_json = identical(
+        as.character(operation$deployment_states_json[[index]]),
+        as.character(deployment_json)
+      ),
+      deployment_digest = identical(
+        as.character(operation$deployment_states_digest[[index]]),
+        sha256_text_independent(deployment_json)
+      ),
+      deployment_count = as.integer(
+        operation$resolved_deployment_count[[index]]
+      ) == sum(!is.na(deployments)),
+      operation = isTRUE(all.equal(
+        as.numeric(operation$operation[[index]]),
+        expected_operation,
+        check.attributes = FALSE
+      )),
+      concurrency = identical(
+        as.character(operation$concurrency_class[[index]]),
+        concurrency$class
+      ),
+      handover = isTRUE(all.equal(observed_handover, concurrency$handover))
+    )
+    checks[is.na(checks)] <- FALSE
+    if (!all(checks)) {
+      stop(
+        "Published selected operation does not independently reconstruct: ",
+        paste(names(checks)[!checks], collapse = ", ")
+      )
+    }
+  }
+  route_reasons <- unique(route_reasons[!vapply(
+    route_reasons,
+    is.null,
+    logical(1)
+  )])
+  route_eligible <- length(route_reasons) == 0L
+  expected_status <- if (route_eligible) "eligible" else "ineligible"
+  artifact_paths <- c(
+    membership = selected$membership,
+    operation = selected$operation,
+    event_map = selected$event_map
+  )
+  artifact_sha256 <- vapply(artifact_paths, function(path) {
+    sha256_file_independent(bundle_file_independent(bundle, path))
+  }, character(1))
+  operation_values <- suppressWarnings(as.numeric(operation$operation))
+  operation_counts <- c(
+    active = sum(operation_values == 1, na.rm = TRUE),
+    inactive = sum(operation_values == 0, na.rm = TRUE),
+    unknown = sum(is.na(operation_values))
+  )
+  if (!identical(summary$selected_resolution_summary_schema,
+                 "camtrap-selected-resolution-summary/1.0") ||
+    !isTRUE(summary$integrity_ok) ||
+    !identical(summary$route_eligible, route_eligible) ||
+    !identical(summary$status, expected_status) ||
+    !setequal(unlist(summary$reasons, use.names = FALSE), route_reasons) ||
+    !identical(
+      unlist(summary$artifact_sha256, use.names = TRUE)[names(artifact_sha256)],
+      artifact_sha256
+    ) ||
+    !identical(as.integer(unlist(summary$operation_state_counts)),
+               as.integer(operation_counts)) ||
+    as.integer(summary$membership_count) != nrow(membership) ||
+    as.integer(summary$analysis_unit_count) != length(units) ||
+    as.integer(summary$physical_location_count) !=
+      length(unique(membership$physical_location_id)) ||
+    as.integer(summary$event_count) != nrow(event_map) ||
+    as.integer(summary$source_row_membership_count) !=
+      sum(event_map$source_membership_count) ||
+    !identical(summary$resolution, manifest$spatial_resolution) ||
+    !identical(summary$scheme_id, unique(membership$scheme_id)[[1L]]) ||
+    !identical(summary$scheme_version,
+               unique(membership$scheme_version)[[1L]]) ||
+    !identical(summary$authority_reference,
+               unique(membership$authority_reference)[[1L]])) {
+    stop("Published selected route eligibility or summary does not reconstruct.")
+  }
+  route_eligible
+}
+
 verify_published_bundle_independent <- function( # nolint: object_length_linter.
     bundle,
     oracle = NULL) {
@@ -307,6 +606,27 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
         any(states == "failed") || !all(records_valid)) {
     stop("Published module status contains a failure or missing candidate.")
   }
+  records <- stats::setNames(status$records, modules)
+  output_contract <- c(
+    effort_coverage = "effort_coverage",
+    observed_presence = "community_presence",
+    observed_richness = "observed_richness",
+    jaccard = "jaccard"
+  )
+  output_paths <- lapply(output_contract, function(name) {
+    relative <- manifest$outputs[[name]]
+    if (is.null(relative)) NULL else bundle_file_independent(bundle, relative)
+  })
+  for (module in names(output_contract)) {
+    state <- records[[module]]$status
+    present <- !is.null(output_paths[[module]])
+    if (state %in% c("completed", "completed_with_warnings") && !present) {
+      stop("Published selected payload is required by status: ", module)
+    }
+    if (identical(state, "omitted") && present) {
+      stop("Published omitted selected module has a payload: ", module)
+    }
+  }
 
   events <- utils::read.csv(bundle_file_independent(
     bundle,
@@ -316,7 +636,17 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
     bundle,
     manifest$audit$events$event_membership
   ), stringsAsFactors = FALSE)
-  if (anyDuplicated(events$event_id) ||
+  required_events <- c(
+    "event_id", "physical_location_id", "species", "event_time",
+    "source_membership_count", "source_membership_digest"
+  )
+  required_memberships <- c(
+    "membership_schema", "membership_id", "event_id", "source_row_id",
+    "physical_location_id", "deployment_id"
+  )
+  if (!identical(names(events), required_events) ||
+        !identical(names(memberships), required_memberships) ||
+        anyDuplicated(events$event_id) ||
         anyDuplicated(memberships$membership_id) ||
         any(!memberships$event_id %in% events$event_id)) {
     stop("Published event identities or source memberships are invalid.")
@@ -328,10 +658,13 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
       method = "radix"
     )))
     if (nrow(rows) != events$source_membership_count[[index]] ||
-          !identical(digest, events$source_membership_digest[[index]])) {
+          !identical(digest, events$source_membership_digest[[index]]) ||
+          any(rows$physical_location_id !=
+                events$physical_location_id[[index]])) {
       stop("Published event membership does not independently reconcile.")
     }
   }
+  verify_event_ledger(bundle, manifest, memberships)
 
   selected <- manifest$audit$selected_resolution
   selected_membership <- utils::read.csv(bundle_file_independent(
@@ -346,47 +679,42 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
     bundle,
     selected$event_map
   ), stringsAsFactors = FALSE)
-  if (!setequal(selected_events$event_id, events$event_id) ||
+  required_selected_event <- c(
+    "event_id", "physical_location_id", "analysis_unit_id", "species",
+    "event_time", "source_membership_count", "source_membership_digest",
+    "source_membership_reference", "deployment_id",
+    "deployment_resolution_state"
+  )
+  if (!identical(names(selected_events), required_selected_event) ||
+        anyDuplicated(selected_events$event_id) ||
+        any(!selected_events$source_membership_reference %in%
+              "provenance/event_membership.csv")) {
+    stop("Published selected event map is malformed.")
+  }
+  physical <- events[order(events$event_id, method = "radix"), , drop = FALSE]
+  selected_events <- selected_events[
+    order(selected_events$event_id, method = "radix"),
+    ,
+    drop = FALSE
+  ]
+  rownames(physical) <- rownames(selected_events) <- NULL
+  shared <- c(
+    "event_id", "physical_location_id", "species", "event_time",
+    "source_membership_count", "source_membership_digest"
+  )
+  mapped_units <- selected_membership$analysis_unit_id[
+    match(
+      selected_events$physical_location_id,
+      selected_membership$physical_location_id
+    )
+  ]
+  if (!identical(selected_events[shared], physical[shared]) ||
+        anyNA(mapped_units) ||
+        !identical(as.character(selected_events$analysis_unit_id),
+                   as.character(mapped_units)) ||
         sum(selected_events$source_membership_count) != nrow(memberships)) {
-    stop("Published events are not conserved through spatial grouping.")
+    stop("Published events contradict physical lineage or spatial mapping.")
   }
-
-  presence <- utils::read.csv(bundle_file_independent(
-    bundle,
-    manifest$outputs$community_presence
-  ), stringsAsFactors = FALSE, check.names = FALSE)
-  richness <- utils::read.csv(bundle_file_independent(
-    bundle,
-    manifest$outputs$observed_richness
-  ), stringsAsFactors = FALSE)
-  jaccard <- utils::read.csv(bundle_file_independent(
-    bundle,
-    manifest$outputs$jaccard
-  ), stringsAsFactors = FALSE)
-  metadata <- c(
-    "analysis_unit_id", "resolution", "scheme_id", "scheme_version",
-    "authority_reference", "analysis_unit_count", "temporal_scope_start",
-    "temporal_scope_end", "effort_definition", "claim_limit",
-    "metadata_reference"
-  )
-  species <- setdiff(names(presence), metadata)
-  presence_matrix <- as.matrix(presence[species])
-  storage.mode(presence_matrix) <- "integer"
-  if (anyNA(presence_matrix) || any(!presence_matrix %in% c(0L, 1L)) ||
-        !identical(as.integer(richness$observed_richness),
-                   as.integer(rowSums(presence_matrix)))) {
-    stop("Published presence and observed richness do not reconcile.")
-  }
-  expected_jaccard <- independent_jaccard(
-    presence_matrix,
-    presence$analysis_unit_id
-  )
-  compare_jaccard(jaccard, expected_jaccard, "Reconstructed")
-  validate_jaccard_semantics(
-    jaccard,
-    presence_matrix,
-    presence$analysis_unit_id
-  )
 
   inputs <- readRDS(bundle_file_independent(
     bundle,
@@ -413,19 +741,178 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
     ))) {
     stop("Published physical coordinates changed during grouping.")
   }
-  if (!is.null(oracle)) {
-    accepted <- utils::read.csv(oracle, stringsAsFactors = FALSE)
-    compare_jaccard(jaccard, accepted, "Accepted oracle")
+
+  route_eligible <- verify_selected_route_independent(
+    bundle,
+    manifest,
+    selected_membership,
+    selected_operation,
+    selected_events,
+    inputs
+  )
+  all_units <- sort(unique(as.character(selected_membership$analysis_unit_id)),
+                    method = "radix")
+  selected_operation$operation <- suppressWarnings(as.numeric(
+    selected_operation$operation
+  ))
+  eligible_units <- sort(unique(as.character(
+    selected_operation$analysis_unit_id[
+      !is.na(selected_operation$operation) &
+        selected_operation$operation == 1
+    ]
+  )), method = "radix")
+  core_modules <- c("observed_presence", "observed_richness", "jaccard")
+  core_present <- vapply(
+    output_paths[core_modules],
+    Negate(is.null),
+    logical(1)
+  )
+  core_states <- vapply(records[core_modules], `[[`, character(1), "status")
+  if (length(unique(core_present)) != 1L) {
+    stop("Published selected ecological core is only partially present.")
+  }
+  if (!route_eligible) {
+    selected_states <- vapply(
+      records[c("effort_coverage", core_modules)],
+      `[[`,
+      character(1),
+      "status"
+    )
+    if (any(selected_states != "omitted") ||
+          any(vapply(output_paths, Negate(is.null), logical(1)))) {
+      stop("Published ineligible selected route has ecological output.")
+    }
+  } else if (is.null(output_paths$effort_coverage) ||
+               !identical(records$effort_coverage$status, "completed")) {
+    stop("Published eligible route lacks complete effort coverage.")
+  }
+  if (!is.null(output_paths$effort_coverage)) {
+    effort <- utils::read.csv(
+      output_paths$effort_coverage,
+      stringsAsFactors = FALSE
+    )
+    expected_effort <- do.call(rbind, lapply(all_units, function(id) {
+      rows <- selected_operation[
+        selected_operation$analysis_unit_id == id,
+        ,
+        drop = FALSE
+      ]
+      data.frame(
+        analysis_unit_id = id,
+        confirmed_active_days = sum(rows$operation == 1, na.rm = TRUE),
+        confirmed_inactive_days = sum(rows$operation == 0, na.rm = TRUE),
+        unknown_days = sum(is.na(rows$operation)),
+        observed_date_count = nrow(rows),
+        stringsAsFactors = FALSE
+      )
+    }))
+    fields <- c(
+      "analysis_unit_id", "confirmed_active_days", "confirmed_inactive_days",
+      "unknown_days", "observed_date_count"
+    )
+    if (!identical(effort[fields], expected_effort[fields])) {
+      stop("Published effort coverage does not reconstruct from operation.")
+    }
+  }
+
+  jaccard <- NULL
+  expected_presence <- NULL
+  if (all(core_present)) {
+    if (!route_eligible || length(eligible_units) == 0L) {
+      stop("Published selected ecological core has no confirmed effort.")
+    }
+    eligible_events <- selected_events[
+      selected_events$analysis_unit_id %in% eligible_units,
+      ,
+      drop = FALSE
+    ]
+    species <- sort(unique(as.character(eligible_events$species)),
+                    method = "radix")
+    species <- species[!is.na(species) & nzchar(species)]
+    expected_presence <- matrix(
+      0L,
+      nrow = length(eligible_units),
+      ncol = length(species),
+      dimnames = list(NULL, species)
+    )
+    if (nrow(eligible_events) > 0L) {
+      pairs <- unique(eligible_events[c("analysis_unit_id", "species")])
+      expected_presence[cbind(
+        match(pairs$analysis_unit_id, eligible_units),
+        match(pairs$species, species)
+      )] <- 1L
+    }
+    expected_core_status <- if (
+      length(setdiff(all_units, eligible_units)) > 0L ||
+        any(rowSums(expected_presence) == 0L)
+    ) {
+      "completed_with_warnings"
+    } else {
+      "completed"
+    }
+    if (any(core_states != expected_core_status)) {
+      stop("Published selected core status contradicts effort and detections.")
+    }
+    presence <- utils::read.csv(
+      output_paths$observed_presence,
+      stringsAsFactors = FALSE,
+      check.names = FALSE
+    )
+    metadata <- c(
+      "analysis_unit_id", "resolution", "scheme_id", "scheme_version",
+      "authority_reference", "analysis_unit_count", "temporal_scope_start",
+      "temporal_scope_end", "effort_definition", "claim_limit",
+      "metadata_reference"
+    )
+    observed_species <- setdiff(names(presence), metadata)
+    observed_presence <- as.matrix(presence[observed_species])
+    storage.mode(observed_presence) <- "integer"
+    if (!identical(as.character(presence$analysis_unit_id), eligible_units) ||
+          !identical(observed_species, species) ||
+          anyNA(observed_presence) ||
+          !identical(unname(observed_presence), unname(expected_presence))) {
+      stop("Published presence does not reconstruct from selected events.")
+    }
+    richness <- utils::read.csv(
+      output_paths$observed_richness,
+      stringsAsFactors = FALSE
+    )
+    if (!identical(as.character(richness$analysis_unit_id), eligible_units) ||
+          !identical(as.integer(richness$observed_richness),
+                     as.integer(rowSums(expected_presence)))) {
+      stop("Published richness does not reconstruct from selected events.")
+    }
+    jaccard <- utils::read.csv(
+      output_paths$jaccard,
+      stringsAsFactors = FALSE
+    )
+    expected_jaccard <- independent_jaccard(
+      expected_presence,
+      eligible_units
+    )
+    compare_jaccard(jaccard, expected_jaccard, "Event-reconstructed")
+    validate_jaccard_semantics(
+      jaccard,
+      expected_presence,
+      eligible_units
+    )
+  } else if (route_eligible &&
+               (length(eligible_units) > 0L || any(core_states != "omitted"))) {
+    stop("Published eligible selected ecological core is unjustifiably omitted.")
+  } else if (!is.null(oracle)) {
+    stop("An oracle cannot be checked when selected community outputs are omitted.")
   }
 
   scheme <- unique(selected_membership$scheme_id)
   if (identical(scheme, "judbury-analysis-site")) {
     oracle_sha256 <-
       "c45bb6285b58071c575a26cc9e85b556cacbcdee9f2dd0f936ae27f0d588daab"
-    if (is.null(oracle) ||
+    if (is.null(jaccard) || is.null(oracle) ||
           !identical(sha256_file_independent(oracle), oracle_sha256)) {
       stop("Judbury release requires the accepted Goal 010 Jaccard oracle.")
     }
+    accepted <- utils::read.csv(oracle, stringsAsFactors = FALSE)
+    compare_jaccard(jaccard, accepted, "Accepted oracle")
     expected_counts <- c(
       physical_locations = 13L,
       analysis_units = 9L,
@@ -457,10 +944,11 @@ verify_published_bundle_independent <- function( # nolint: object_length_linter.
       selected_membership$physical_location_id
     )),
     analysis_units = length(unique(selected_membership$analysis_unit_id)),
+    eligible_analysis_units = length(eligible_units),
     operation_rows = nrow(selected_operation),
     events = nrow(events),
     source_memberships = nrow(memberships),
-    jaccard_pairs = nrow(jaccard),
+    jaccard_pairs = if (is.null(jaccard)) 0L else nrow(jaccard),
     oracle_checked = !is.null(oracle)
   )
 }

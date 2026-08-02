@@ -12,10 +12,10 @@ selected_resolution_membership_digest <- function(value) { # nolint: object_leng
   sha256_text(canonical_json(value))
 }
 
-selected_source_membership_digest <- function(event_id, source_row_ids) { # nolint: object_length_linter.
-  sha256_text(canonical_json(list(
-    event_id = as.character(event_id),
-    source_row_ids = sort(as.character(source_row_ids), method = "radix")
+selected_source_membership_digest <- function(source_row_ids) { # nolint: object_length_linter.
+  sha256_text(canonical_json(sort(
+    as.character(source_row_ids),
+    method = "radix"
   )))
 }
 
@@ -52,25 +52,37 @@ selected_resolution_read_mapping <- function(config, snapshot) { # nolint: objec
                 "authority_state", "analysis_site_id", "physical_location_id",
                 "representative_latitude", "representative_longitude",
                 "coordinate_basis")
-  if (!identical(names(mapping), expected) || nrow(mapping) != 13L) {
+  if (!identical(names(mapping), expected) || nrow(mapping) == 0L) {
     stop("Selected analysis-site mapping schema or row count is invalid.")
   }
-  if (anyNA(mapping$physical_location_id) || any(!nzchar(mapping$physical_location_id)) ||
-        anyDuplicated(mapping$physical_location_id) ||
-        anyNA(mapping$analysis_site_id) || any(!nzchar(mapping$analysis_site_id)) ||
-        anyNA(mapping$representative_latitude) || anyNA(mapping$representative_longitude) ||
-        anyNA(mapping$coordinate_basis) || any(!nzchar(mapping$coordinate_basis))) {
+  text_fields <- c(
+    "analysis_site_mapping_schema", "scheme_id", "scheme_version",
+    "authority_state", "analysis_site_id", "physical_location_id",
+    "coordinate_basis"
+  )
+  if (any(vapply(mapping[text_fields], function(value) {
+    anyNA(value) || any(!nzchar(trimws(as.character(value))))
+  }, logical(1))) ||
+    anyDuplicated(mapping$physical_location_id) ||
+    anyNA(mapping$representative_latitude) || anyNA(mapping$representative_longitude) ||
+    any(!is.finite(mapping$representative_latitude)) ||
+    any(!is.finite(mapping$representative_longitude))) {
     stop("Selected analysis-site mapping contains incomplete or duplicate membership.")
   }
   if (length(unique(mapping$analysis_site_mapping_schema)) != 1L ||
         !identical(mapping$analysis_site_mapping_schema[[1]], "camtrap-analysis-site-mapping/1.0") ||
         length(unique(mapping$scheme_id)) != 1L ||
-        !identical(mapping$scheme_id[[1]], "judbury-analysis-site") ||
         length(unique(mapping$scheme_version)) != 1L ||
-        !identical(mapping$scheme_version[[1]], "1.0.0-proposed") ||
-        length(unique(mapping$authority_state)) != 1L ||
-        !identical(mapping$authority_state[[1]], "proposed_for_barry_exact_approval")) {
+        length(unique(mapping$authority_state)) != 1L) {
     stop("Selected analysis-site mapping authority is invalid.")
+  }
+  mapping_profile_id <- paste0(
+    mapping$scheme_id[[1L]],
+    "/",
+    mapping$scheme_version[[1L]]
+  )
+  if (!identical(selection$mapping_profile_id, mapping_profile_id)) {
+    stop("Selected mapping profile identity contradicts its immutable mapping.")
   }
   for (site in unique(mapping$analysis_site_id)) {
     rows <- mapping[mapping$analysis_site_id == site, , drop = FALSE]
@@ -240,69 +252,6 @@ selected_resolution_pivot_operation <- function(op) { # nolint: object_length_li
   do.call(rbind, rows)
 }
 
-selected_resolution_concurrency <- function( # nolint: object_length_linter.
-    membership, entity_state, operation = NULL) {
-  reasons <- character()
-  lineage <- if (is.list(entity_state)) entity_state$deployment_lineage else NULL
-  if (!is.data.frame(lineage) || nrow(lineage) == 0L) return(reasons)
-  required <- c("physical_location_identifier", "interval_start", "interval_end",
-                "predecessor_deployment_id", "successor_deployment_id",
-                "deployment_identifier")
-  if (!all(required %in% names(lineage))) return(reasons)
-  for (unit in unique(membership$analysis_unit_id)) {
-    if (is.na(unit)) next
-    ids <- membership$physical_location_id[membership$analysis_unit_id == unit]
-    if (length(ids) < 2L) next
-    rows <- lineage[lineage$physical_location_identifier %in% ids, , drop = FALSE]
-    if (nrow(rows) != length(ids)) {
-      reasons <- c(reasons, paste0("missing_deployment_evidence:", unit))
-      next
-    }
-    starts <- as.Date(rows$interval_start)
-    ends <- as.Date(rows$interval_end)
-    if (anyNA(starts) || anyNA(ends) || any(starts > ends)) {
-      reasons <- c(reasons, paste0("malformed_deployment_chronology:", unit))
-      next
-    }
-    # Only simultaneous confirmed-active members make a selected route
-    # ineligible.  Bounded chronology alone is audit evidence, not a reason to
-    # reject otherwise non-overlapping operational histories.
-    active_dates <- NULL
-    if (is.data.frame(operation) && nrow(operation) > 0L &&
-          all(c("site", "trap_date", "on_off") %in% names(operation))) {
-      unit_for_site <- membership$analysis_unit_id[match(operation$site,
-                                                         membership$physical_location_id)]
-      active <- unit_for_site == unit & operation$on_off == 1
-      active_dates <- split(operation$site[active], operation$trap_date[active])
-    }
-    overlap <- FALSE
-    for (i in seq_len(nrow(rows) - 1L)) for (j in (i + 1L):nrow(rows)) {
-      if (starts[[i]] > ends[[j]] || starts[[j]] > ends[[i]]) next
-      if (!is.null(active_dates)) {
-        simultaneous <- any(vapply(active_dates, function(ids) {
-          all(c(rows$physical_location_identifier[[i]],
-                rows$physical_location_identifier[[j]]) %in% ids)
-        }, logical(1)))
-        if (!simultaneous) next
-      }
-      approved <- identical(as.character(rows$successor_deployment_id[[i]]),
-                            as.character(rows$deployment_identifier[[j]])) &&
-        identical(as.character(rows$predecessor_deployment_id[[j]]),
-                  as.character(rows$deployment_identifier[[i]]))
-      approved <- approved && starts[[j]] == ends[[i]]
-      approved <- approved || (
-        identical(as.character(rows$successor_deployment_id[[j]]),
-                  as.character(rows$deployment_identifier[[i]])) &&
-          identical(as.character(rows$predecessor_deployment_id[[i]]),
-                    as.character(rows$deployment_identifier[[j]])) &&
-          starts[[i]] == ends[[j]]
-      )
-      if (!approved) overlap <- TRUE
-    }
-    if (overlap) reasons <- c(reasons, paste0("genuine_concurrent_member_deployments:", unit))
-  }
-  unique(reasons)
-}
 
 selected_resolution_classify_concurrency <- function( # nolint: object_length_linter.
     membership, entity_state, operation) {
@@ -466,14 +415,11 @@ build_selected_event_map <- function(event_lineage, membership, lineage = NULL,
   unique_events$source_membership_digest <- vapply(
     unique_events$event_id,
     function(id) {
-      selected_source_membership_digest(
-        id,
-        source_ids[[id]] %||% character()
-      )
+      selected_source_membership_digest(source_ids[[id]] %||% character())
     },
     character(1)
   )
-  unique_events$source_membership_reference <- "provenance/phase2/event_membership.json"
+  unique_events$source_membership_reference <- "provenance/event_membership.csv"
   unique_events$deployment_id <- NA_character_
   unique_events$deployment_resolution_state <- "unresolved"
   if (is.data.frame(deployment_lineage)) {
@@ -501,7 +447,12 @@ build_selected_event_map <- function(event_lineage, membership, lineage = NULL,
 
 `%||%` <- function(x, y) if (is.null(x) || length(x) == 0L || is.na(x[[1]])) y else x
 
-resolve_selected_resolution <- function(config, snapshot, validation_state, entity_state) {
+resolve_selected_resolution <- function(
+    config,
+    snapshot,
+    validation_state,
+    entity_state,
+    event_lineage) {
   selection <- analysis_unit_selection(config)
   if (is.null(selection)) return(NULL)
   integrity_ok <- TRUE
@@ -610,9 +561,9 @@ resolve_selected_resolution <- function(config, snapshot, validation_state, enti
   }
   event_map <- tryCatch(
     build_selected_event_map(
-      validation_state$event_lineage,
+      event_lineage,
       membership,
-      validation_state$lineage,
+      event_lineage$lineage,
       entity_state$deployment_lineage
     ),
     error = function(e) {
@@ -726,220 +677,4 @@ write_selected_resolution_artifacts <- function(state, root) { # nolint: object_
   )
   atomic_write_json(summary, paths[["summary"]])
   paths
-}
-
-validate_selected_resolution_artifacts <- function( # nolint: object_length_linter.
-    root,
-    paths = selected_resolution_paths(root),
-    require_integrity = TRUE) {
-  expected <- selected_resolution_paths(root)
-  if (!identical(names(paths), names(expected)) ||
-        !identical(unname(normalizePath(paths, winslash = "/", mustWork = FALSE)),
-                   unname(normalizePath(expected, winslash = "/", mustWork = FALSE)))) {
-    stop("Selected-resolution artifact namespace is not exact.")
-  }
-  directory <- dirname(expected[["membership"]])
-  files <- if (dir.exists(directory)) list.files(directory, all.files = FALSE, full.names = TRUE) else character()
-  if (length(files) != 4L || !setequal(basename(files), basename(unlist(expected)))) {
-    stop("Selected-resolution artifact namespace is incomplete or contains extras.")
-  }
-  if (any(!file.exists(unlist(expected)))) stop("Selected-resolution artifact is missing.")
-  summary <- jsonlite::read_json(expected[["summary"]], simplifyVector = FALSE)
-  for (name in c("membership", "operation", "event_map")) {
-    if (!identical(summary$artifact_sha256[[name]], sha256_file(expected[[name]]))) {
-      stop("Selected-resolution artifact fixity mismatch: ", name)
-    }
-  }
-  membership <- utils::read.csv(expected[["membership"]], stringsAsFactors = FALSE,
-                                check.names = FALSE, na.strings = "")
-  operation <- utils::read.csv(expected[["operation"]], stringsAsFactors = FALSE,
-                               check.names = FALSE, na.strings = "")
-  event_map <- utils::read.csv(expected[["event_map"]], stringsAsFactors = FALSE,
-                               check.names = FALSE, na.strings = "")
-  required_membership <- c("resolution", "scheme_id", "scheme_version", "authority_reference",
-                           "physical_location_id", "analysis_unit_id", "physical_latitude",
-                           "physical_longitude", "representative_latitude",
-                           "representative_longitude", "coordinate_basis")
-  required_operation <- c("analysis_unit_id", "date", "operation", "member_states_json",
-                          "member_states_digest", "member_count", "active_member_count",
-                          "unknown_member_count", "deployment_states_json",
-                          "deployment_states_digest", "resolved_deployment_count",
-                          "concurrency_class", "handover_date")
-  required_event <- c("event_id", "physical_location_id", "analysis_unit_id", "species",
-                      "event_time", "source_membership_count", "source_membership_digest",
-                      "source_membership_reference", "deployment_id",
-                      "deployment_resolution_state")
-  if (!identical(names(membership), required_membership) ||
-        !identical(names(operation), required_operation) ||
-        !identical(names(event_map), required_event)) stop("Selected-resolution artifact schema mismatch.")
-  if (anyDuplicated(membership$physical_location_id) ||
-        anyNA(membership$analysis_unit_id) ||
-        anyDuplicated(event_map$event_id) || anyNA(event_map$event_id) ||
-        any(!event_map$source_membership_reference %in% "provenance/phase2/event_membership.json")) {
-    stop("Selected-resolution artifact identity or lineage is invalid.")
-  }
-  operation$date <- as.Date(operation$date)
-  operation$operation <- suppressWarnings(as.numeric(operation$operation))
-  if (anyNA(operation$date) || any(!is.na(operation$operation) &
-                                     !operation$operation %in% c(0, 1))) {
-    stop("Selected-resolution operation semantics are invalid.")
-  }
-  for (i in seq_len(nrow(operation))) {
-    contribution_json <- trimws(as.character(operation$member_states_json[[i]]))
-    contribution_count <- suppressWarnings(as.integer(operation$member_count[[i]]))
-    contribution_active <- suppressWarnings(as.integer(operation$active_member_count[[i]]))
-    contribution_unknown <- suppressWarnings(as.integer(operation$unknown_member_count[[i]]))
-    # Unit fixtures may provide no member-level evidence at all. The writer
-    # materializes that absence as an explicit empty object;
-    # accept it only when every reconciled count is zero, while still failing
-    # closed for any non-empty or internally inconsistent contribution.
-    if (identical(contribution_json, "{}") && identical(contribution_count, 0L) &&
-          identical(contribution_active, 0L) && identical(contribution_unknown, 0L)) {
-      next
-    }
-    parsed <- tryCatch(jsonlite::fromJSON(contribution_json, simplifyVector = TRUE),
-                       error = function(e) NULL)
-    if (is.null(parsed) || !identical(operation$member_states_digest[[i]],
-                                      sha256_text(canonical_json(parsed))) ||
-          contribution_count != length(parsed) ||
-          contribution_active != sum(as.character(parsed) == "1", na.rm = TRUE)) {
-      stop("Selected-resolution operation contribution evidence does not reconcile.")
-    }
-    deployment_json <- trimws(as.character(
-      operation$deployment_states_json[[i]]
-    ))
-    deployments <- tryCatch(
-      jsonlite::fromJSON(deployment_json, simplifyVector = TRUE),
-      error = function(e) NULL
-    )
-    resolved_deployments <- suppressWarnings(as.integer(
-      operation$resolved_deployment_count[[i]]
-    ))
-    if (is.null(deployments) || !identical(
-      operation$deployment_states_digest[[i]],
-      sha256_text(canonical_json(deployments))
-    ) || resolved_deployments != sum(!is.na(unlist(deployments)))) {
-      stop("Selected-resolution deployment contribution evidence does not reconcile.")
-    }
-  }
-  if (!identical(as.integer(summary$membership_count), as.integer(nrow(membership))) ||
-    !identical(as.integer(summary$analysis_unit_count),
-               as.integer(length(unique(stats::na.omit(
-                 membership$analysis_unit_id
-               ))))) ||
-    !identical(as.integer(summary$physical_location_count),
-               as.integer(length(unique(membership$physical_location_id)))) ||
-    !identical(as.integer(summary$event_count), as.integer(nrow(event_map))) ||
-    !identical(as.integer(summary$source_row_membership_count),
-               as.integer(sum(event_map$source_membership_count)))) {
-    stop("Selected-resolution summary counts do not reconcile.")
-  }
-  observed_operation_counts <- c(
-    active = sum(operation$operation == 1, na.rm = TRUE),
-    inactive = sum(operation$operation == 0, na.rm = TRUE),
-    unknown = sum(is.na(operation$operation))
-  )
-  if (!identical(
-    as.integer(unlist(summary$operation_state_counts, use.names = FALSE)),
-    as.integer(observed_operation_counts)
-  )) {
-    stop("Selected-resolution operation-state counts do not reconcile.")
-  }
-  event_units <- membership$analysis_unit_id[
-    match(event_map$physical_location_id, membership$physical_location_id)
-  ]
-  if (!identical(as.character(event_map$analysis_unit_id), as.character(event_units))) {
-    stop("Selected-resolution event membership does not reconcile.")
-  }
-  if (isTRUE(require_integrity) && !isTRUE(summary$integrity_ok)) {
-    stop("Selected-resolution summary reports an integrity failure.")
-  }
-  expected_status <- if (!isTRUE(summary$integrity_ok)) {
-    "integrity_failure"
-  } else if (!isTRUE(summary$route_eligible)) {
-    "ineligible"
-  } else {
-    "eligible"
-  }
-  if (!identical(as.character(summary$status), expected_status)) {
-    stop("Selected-resolution summary status does not reconcile.")
-  }
-  config_path <- file.path(root, "provenance", "config.raw.yml")
-  can_reconstruct <- file.exists(config_path) &&
-    exists("reconstruct_validation_state", mode = "function") &&
-    exists("reconstruct_entity_state", mode = "function") &&
-    exists("read_config", mode = "function")
-  if (can_reconstruct) {
-    config <- read_config(config_path)
-    validation_state <- reconstruct_validation_state(root)
-    entity_state <- reconstruct_entity_state(root)
-    portable_snapshot <- portable_validation_snapshot(root, config)
-    portable_snapshot$staging_dir <- root
-    expected_state <- resolve_selected_resolution(
-      config,
-      portable_snapshot,
-      validation_state,
-      entity_state
-    )
-    normalize_frame <- function(frame) {
-      if (!is.data.frame(frame)) return(list())
-      lapply(seq_len(nrow(frame)), function(i) {
-        row <- as.list(frame[i, , drop = FALSE])
-        lapply(row, function(x) if (length(x) == 1L && is.na(x)) NULL else as.character(x))
-      })
-    }
-    roundtrip_csv <- function(frame) {
-      path <- tempfile("selected-resolution-reconstruction-", fileext = ".csv")
-      on.exit(unlink(path, force = TRUE), add = TRUE)
-      readr::write_csv(frame, path, na = "")
-      utils::read.csv(
-        path,
-        stringsAsFactors = FALSE,
-        check.names = FALSE,
-        na.strings = ""
-      )
-    }
-    expected_membership <- roundtrip_csv(
-      selected_resolution_prepare_membership(expected_state$membership)
-    )
-    expected_operation <- roundtrip_csv(
-      selected_resolution_prepare_operation(expected_state$operation)
-    )
-    expected_operation$date <- as.Date(expected_operation$date)
-    expected_operation$operation <- suppressWarnings(as.numeric(
-      expected_operation$operation
-    ))
-    expected_event <- roundtrip_csv(
-      selected_resolution_prepare_event_map(expected_state$event_map)
-    )
-    observed_summary <- summary
-    observed_summary$artifact_sha256 <- NULL
-    expected_summary <- expected_state$summary
-    reconstruction_matches <- c(
-      membership = identical(
-        canonical_json(normalize_frame(membership)),
-        canonical_json(normalize_frame(expected_membership))
-      ),
-      operation = identical(
-        canonical_json(normalize_frame(operation)),
-        canonical_json(normalize_frame(expected_operation))
-      ),
-      event_map = identical(
-        canonical_json(normalize_frame(event_map)),
-        canonical_json(normalize_frame(expected_event))
-      ),
-      summary = identical(
-        canonical_json(observed_summary),
-        canonical_json(expected_summary)
-      )
-    )
-    if (!all(reconstruction_matches)) {
-      stop(
-        "Selected-resolution artifacts do not reconstruct from immutable evidence: ",
-        paste(names(reconstruction_matches)[!reconstruction_matches], collapse = ", ")
-      )
-    }
-  }
-  list(integrity_ok = isTRUE(summary$integrity_ok), route_eligible = isTRUE(summary$route_eligible),
-       summary = summary, membership = membership, operation = operation, event_map = event_map)
 }

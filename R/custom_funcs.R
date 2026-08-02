@@ -77,7 +77,7 @@ calc_trap_nights <- function(op_long) {
 
   op_long |>
     group_by(site) |>
-    summarise(trap_nights = sum(on_off), .groups = "drop")
+    summarise(trap_nights = sum(on_off == 1, na.rm = TRUE), .groups = "drop")
 }
 
 #' Filter observations to periods when camera was on
@@ -91,7 +91,9 @@ filter_obs_by_effort <- function(obs, op_long) {
 
   obs |>
     mutate(
-      trap_date = as_date(datetime, format = "%d/%m/%Y %H:%M:%S")
+      trap_date = suppressWarnings(
+        as_date(datetime, format = "%d/%m/%Y %H:%M:%S")
+      )
     ) |>
     left_join(op_long, by = c("site", "trap_date")) |>
     filter(on_off == 1) |>
@@ -179,7 +181,7 @@ calc_diel <- function(
   day_end_hour = 18
 ) {
   import::from(
-    "dplyr", across, distinct, group_by, mutate, n, summarise, ungroup
+    "dplyr", across, distinct, filter, group_by, mutate, n, summarise, ungroup
   )
   import::from("lubridate", hour)
 
@@ -195,7 +197,7 @@ calc_diel <- function(
     distinct(event_id, .keep_all = TRUE) |>
     mutate(
       period = if (method == "flash") {
-        ifelse(flash == 1, "night", "day")
+        ifelse(is.na(flash), NA_character_, ifelse(flash == 1, "night", "day"))
       } else {
         ifelse(
           hour(dt) >= day_start_hour & hour(dt) < day_end_hour,
@@ -203,7 +205,8 @@ calc_diel <- function(
           "night"
         )
       }
-    )
+    ) |>
+    filter(!is.na(period))
 
   df |>
     group_by(site, species, period) |>
@@ -224,23 +227,38 @@ calc_diel <- function(
 #' expected species-accumulation calculation in `vegan::specaccum()`.
 #'
 #' @param events_per_day Tibble of daily independent events.
+#' @param physical_locations Confirmed-active physical locations, including
+#'   sampled locations with no detections.
 #' @return Tibble with columns `sites`, `richness`, and `se`
 #'   (standard error of richness).
 #'
 #' @export
-compute_species_accumulation <- function(events_per_day) {
+compute_species_accumulation <- function(
+    events_per_day,
+    physical_locations = unique(events_per_day$site)) {
   import::from("vegan", specaccum)
-  import::from("dplyr", distinct, mutate)
-  import::from("tidyr", pivot_wider)
-  import::from("tibble", column_to_rownames, tibble)
+  import::from("tibble", tibble)
 
-  # one row per site × species
-  inc_mat <- events_per_day |>
-    distinct(site, species) |>
-    mutate(pres = 1L) |>
-    pivot_wider(names_from = species, values_from = pres, values_fill = 0) |>
-    column_to_rownames("site") |>
-    as.matrix()
+  physical_locations <- sort(unique(as.character(physical_locations)),
+                             method = "radix")
+  species <- sort(unique(as.character(events_per_day$species)), method = "radix")
+  species <- species[!is.na(species) & nzchar(species)]
+  if (length(physical_locations) < 2L || length(species) == 0L ||
+        anyNA(physical_locations) || any(!nzchar(physical_locations)) ||
+        any(!events_per_day$site %in% physical_locations)) {
+    stop("Species accumulation requires detections and two confirmed-active locations.")
+  }
+  inc_mat <- matrix(
+    0L,
+    nrow = length(physical_locations),
+    ncol = length(species),
+    dimnames = list(physical_locations, species)
+  )
+  pairs <- unique(events_per_day[c("site", "species")])
+  inc_mat[cbind(
+    match(pairs$site, physical_locations),
+    match(pairs$species, species)
+  )] <- 1L
 
   acc <- suppressWarnings(specaccum(inc_mat, method = "exact"))
 

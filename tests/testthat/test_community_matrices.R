@@ -85,65 +85,7 @@ test_that("selected community arithmetic is exact for the approved nine units", 
   expect_equal(unname(matrix_view), t(unname(matrix_view)))
 })
 
-test_that("runtime event conservation decodes canonical artifact times as UTC", {
-  event_map <- data.frame(
-    event_id = c("e1", "e2"),
-    physical_location_id = c("camera_a", "camera_b"),
-    species = c("sp1", "sp2"),
-    event_time = c("2020-01-01T01:00:00Z", "2020-01-02T02:00:00Z"),
-    stringsAsFactors = FALSE
-  )
-  artifact <- tempfile(fileext = ".csv")
-  utils::write.csv(event_map, artifact, row.names = FALSE)
-  event_map <- utils::read.csv(artifact, stringsAsFactors = FALSE)
-  runtime_events <- data.frame(
-    event_id = c("e1", "e1", "e2"),
-    site = c("camera_a", "camera_a", "camera_b"),
-    species = c("sp1", "sp1", "sp2"),
-    dt = as.POSIXct(c(
-      "2020-01-01 11:00:00", "2020-01-01 11:05:00",
-      "2020-01-02 12:00:00"
-    ), tz = "Etc/GMT-10"),
-    stringsAsFactors = FALSE
-  )
-
-  conservation <- NULL
-  expect_no_error(
-    conservation <- validate_selected_runtime_events(event_map, runtime_events)
-  )
-  expect_true(isTRUE(conservation$exact))
-  expect_equal(conservation$preflight_event_count, 2L)
-  expect_equal(conservation$runtime_event_count, 2L)
-})
-
-test_that("runtime event conservation rejects noncanonical artifact times", {
-  runtime_events <- data.frame(
-    event_id = "e1",
-    site = "camera_a",
-    species = "sp1",
-    dt = as.POSIXct("2020-01-01 01:00:00", tz = "UTC"),
-    stringsAsFactors = FALSE
-  )
-  event_map <- data.frame(
-    event_id = "e1",
-    physical_location_id = "camera_a",
-    species = "sp1",
-    event_time = "2020-01-01 01:00:00",
-    stringsAsFactors = FALSE
-  )
-
-  expect_error(
-    validate_selected_runtime_events(event_map, runtime_events),
-    "canonical UTC"
-  )
-  event_map$event_time <- "2020-02-30T01:00:00Z"
-  expect_error(
-    validate_selected_runtime_events(event_map, runtime_events),
-    "canonical UTC"
-  )
-})
-
-test_that("selected ecological writer conserves events and routes by eligibility", {
+test_that("selected ecological writer routes by effort and grouping eligibility", {
   root <- tempfile("selected-ecology-")
   event_map <- data.frame(
     event_id = c("e1", "e2"),
@@ -152,16 +94,6 @@ test_that("selected ecological writer conserves events and routes by eligibility
     species = c("sp1", "sp2"),
     event_time = c("2020-01-01T01:00:00Z", "2020-01-02T02:00:00Z"),
     deployment_id = c("dep_a", "dep_b"),
-    stringsAsFactors = FALSE
-  )
-  runtime_events <- data.frame(
-    event_id = c("e1", "e1", "e2"),
-    site = c("camera_a", "camera_a", "camera_b"),
-    species = c("sp1", "sp1", "sp2"),
-    dt = as.POSIXct(c(
-      "2020-01-01 01:00:00", "2020-01-01 01:05:00",
-      "2020-01-02 02:00:00"
-    ), tz = "UTC"),
     stringsAsFactors = FALSE
   )
   state <- list(
@@ -204,7 +136,7 @@ test_that("selected ecological writer conserves events and routes by eligibility
     )
   )
 
-  outputs <- write_selected_ecological_outputs(state, runtime_events, root)
+  outputs <- write_selected_ecological_outputs(state, root)
   expect_setequal(names(outputs), c(
     "effort_coverage", "community_presence", "observed_richness",
     "jaccard", "status"
@@ -231,12 +163,17 @@ test_that("selected ecological writer conserves events and routes by eligibility
   ) %in% names(presence)))
   expect_equal(effort$confirmed_active_days, c(1L, 1L, 0L))
   expect_equal(effort$confirmed_inactive_days, c(0L, 0L, 1L))
-  expect_equal(richness$observed_richness, c(1L, 1L, 0L))
+  expect_equal(presence$analysis_unit_id, c("unit_a", "unit_b"))
+  expect_equal(richness$observed_richness, c(1L, 1L))
+  expect_equal(nrow(jaccard), 4L)
   expect_equal(unique(jaccard$claim_limit), jaccard_claim_limit)
   expect_identical(status$claim_limits$jaccard, jaccard_claim_limit)
   expect_identical(status$module_status_schema, "camtrap-module-status/1.0")
-  expect_identical(status$status, "completed")
-  expect_true(is.null(status$reason))
+  expect_identical(status$status, "completed_with_warnings")
+  expect_match(status$reason, "unit_c")
+  expect_identical(status$output_status$effort_coverage$status, "completed")
+  expect_identical(status$output_status$observed_presence$status,
+                   "completed_with_warnings")
   expect_identical(status$actual_resolution, "analysis_site")
   expect_setequal(
     unlist(status$required_evidence, use.names = FALSE),
@@ -245,7 +182,6 @@ test_that("selected ecological writer conserves events and routes by eligibility
       "physical_location_events"
     )
   )
-  expect_true(isTRUE(status$event_conservation$exact))
   expect_true(all(c(
     "contributing_physical_locations", "contributing_deployments"
   ) %in% names(status$analysis_units[[1]])))
@@ -264,7 +200,6 @@ test_that("selected ecological writer conserves events and routes by eligibility
   ineligible_root <- tempfile("selected-ineligible-")
   ineligible_outputs <- write_selected_ecological_outputs(
     ineligible,
-    runtime_events,
     ineligible_root
   )
   expect_true(all(vapply(ineligible_outputs[1:4], is.null, logical(1))))
@@ -298,7 +233,6 @@ test_that("selected ecological writer conserves events and routes by eligibility
   integrity_root <- tempfile("selected-integrity-failure-")
   integrity_outputs <- write_selected_ecological_outputs(
     integrity_failure,
-    runtime_events,
     integrity_root
   )
   expect_true(all(vapply(integrity_outputs[1:4], is.null, logical(1))))
@@ -309,10 +243,9 @@ test_that("selected ecological writer conserves events and routes by eligibility
   expect_equal(integrity_status$status, "failed")
   expect_equal(integrity_status$reason, "incomplete_or_orphan_mapping")
   expect_equal(integrity_status$reasons[[1]], "incomplete_or_orphan_mapping")
-  expect_false(isTRUE(integrity_status$event_conservation$checked))
 })
 
-test_that("zero events produce valid empty evidence with a plain warning", {
+test_that("no-effort units omit community outputs but preserve effort evidence", {
   root <- tempfile("selected-zero-events-")
   analysis_units <- c("unit_a", "unit_b")
   state <- list(
@@ -353,21 +286,64 @@ test_that("zero events produce valid empty evidence with a plain warning", {
       source_row_membership_count = 0L, reasons = character()
     )
   )
-  runtime_events <- data.frame(
-    event_id = character(), site = character(), species = character(),
-    dt = as.POSIXct(character(), tz = "UTC"), stringsAsFactors = FALSE
+  outputs <- write_selected_ecological_outputs(state, root)
+  effort <- read.csv(outputs$effort_coverage, check.names = FALSE)
+  status <- jsonlite::read_json(outputs$status, simplifyVector = FALSE)
+
+  expect_equal(nrow(effort), 2L)
+  expect_true(all(vapply(outputs[c(
+    "community_presence", "observed_richness", "jaccard"
+  )], is.null, logical(1))))
+  expect_identical(status$status, "omitted")
+  expect_match(status$reason, "confirmed active day")
+  expect_identical(status$output_status$effort_coverage$status, "completed")
+  expect_identical(status$output_status$observed_presence$status, "omitted")
+})
+
+test_that("sampled zero detections are zero richness with undefined empty Jaccard", {
+  root <- tempfile("selected-zero-detection-")
+  analysis_units <- c("unit_a", "unit_b")
+  state <- list(
+    integrity_ok = TRUE,
+    route_eligible = TRUE,
+    reasons = character(),
+    membership = data.frame(
+      physical_location_id = c("camera_a", "camera_b"),
+      analysis_unit_id = analysis_units,
+      stringsAsFactors = FALSE
+    ),
+    operation = data.frame(
+      analysis_unit_id = analysis_units,
+      date = as.Date(c("2020-01-01", "2020-01-01")),
+      operation = c(1, 1),
+      deployment_states_json = c("{}", "{}"),
+      stringsAsFactors = FALSE
+    ),
+    event_map = data.frame(
+      event_id = "e1", physical_location_id = "camera_a",
+      analysis_unit_id = "unit_a", species = "sp1",
+      event_time = "2020-01-01T01:00:00Z", deployment_id = NA_character_,
+      stringsAsFactors = FALSE
+    ),
+    summary = list(
+      status = "eligible", integrity_ok = TRUE, route_eligible = TRUE,
+      resolution = "analysis_site", scheme_id = "test-scheme",
+      scheme_version = "1.0.0", authority_reference = "test-authority",
+      membership_count = 2L, analysis_unit_count = 2L,
+      physical_location_count = 2L, event_count = 1L,
+      reasons = character()
+    )
   )
 
-  outputs <- write_selected_ecological_outputs(state, runtime_events, root)
-  presence <- read.csv(outputs$community_presence, check.names = FALSE)
+  outputs <- write_selected_ecological_outputs(state, root)
   richness <- read.csv(outputs$observed_richness, check.names = FALSE)
   jaccard <- read.csv(outputs$jaccard, check.names = FALSE)
   status <- jsonlite::read_json(outputs$status, simplifyVector = FALSE)
 
-  expect_equal(nrow(presence), 2L)
-  expect_equal(richness$observed_richness, c(0L, 0L))
-  expect_equal(nrow(jaccard), 4L)
-  expect_true(all(is.na(jaccard$jaccard_dissimilarity)))
+  expect_equal(richness$observed_richness, c(1L, 0L))
+  empty_self <- jaccard$analysis_unit_id_1 == "unit_b" &
+    jaccard$analysis_unit_id_2 == "unit_b"
+  expect_true(is.na(jaccard$jaccard_dissimilarity[empty_self]))
   expect_identical(status$status, "completed_with_warnings")
-  expect_identical(status$reason, "no_operational_events")
+  expect_match(status$reason, "zero detections")
 })

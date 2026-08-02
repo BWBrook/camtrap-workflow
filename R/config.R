@@ -65,24 +65,6 @@ analysis_unit_fields <- function() {
   )
 }
 
-analysis_unit_mapping_authority <- function() { # nolint: object_length_linter.
-  digest <- "6490d7f7021e5c727b9be1c7d6dfbf44ba50a1ef5b0396c66e1dd813a9c77083"
-  list(
-    mapping_profile_id = "judbury-analysis-site/1.0.0-proposed",
-    mapping_path = paste0(
-      "docs/goals/009-analysis-site-vertical-slice/",
-      "judbury_analysis_site_mapping.csv"
-    ),
-    mapping_sha256 = digest,
-    authority_reference = paste0(
-      "goal009-judbury-analysis-site-mapping-sha256-", digest
-    ),
-    scheme_id = "judbury-analysis-site",
-    scheme_version = "1.0.0-proposed",
-    authority_state = "proposed_for_barry_exact_approval"
-  )
-}
-
 analysis_unit_identity_authority <- function() { # nolint: object_length_linter.
   list(
     scheme_id = "camtrap-physical-location-identity",
@@ -139,28 +121,21 @@ analysis_unit_selection <- function(config) {
   if (!is_safe_relative_path(selection$mapping_path)) {
     stop("config.yml analysis_unit.mapping_path must be a safe relative path.")
   }
-  authority <- analysis_unit_mapping_authority()
-  if (!identical(selection[mapping_fields], authority[mapping_fields])) {
-    stop("config.yml analysis_unit selection has no exact approved authority.")
-  }
-  c(
-    selection,
-    authority[c("scheme_id", "scheme_version", "authority_state")],
-    state = "selected_mapping"
-  )
+  c(selection, state = "selected_mapping")
 }
 
 normalize_analysis_unit_config <- function(config) {
   selection <- analysis_unit_selection(config)
-  resolved <- selection[c(
-    "resolution", "scheme_id", "scheme_version", "authority_reference",
-    "authority_state", "state"
-  )]
   if (identical(selection$state, "selected_mapping")) {
-    resolved$mapping_profile_id <- selection$mapping_profile_id
-    resolved$mapping_path <- selection$mapping_path
-    resolved$mapping_sha256 <- selection$mapping_sha256
+    resolved <- selection[c(
+      "resolution", "mapping_profile_id", "mapping_path", "mapping_sha256",
+      "authority_reference", "state"
+    )]
   } else {
+    resolved <- selection[c(
+      "resolution", "scheme_id", "scheme_version", "authority_reference",
+      "authority_state", "state"
+    )]
     resolved$mapping_profile_id <- NULL
     resolved$mapping_path <- NULL
     resolved$mapping_sha256 <- NULL

@@ -29,13 +29,13 @@ test_that("QC: validate_effort errors when NA exists in effort matrix", {
 
 test_that("Effort: pivot_op_long and calc_trap_nights produce expected totals", {
   op <- tibble(
-    date = c("01/01/2020", "02/01/2020"),
-    A = c(1, 0),
-    B = c(1, 1)
+    date = c("01/01/2020", "02/01/2020", "03/01/2020"),
+    A = c(1, 0, NA),
+    B = c(1, 1, NA)
   )
 
   op_long <- pivot_op_long(op)
-  expect_equal(nrow(op_long), 4)
+  expect_equal(nrow(op_long), 6)
   expect_equal(sort(unique(op_long$site)), c("A", "B"))
 
   trap_nights <- calc_trap_nights(op_long)
@@ -180,15 +180,29 @@ test_that("Metrics: coarse day-night proportions count each event once", {
   expect_true(all(diel$event_proportion <= 1))
 })
 
-test_that("Accumulation: exact curve returns expected shape", {
-  events_per_day <- tibble(
-    site = c("A", "A", "B"),
-    species = c("sp1", "sp2", "sp1"),
-    date = as.Date(c("2020-01-01", "2020-01-01", "2020-01-01")),
-    events = c(1, 1, 1)
+test_that("Metrics: flash classification does not turn missing evidence into day", {
+  obs_events <- tibble(
+    event_id = c("e1", "e2"),
+    site = "A",
+    species = "sp1",
+    flash = c(NA, 1),
+    dt = as.POSIXct(c("2020-01-01 12:00:00", "2020-01-01 23:00:00"), tz = "UTC")
   )
 
-  acc <- compute_species_accumulation(events_per_day)
+  diel <- calc_diel(obs_events, method = "flash")
+
+  expect_equal(sum(diel$event_count), 1L)
+  expect_equal(diel$period, "night")
+  expect_equal(nrow(calc_diel(transform(obs_events, flash = NA), "flash")), 0L)
+})
+
+test_that("Accumulation: exact curve includes sampled zero-detection sites", {
+  events_per_day <- tibble(
+    site = c("A", "A"), species = c("sp1", "sp2"),
+    date = as.Date(c("2020-01-01", "2020-01-01")), events = c(1, 1)
+  )
+
+  acc <- compute_species_accumulation(events_per_day, c("A", "B"))
 
   expect_equal(names(acc), c("sites", "richness", "se"))
   expect_equal(nrow(acc), 2)
