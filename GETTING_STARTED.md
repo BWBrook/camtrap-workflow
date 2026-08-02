@@ -103,6 +103,27 @@ write under `outputs/work/` and cannot publish completion or change
 
 ---
 
+### 7. **Developer Checks**
+
+Most users do not need these commands. Contributors can run the quick everyday
+checks with:
+
+```sh
+Rscript scripts/run_lint.R
+Rscript scripts/run_tests.R --profile fast
+```
+
+The explicit release profile checks evidence-bundle publication without
+repeating the full Judbury analysis:
+
+```sh
+Rscript scripts/run_tests.R --profile release
+```
+
+The full evidence run remains a separate release step, as shown above.
+
+---
+
 ## What’s Happening Under the Hood?
 
 * **`bootstrap_env.R`**: Activates the project and runs `renv::restore(prompt = FALSE)`.

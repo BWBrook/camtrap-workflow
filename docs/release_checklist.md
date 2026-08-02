@@ -12,9 +12,13 @@ This checklist defines what must be true before tagging a release (e.g., v0.1.0,
 
 ## 2) Quality gates
 
-- [x] Tests pass (`testthat`).
+- [x] Fast tests pass (`Rscript scripts/run_tests.R --profile fast`).
+- [x] Release-contract tests pass
+  (`Rscript scripts/run_tests.R --profile release`).
 - [x] Lint passes (`lintr`) or exceptions are documented and minimal.
-- [x] Pipeline smoke test runs in CI (or documented reason why not).
+- [x] One small pipeline smoke runs separately in ordinary CI.
+- [ ] The exact release SHA passes the manual release workflow, including the
+  full Judbury evidence run, bundle verification, and artefact upload.
 - [ ] No new warnings/errors introduced (or documented as known limitations).
 
 ## 3) Scientific sanity

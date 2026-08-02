@@ -137,13 +137,24 @@ Rscript scripts/run_full_evidence_run.R --config config.forest_example.yml
 * Tests live in `tests/`.
 * Project decisions and milestones live in `docs/`.
 
-Run quality gates locally:
+Run the routine development checks locally:
 
 ```sh
 Rscript scripts/run_lint.R
-Rscript scripts/run_tests.R
+Rscript scripts/run_tests.R --profile fast
+```
+
+The fast profile is also the default when no profile is supplied. Before a
+release, run the separate publication checks and create a full evidence run:
+
+```sh
+Rscript scripts/run_tests.R --profile release
 Rscript scripts/run_full_evidence_run.R --config config.yml
 ```
+
+Ordinary push and pull-request CI runs lint, the fast tests, and one small
+pipeline smoke. Report rendering, the full Judbury run, bundle verification,
+and artefact upload run only through the explicit release workflow.
 
 Container users: see `docs/container.md` for build/run instructions.
 

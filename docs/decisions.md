@@ -774,5 +774,19 @@ Decision:
   destructive or irreversible publication, and reproducibility.
 
 Consequences / follow-ups:
-- This is approved next-goal direction only. A separate Goal 010 packet is
-  required before execution; no test change is authorized or implemented here.
+- Barry authorized the bounded Goal 010 packet and implementation. The suite is
+  now split into fast everyday and explicit release profiles; ordinary CI owns
+  one separate target smoke, while the full Judbury evidence run is release
+  only.
+- The implemented test surface is 4,929 lines and 121 blocks, down from 7,556
+  lines and 179 blocks. Production-runner invocations inside tests fell from 26
+  to two validation-only release calls.
+- Independent re-review found no material scientific or data-integrity loss.
+  Historical schemas, nominal-station compatibility, plot existence, repeated
+  reclosure, and duplicated production-runner matrices have no retained current
+  beneficiary.
+- Exact-SHA ordinary CI, the manual release workflow, and independent emitted-
+  bundle reconstruction remain the publication gate.
+- Production repair remains deferred for zero-row selected-event preview
+  serialization and CamtrapDP deployment lineage that omits the physical-
+  location identifier required by grouped-site concurrency.

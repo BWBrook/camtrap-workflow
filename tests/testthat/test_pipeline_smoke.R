@@ -1,44 +1,7 @@
-import::from("testthat", test_that, expect_equal, expect_false, expect_true)
-import::from("targets", tar_make, tar_manifest)
+import::from("testthat", test_that, expect_false, expect_true)
+import::from("targets", tar_igraph)
 import::from("here", here)
-import::from("withr", local_envvar, with_dir)
-
-test_that("direct partial target calls cannot complete or advance latest", {
-  with_dir(here(), {
-    pointer <- here("outputs", "latest")
-    pointer_before <- if (file.exists(pointer)) {
-      readBin(pointer, "raw", n = file.info(pointer)$size)
-    } else {
-      raw()
-    }
-    local_envvar(c(
-      CAMTRAP_CONFIG = here("config.template_example.yml"),
-      CAMTRAP_EVIDENCE_CONTEXT = NA
-    ))
-
-    tar_make(
-      names = "config",
-      callr_function = NULL,
-      script = here("_targets.R"),
-      reporter = "silent"
-    )
-
-    pointer_after <- if (file.exists(pointer)) {
-      readBin(pointer, "raw", n = file.info(pointer)$size)
-    } else {
-      raw()
-    }
-    partial_root <- here("outputs", "work", "template_example")
-    completion <- if (dir.exists(partial_root)) {
-      list.files(partial_root, pattern = "^COMPLETED[.]json$", recursive = TRUE)
-    } else {
-      character()
-    }
-
-    expect_equal(pointer_after, pointer_before)
-    expect_equal(completion, character())
-  })
-})
+import::from("withr", with_dir)
 
 test_that("report and methods state bounded selected-resolution claims", {
   report_text <- paste(readLines(here("analysis", "report.qmd")), collapse = " ")
@@ -91,29 +54,46 @@ test_that("report and methods state bounded selected-resolution claims", {
   }
 })
 
-test_that("protected targets retain physical site carriers", {
+test_that("protected targets stay outside the selected-resolution graph", {
   with_dir(here(), {
-    manifest <- tar_manifest(
+    graph <- tar_igraph(
+      targets_only = TRUE,
       script = here("_targets.R"),
-      fields = c("name", "command"),
       callr_function = NULL
     )
+    target_names <- igraph::V(graph)$name
     protected <- c(
       "rai_with_ci", "diel_site", "occupancy_models", "rarefaction_data",
       "functional_diversity", "trait_env_associations", "camtrapdp_export",
       "site_map_plot"
     )
-    expect_true(all(protected %in% manifest$name))
-    commands <- manifest$command[match(protected, manifest$name)]
-    expect_false(any(grepl("selected_", commands, fixed = TRUE)))
+    selected_targets <- grep("^selected_", target_names, value = TRUE)
+
+    expect_true(all(protected %in% target_names))
+    expect_true(length(selected_targets) > 0L)
+    for (target in protected) {
+      ancestors <- target_names[igraph::subcomponent(
+        graph,
+        target,
+        mode = "in"
+      )]
+      expect_false(
+        any(ancestors %in% selected_targets),
+        info = target
+      )
+    }
 
     physical_carriers <- c(
       "occupancy_site_covs", "trait_env_associations", "camtrapdp_export",
       "site_map_plot"
     )
-    carrier_commands <- manifest$command[
-      match(physical_carriers, manifest$name)
-    ]
-    expect_true(all(grepl("site_raw", carrier_commands, fixed = TRUE)))
+    for (target in physical_carriers) {
+      ancestors <- target_names[igraph::subcomponent(
+        graph,
+        target,
+        mode = "in"
+      )]
+      expect_true("site_raw" %in% ancestors, info = target)
+    }
   })
 })

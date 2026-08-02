@@ -193,12 +193,13 @@ standardized for unequal effort, completeness, or detectability. It makes no
 abundance, density, inferential, pooled-covariate, or generalized-grouping
 claim and does not complete Phase 3.
 
-Barry approved Goal 010 as a ruthless test-value and runtime audit before
-further feature work. Default to subtraction: existing tests receive no
-presumption of necessity. Retention requires a concrete prevented failure,
-beneficiary, understandable
-purpose, run occasion, and justified cost. Remove, combine, simplify, or demote
-tests where practical, distinguish fast everyday from slower release-grade
-integration only when value warrants it, and retain proportionate scientific,
-data-integrity, irreversible-publication, and reproducibility safeguards. This
-is direction only; no Goal 010 packet or test change is authorized here.
+Barry authorized and implementation has completed for Goal 010's ruthless
+test-value and runtime audit. The default suite is now the pruned fast profile;
+current publication contracts run explicitly at release, and the real Judbury
+evidence run is no longer repeated inside test fixtures. The surface fell from
+7,556 to 4,929 lines and from 26 executed production-runner invocations to two.
+Independent review found no Goal010-introduced scientific or data-integrity
+loss. Exact-SHA CI, manual release, and emitted-bundle reconstruction remain
+pending. The next architecture decision should address the fail-closed zero-row
+preview serializer and missing physical-location identity in CamtrapDP
+deployment lineage, without reopening deleted historical coverage.

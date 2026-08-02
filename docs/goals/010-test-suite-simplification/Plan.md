@@ -60,64 +60,64 @@ An unlisted production edit is a stop condition, not permission to widen scope.
 
 ## Task 1: Complete the audit and freeze decisions
 
-- [ ] Record all 33 current test files in `Audit.md` with purpose, beneficiary,
+- [x] Record all 33 current test files in `Audit.md` with purpose, beneficiary,
   prevented failure, current cost evidence, decision, and run profile.
-- [ ] Mark historical schemas, unused modes, plot-existence checks, repeated
+- [x] Mark historical schemas, unused modes, plot-existence checks, repeated
   reclosure cases, and static DAG preservation for deletion or consolidation.
-- [ ] Mark broader production complexity as deferred architecture debt.
-- [ ] Verify the decisions retain every non-negotiable invariant in `Goal.md`.
+- [x] Mark broader production complexity as deferred architecture debt.
+- [x] Verify the decisions retain every non-negotiable invariant in `Goal.md`.
 
 ## Task 2: Add explicit fast and release profiles
 
-- [ ] Change `scripts/run_tests.R` to accept `--profile fast`, `release`, or
+- [x] Change `scripts/run_tests.R` to accept `--profile fast`, `release`, or
   `all`; default to `fast`; reject unknown arguments clearly.
-- [ ] Make `fast` run only root test files and `release` run only
+- [x] Make `fast` run only root test files and `release` run only
   `tests/testthat/release/`; make `all` run both in that order.
-- [ ] Add focused argument/profile tests without invoking the expensive suite.
-- [ ] Rework CI so push/PR uses lint, fast tests, and one target smoke.
-- [ ] Make Quarto, TinyTeX, release tests, full evidence, bundle verification,
+- [x] Add focused argument/profile tests without invoking the expensive suite.
+- [x] Rework CI so push/PR uses lint, fast tests, and one target smoke.
+- [x] Make Quarto, TinyTeX, release tests, full evidence, bundle verification,
   and artifact upload conditional on manual `release` dispatch.
-- [ ] Validate YAML with `actionlint` and test invalid profile handling.
+- [x] Validate YAML with `actionlint` and test invalid profile handling.
 
 ## Task 3: Delete low-value fast-suite tests
 
-- [ ] Remove ten plot-file-existence groups and delete the now-empty spatial
+- [x] Remove ten plot-file-existence groups and delete the now-empty spatial
   test file.
-- [ ] Remove old preview/manifest compatibility and schema-downgrade tests.
-- [ ] Remove legacy omitted-mode and exact-old-DAG preservation tests with no
-  current user, replacing them with one behavioral protected-output comparison
-  proving only the four selected outputs use `analysis_site`.
-- [ ] Preserve explicit checks that synthetic midpoints are used only for
+- [x] Remove old preview/manifest compatibility and schema-downgrade tests.
+- [x] Remove legacy omitted-mode and exact-old-DAG preservation tests with no
+  current user, replacing them with a transitive target-graph guard proving
+  protected physical outputs cannot inherit `selected_*` inputs.
+- [x] Preserve explicit checks that synthetic midpoints are used only for
   mapping/distance and physical covariates are never pooled or re-extracted.
-- [ ] Collapse duplicate presence/richness/Jaccard, adapter-unknown, target
+- [x] Collapse duplicate presence/richness/Jaccard, adapter-unknown, target
   manifest, and fixity proofs to one meaningful check per boundary.
-- [ ] Convert the expected CamtrapDP warning to an explicit expectation or
+- [x] Convert the expected CamtrapDP warning to an explicit expectation or
   delete the duplicate case.
-- [ ] Run only affected fast files, then the complete fast profile once.
+- [x] Run only affected fast files, then the complete fast profile once.
 
 ## Task 4: Replace the two dominant files with small release contracts
 
-- [ ] Remove the production-data and historical-schema matrices from
+- [x] Remove the production-data and historical-schema matrices from
   `test_run_bundle.R` and `test_validation_ledger.R`.
-- [ ] Move the retained current-format publication cases into the two release
+- [x] Move the retained current-format publication cases into the two release
   files and delete the obsolete originals if no fast contract remains.
-- [ ] Retain one ready and one blocked validation runner, one publish/copy/open
+- [x] Retain one ready and one blocked validation runner, one publish/copy/open
   bundle, one ordinary payload mutation, and one failed-publication preservation
   case.
-- [ ] Make invalid or unauthorized mapping a hard-stop control; keep valid
+- [x] Make invalid or unauthorized mapping a hard-stop control; keep valid
   concurrency as the distinct status-only omission control.
-- [ ] Keep the pure floating-point comparator in a fast, in-memory test.
-- [ ] Confirm release tests do not repeat the later real Judbury full run.
-- [ ] Run the release-only profile once and record its observed duration.
+- [x] Keep the pure floating-point comparator in a fast, in-memory test.
+- [x] Confirm release tests do not repeat the later real Judbury full run.
+- [x] Run the release-only profile once and record its observed duration.
 
 ## Task 5: Verify, review, publish, and close
 
 - [ ] Run lint, the fast profile, one target smoke, and `actionlint`.
 - [ ] Measure fast test and total ordinary CI duration against the 4,315.2-second
   baseline; do not encode the duration as a flaky test.
-- [ ] Obtain one independent scientific and engineering review of the actual
+- [x] Obtain one independent scientific and engineering review of the actual
   diff and retained audit.
-- [ ] Apply at most one focused material repair and rerun affected checks.
+- [x] Apply at most one focused material repair and rerun affected checks.
 - [ ] Commit and push the accepted implementation with subject
   `test: simplify and tier the test suite`.
 - [ ] Require exact-SHA push CI success.

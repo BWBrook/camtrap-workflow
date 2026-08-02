@@ -72,3 +72,58 @@ test invocation.
   policy, provenance-boundary consolidation, target-graph modularity, and
   semantic plot testing to later architecture work; no production behavior was
   authorized or changed.
+
+### 2026-08-02 - Tasks 2 and 3: tier and prune
+
+- Added explicit `fast`, `release`, and `all` profiles; no argument defaults to
+  `fast`. Ordinary CI now runs lint, fast tests, and one separate target smoke.
+  Quarto, full evidence publication, verification, and artefact upload moved to
+  an explicit manual release job.
+- Removed ten plot-existence groups, historical preview/manifest matrices,
+  speculative resolution modes, duplicated arithmetic and repair cases, and
+  exact old-DAG snapshots. `test_spatial_outputs.R` was deleted.
+- Consolidated current presence, richness, Jaccard, mapping, event-lineage, and
+  authority protection. The final fast routing guard follows the complete
+  target dependency graph and rejects any `selected_*` ancestor of protected
+  physical-location outputs.
+- Commits: `4e122cd`, `afddb60`, `b415bf4`, and `21e8911`.
+
+### 2026-08-02 - Task 4: replace the hour-scale matrices
+
+- Replaced the 2,510-line bundle/manifest/validation surface with small fast
+  units and two release files. Current publication evidence covers manifest
+  1.3 publish/open/copy, non-overwrite, one ordinary payload mutation, a failed
+  publication preserving prior `latest`, one ready validation preview, and one
+  unauthorized-mapping hard stop.
+- Root fast tests contain no `run_full_evidence_run()` or `tar_make()` call.
+  The release tree contains exactly two validation-only runner calls and never
+  repeats the full Judbury run.
+- The complete release profile ran once in 8.54 seconds before review repair.
+  After repair, the bundle file passed 16 assertions in 7.1 seconds and the
+  validation-runner file passed 15 assertions in 2.8 seconds.
+- Review repair added honest `session_info.txt`, exact collision-inventory
+  preservation, and seeded latest-byte preservation. Commits: `f126866` and
+  `7461ae8`.
+
+### 2026-08-02 - Review, reduction, and honest residuals
+
+- Current test surface: 35 files (33 fast, two release), 4,929 lines, 121
+  `test_that()` blocks, 660 lexical expectation references, two runner calls,
+  and zero `tar_make()` calls. Baseline was 33 files, 7,556 lines, 179 blocks,
+  782 expectation references, and 26 executed production-runner invocations.
+- The final complete local fast attempt finished in 5.19 seconds but could not
+  pass in the partial global library because `camtrapdp`, `FD`, `frictionless`,
+  and `unmarked` are absent (557 checks passed, three skipped, two failed for
+  missing packages). No packages were installed; dependency-complete
+  exact-SHA CI is the acceptance environment.
+- Independent re-review returned `SCIENCE SPEC: PASS` and `SCIENCE QUALITY:
+  PASS`, finding no material ecological or data-integrity loss introduced by
+  Goal 010. Engineering re-review found the repair correctly scoped.
+- Two fail-closed production debts were exposed and not mocked away: an
+  authorized orphan mapping cannot serialize a zero-row event map into a
+  blocked preview, and CamtrapDP deployment lineage lacks the physical-location
+  identifier needed to reconstruct genuine grouped-site concurrency. The old
+  deleted “ineligible” fixture used legacy nominal-station mode and was not
+  evidence for current analysis-site concurrency.
+- Exact implementation commit, push CI, manual release workflow, emitted-bundle
+  reconstruction, and final runtime evidence remain pending.

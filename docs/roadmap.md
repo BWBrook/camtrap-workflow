@@ -1204,12 +1204,31 @@ detection-limited richness/presence, and descriptive Jaccard not standardized
 for unequal effort, completeness, or detectability. No abundance, density,
 inference, pooled covariates, or generalized grouping is claimed.
 
-**Approved next-goal direction:** Goal 010 must ruthlessly audit test value and
-runtime before further feature work. Default to subtraction; retain tests only
-for concrete current failures and beneficiaries at justified run cadence and
-cost, while preserving proportionate scientific, data-integrity,
-irreversible-publication, and reproducibility safeguards. This is direction
-only: no Goal 010 packet or test change is authorized here.
+## Goal 010 - The Promise: simplify and tier the test suite
+
+- [x] Audit all 33 baseline test files by prevented failure, beneficiary, cost,
+  and run occasion.
+- [x] Delete historical compatibility, ten plot-existence groups, repeated
+  runner setup, duplicated calculations and repairs, and exact old-DAG checks.
+- [x] Make the default suite fast and reserve current publication contracts for
+  an explicit release profile.
+- [x] Keep one separate target smoke in ordinary CI; reserve rendering, the full
+  Judbury evidence run, bundle verification, and artefact upload for manual
+  release.
+- [x] Complete one independent review and one focused repair, with no material
+  ecological or data-integrity loss found.
+- [ ] Pass exact-SHA ordinary CI within the two-minute fast-test and ten-minute
+  whole-job bars.
+- [ ] Pass the manual exact-SHA release workflow and independently reconstruct
+  the required ecological evidence from its emitted bundle.
+
+The implemented surface has fallen from 7,556 to 4,929 test lines and from 26
+executed production-runner invocations to two validation-only release calls.
+The final local fast attempt took 5.19 seconds but lacked four locked packages;
+dependency-complete CI remains authoritative. Two fail-closed production debts
+are deferred: zero-row selected-event preview serialization and missing
+physical-location identity in CamtrapDP deployment lineage for authentic
+grouped-site concurrency.
 
 ---
 
