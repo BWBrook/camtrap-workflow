@@ -3,9 +3,9 @@
 ## Current Product
 
 Goal 011 defines the lean run contract. Goal 012 adds a practitioner-facing
-report proof without changing the ecological engine. Local implementation and
-evidence live in `docs/goals/012-practitioner-report/` and await orchestrator
-review.
+report proof without changing the ecological engine. Implementation and
+acceptance evidence live in `docs/goals/012-practitioner-report/`; the
+orchestrator accepted the goal and authorized canonical publication.
 
 ## Goal 012 Local Evidence
 
@@ -14,7 +14,7 @@ review.
 - [x] Prove the full Judbury journey against the accepted Jaccard oracle.
 - [x] Prove the same full journey on the maintained forest four-table example.
 - [x] Complete one scientific/visual review and material repair pass.
-- [ ] Obtain orchestrator acceptance and publication authority.
+- [x] Obtain orchestrator acceptance and publication authority.
 
 ## Goal 011 Acceptance
 

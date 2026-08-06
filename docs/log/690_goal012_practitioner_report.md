@@ -20,3 +20,6 @@ restored three missing plot prints, and made the effort/richness panel legible.
 Final lint, actionlint, and 518 fast tests passed. Full evidence and residual
 limits are recorded in
 `docs/goals/012-practitioner-report/ImplementationReport.md`.
+
+The orchestrator accepted the verified practitioner report and authorized
+canonical publication on 2026-08-06.
