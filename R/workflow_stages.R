@@ -734,6 +734,7 @@ run_report_stage <- function(modules) {
     operation_state_counts = events$selected$summary$operation_state_counts,
     event_count = nrow(events$physical_events),
     source_membership_count = nrow(events$event_lineage$memberships),
+    diel_method = ingest$config$diel$method,
     module_status = modules$records,
     outputs = lapply(modules$outputs, stage_relative_path, root = root)
   ), input_path)

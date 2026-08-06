@@ -26,11 +26,25 @@ output_path <- function(name) {
   file.path(bundle_root, path)
 }
 module_record <- function(name) {
-  inputs$module_status[[which(vapply(
+  matches <- which(vapply(
     inputs$module_status,
     function(record) identical(record$module, name),
     logical(1)
-  ))[[1L]]]]
+  ))
+  inputs$module_status[[matches[[1L]]]]
+}
+module_context <- function(name, interpretation) {
+  record <- module_record(name)
+  cat(
+    "**Result status:** ", gsub("_", " ", record$status),
+    "  \n**Spatial resolution:** ", gsub("_", " ", record$actual_resolution),
+    "  \n",
+    sep = ""
+  )
+  if (!is.null(record$reason)) {
+    cat("**Warning or omission:** ", record$reason, "  \n", sep = "")
+  }
+  cat("**Interpretation:** ", interpretation, "\n\n", sep = "")
 }
 status_table <- do.call(rbind, lapply(inputs$module_status, function(record) {
   data.frame(
@@ -47,129 +61,30 @@ status_table <- do.call(rbind, lapply(inputs$module_status, function(record) {
 }))
 ```
 
-## Ecological result
+## Summary
 
-This run retained `r inputs$event_count` independent detection events from
-`r inputs$physical_location_count` physical camera locations. The requested
-spatial resolution was `r gsub("_", " ", inputs$resolution)` across
-`r inputs$analysis_unit_count` analytical units.
+This run retained **`r format(inputs$event_count, big.mark = ",")` operational
+detection events** from **`r inputs$physical_location_count` physical camera
+locations**. Results requested at `r gsub("_", " ", inputs$resolution)`
+resolution cover **`r inputs$analysis_unit_count` analytical units**.
+
+The evidence contains `r format(inputs$operation_state_counts[["active"]],
+big.mark = ",")` confirmed active analysis-unit days,
+`r format(inputs$operation_state_counts[["inactive"]], big.mark = ",")`
+confirmed inactive days, and
+`r format(inputs$operation_state_counts[["unknown"]], big.mark = ",")` days
+with unknown operation. Unknown operation was not counted as sampling effort.
 
 ```{r}
 attention <- status_table[status_table$status != "completed", , drop = FALSE]
 if (nrow(attention) > 0L) {
-  knitr::kable(attention, caption = "Warnings and omitted analyses")
+  knitr::kable(attention, caption = "Results needing attention")
 }
 ```
 
-```{r}
-effort <- read_output("effort_coverage")
-richness <- read_output("observed_richness")
-if (!is.null(effort)) {
-  show <- effort[c(
-    "analysis_unit_id", "confirmed_active_days", "unknown_days"
-  )]
-  if (!is.null(richness)) {
-    show <- merge(
-      show,
-      richness[c("analysis_unit_id", "observed_richness")],
-      by = "analysis_unit_id",
-      all.x = TRUE,
-      sort = FALSE
-    )
-  } else {
-    show$observed_richness <- NA_integer_
-  }
-  show$eligible_for_community <- show$confirmed_active_days >= 1L
-  names(show) <- c(
-    "Analysis unit", "Confirmed active days", "Unknown days",
-    "Observed species", "Included in community summaries"
-  )
-  knitr::kable(show)
-}
-```
+## Sampling and observed richness
 
-Observed richness is the number of species detected in the supplied,
-effort-filtered records. Units without a confirmed active day are excluded,
-not treated as absences. A sampled unit with no detections has zero observed
-richness. This is not an estimate of species that went undetected.
-
-```{r}
-jaccard <- read_output("jaccard")
-if (!is.null(jaccard)) {
-  finite <- jaccard$jaccard_dissimilarity[
-    is.finite(jaccard$jaccard_dissimilarity)
-  ]
-  if (length(finite) > 0L) {
-    cat(
-      "Observed-composition Jaccard dissimilarity ranged from ",
-      sprintf("%.3f", min(finite)), " to ", sprintf("%.3f", max(finite)),
-      ".\n",
-      sep = ""
-    )
-  } else {
-    cat("No pairwise Jaccard value was estimable from the detected community.\n")
-  }
-}
-```
-
-Jaccard values describe turnover in detected composition. They are not
-standardized for unequal effort, sampling completeness, or detectability and
-do not establish environmental causes.
-
-## Sampling context
-
-The evidence contains `r inputs$operation_state_counts[["active"]]` confirmed
-active analysis-unit days, `r inputs$operation_state_counts[["inactive"]]`
-confirmed inactive days, and `r inputs$operation_state_counts[["unknown"]]`
-days with unknown operation. Unknown operation was not counted as effort.
-
-```{r}
-rates <- read_output("operational_event_detection_rate")
-if (!is.null(rates) && nrow(rates) > 0L) {
-  rates <- rates[order(
-    rates$events_per_100_active_days,
-    decreasing = TRUE,
-    na.last = TRUE
-  ), ]
-  show <- utils::head(rates, 15L)
-  names(show) <- c(
-    "Physical location", "Species", "Events", "Confirmed active days",
-    "Events per 100 active days"
-  )
-  knitr::kable(show, digits = 2)
-}
-```
-
-Operational-event detection rates describe detections per confirmed active
-camera day. They must not be interpreted as abundance or density.
-
-### Coarse day and night
-
-```{r}
-diel <- read_output("coarse_day_night")
-if (!is.null(diel) && nrow(diel) > 0L) {
-  names(diel) <- c(
-    "Physical location", "Species", "Period", "Events", "Proportion"
-  )
-  knitr::kable(diel, digits = 3)
-} else {
-  cat(module_record("coarse_day_night")$reason)
-}
-```
-
-### Species accumulation
-
-```{r}
-accumulation <- read_output("species_accumulation")
-if (!is.null(accumulation)) {
-  knitr::kable(accumulation, digits = 2)
-  knitr::include_graphics(output_path("species_accumulation_plot"))
-} else {
-  cat(module_record("species_accumulation")$reason)
-}
-```
-
-### Physical locations
+### Where sampling occurred
 
 ```{r}
 map_path <- output_path("point_map")
@@ -180,12 +95,355 @@ if (!is.null(map_path)) {
 }
 ```
 
+```{r}
+#| results: asis
+module_context(
+  "point_map",
+  paste(
+    "The map shows supplied physical camera locations only. It does not",
+    "interpolate habitat or establish an environmental explanation."
+  )
+)
+```
+
+```{r}
+#| results: asis
+if (identical(inputs$scheme_id, "judbury-analysis-site")) {
+  cat(paste(
+    "**Judbury spatial policy:** this report groups 13 physical camera",
+    "locations into the nine intended grid sites using the approved replacement",
+    "history. This purpose-specific mapping preserves the grid design; it is not",
+    "a generic workflow default. Physical covariates were not pooled, and",
+    "representative grouped positions are orientation aids only.\n\n"
+  ))
+}
+```
+
+### How effort and detections differed
+
+```{r}
+effort <- read_output("effort_coverage")
+richness <- read_output("observed_richness")
+if (!is.null(effort)) {
+  effort_display <- effort[c(
+    "analysis_unit_id", "confirmed_active_days", "unknown_days"
+  )]
+  if (!is.null(richness)) {
+    effort_display <- merge(
+      effort_display,
+      richness[c("analysis_unit_id", "observed_richness")],
+      by = "analysis_unit_id",
+      all.x = TRUE,
+      sort = FALSE
+    )
+  } else {
+    effort_display$observed_richness <- NA_integer_
+  }
+  ordered_units <- effort_display$analysis_unit_id[
+    order(effort_display$confirmed_active_days, method = "radix")
+  ]
+  effort_plot <- rbind(
+    data.frame(
+      analysis_unit_id = effort_display$analysis_unit_id,
+      measure = "Confirmed active days",
+      value = effort_display$confirmed_active_days
+    ),
+    data.frame(
+      analysis_unit_id = effort_display$analysis_unit_id,
+      measure = "Days with unknown operation",
+      value = effort_display$unknown_days
+    ),
+    data.frame(
+      analysis_unit_id = effort_display$analysis_unit_id,
+      measure = "Observed species",
+      value = effort_display$observed_richness
+    )
+  )
+  effort_plot$analysis_unit_id <- factor(
+    effort_plot$analysis_unit_id,
+    levels = ordered_units
+  )
+  ggplot2::ggplot(
+    effort_plot,
+    ggplot2::aes(x = value, y = analysis_unit_id, fill = measure)
+  ) +
+    ggplot2::geom_col(width = 0.72, na.rm = TRUE) +
+    ggplot2::facet_grid(. ~ measure, scales = "free_x") +
+    ggplot2::scale_fill_manual(values = c(
+      "Confirmed active days" = "#287271",
+      "Days with unknown operation" = "#D9894E",
+      "Observed species" = "#6C5B7B"
+    )) +
+    ggplot2::labs(x = NULL, y = "Analysis unit") +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      legend.position = "none",
+      panel.grid.major.y = ggplot2::element_blank(),
+      strip.text = ggplot2::element_text(face = "bold")
+    )
+}
+```
+
+```{r}
+#| results: asis
+module_context(
+  "effort_coverage",
+  paste(
+    "Effort is confirmed active time at the selected analytical resolution;",
+    "unknown operation is not effort. Unequal effort limits direct comparison."
+  )
+)
+module_context(
+  "observed_richness",
+  paste(
+    "Observed richness is the number of species detected in the supplied,",
+    "effort-filtered records. It is not an estimate of species that went",
+    "undetected."
+  )
+)
+```
+
+A sampled unit with no detections has zero observed richness. A unit without a
+confirmed active day is excluded rather than treated as an ecological absence.
+Observed richness is not an estimate of species that went undetected.
+The complete effort and richness tables remain in the machine-readable bundle.
+
+## Detected community differences
+
+```{r}
+#| results: asis
+jaccard <- read_output("jaccard")
+if (!is.null(jaccard) && nrow(jaccard) > 0L) {
+  units <- unique(as.character(jaccard$analysis_unit_id_1))
+  jaccard$analysis_unit_id_1 <- factor(
+    jaccard$analysis_unit_id_1,
+    levels = rev(units)
+  )
+  jaccard$analysis_unit_id_2 <- factor(
+    jaccard$analysis_unit_id_2,
+    levels = units
+  )
+  print(ggplot2::ggplot(
+    jaccard,
+    ggplot2::aes(
+      x = analysis_unit_id_2,
+      y = analysis_unit_id_1,
+      fill = jaccard_dissimilarity
+    )
+  ) +
+    ggplot2::geom_tile(colour = "white", linewidth = 0.35) +
+    ggplot2::scale_fill_gradient(
+      low = "#F2EFE9",
+      high = "#2D5F73",
+      limits = c(0, 1),
+      na.value = "#D7D7D7",
+      name = "Jaccard\ndissimilarity"
+    ) +
+    ggplot2::coord_equal() +
+    ggplot2::labs(x = "Analysis unit", y = "Analysis unit") +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+    ))
+
+  between_units <- jaccard$jaccard_dissimilarity[
+    as.character(jaccard$analysis_unit_id_1) !=
+      as.character(jaccard$analysis_unit_id_2) &
+      is.finite(jaccard$jaccard_dissimilarity)
+  ]
+  if (length(between_units) > 0L) {
+    cat(
+      "\n\nAmong different analysis units, detected-composition dissimilarity ",
+      "ranged from **", sprintf("%.2f", min(between_units)), "** to **",
+      sprintf("%.2f", max(between_units)), "**. Darker cells indicate fewer ",
+      "detected species in common.\n\n",
+      sep = ""
+    )
+  }
+} else {
+  cat(module_record("jaccard")$reason)
+}
+```
+
+```{r}
+#| results: asis
+module_context(
+  "jaccard",
+  paste(
+    "Jaccard describes differences in detected species composition. It is not",
+    "standardized for unequal effort, sampling completeness, or detectability",
+    "and does not establish environmental causes."
+  )
+)
+```
+
+These descriptive differences do not establish environmental causes.
+
+## Operational-event detection rates
+
+```{r}
+#| results: asis
+rates <- read_output("operational_event_detection_rate")
+if (!is.null(rates) && nrow(rates) > 0L) {
+  rates <- rates[order(
+    rates$events_per_100_active_days,
+    decreasing = TRUE,
+    na.last = TRUE
+  ), ]
+  top_rates <- utils::head(rates, 12L)
+  top_rates$display_label <- paste0(
+    top_rates$species,
+    " @ ", top_rates$physical_location_id,
+    " (", top_rates$confirmed_active_days, " active days)"
+  )
+  top_rates$display_label <- factor(
+    top_rates$display_label,
+    levels = rev(top_rates$display_label)
+  )
+  print(ggplot2::ggplot(
+    top_rates,
+    ggplot2::aes(x = events_per_100_active_days, y = display_label)
+  ) +
+    ggplot2::geom_col(fill = "#3E7C59", width = 0.72) +
+    ggplot2::labs(
+      x = "Operational events per 100 confirmed active days",
+      y = "Species @ physical location (effort denominator)"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank()))
+  cat("\n\n", paste(
+    "These are the 12 highest already-emitted physical-location/species rates;",
+    "no rates were pooled across locations. The complete table remains in the",
+    "bundle."
+  ), "\n\n", sep = "")
+} else {
+  cat(module_record("operational_event_detection_rate")$reason)
+}
+```
+
+```{r}
+#| results: asis
+module_context(
+  "operational_event_detection_rate",
+  paste(
+    "These are detections of operational events per confirmed camera effort.",
+    "They must not be interpreted as abundance, density, or population trend."
+  )
+)
+```
+
+Operational-event detection rates must not be interpreted as abundance or density.
+
+## Broad day/night patterns
+
+```{r}
+#| results: asis
+diel <- read_output("coarse_day_night")
+if (!is.null(diel) && nrow(diel) > 0L) {
+  pair_totals <- stats::aggregate(
+    event_count ~ physical_location_id + species,
+    data = diel,
+    FUN = sum
+  )
+  pair_totals <- pair_totals[order(
+    pair_totals$event_count,
+    decreasing = TRUE,
+    method = "radix"
+  ), ]
+  selected_pairs <- utils::head(pair_totals, 12L)
+  selected_keys <- paste(
+    selected_pairs$physical_location_id,
+    selected_pairs$species,
+    sep = "\r"
+  )
+  diel$display_key <- paste(diel$physical_location_id, diel$species, sep = "\r")
+  diel_display <- diel[diel$display_key %in% selected_keys, , drop = FALSE]
+  label_lookup <- paste0(
+    selected_pairs$species,
+    " @ ", selected_pairs$physical_location_id,
+    " (", selected_pairs$event_count, " events)"
+  )
+  names(label_lookup) <- selected_keys
+  diel_display$display_label <- factor(
+    label_lookup[diel_display$display_key],
+    levels = rev(label_lookup)
+  )
+  print(ggplot2::ggplot(
+    diel_display,
+    ggplot2::aes(x = event_proportion, y = display_label, fill = period)
+  ) +
+    ggplot2::geom_col(width = 0.72) +
+    ggplot2::scale_x_continuous(
+      labels = function(value) paste0(round(100 * value), "%"),
+      limits = c(0, 1)
+    ) +
+    ggplot2::scale_fill_manual(
+      values = c(day = "#E3B23C", night = "#345995"),
+      name = "Period"
+    ) +
+    ggplot2::labs(
+      x = "Share of classified operational events",
+      y = "Species @ physical location (classified events)"
+    ) +
+    ggplot2::theme_minimal(base_size = 11) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_blank()))
+  cat(
+    "\n\nThe plot selects the 12 physical-location/species pairs with the most ",
+    "classified events and displays their already-emitted proportions. Nothing ",
+    "was pooled across locations; the complete table remains in the bundle.\n\n",
+    sep = ""
+  )
+} else {
+  cat(module_record("coarse_day_night")$reason)
+}
+```
+
+```{r}
+#| results: asis
+diel_basis <- if (identical(inputs$diel_method, "flash")) {
+  paste(
+    "Day versus night is based on the supplied flash indicator. It is a broad",
+    "light-condition summary, not precise clock-based activity timing."
+  )
+} else {
+  paste(
+    "Day versus night is based on the configured clock rule. It is a broad",
+    "category and does not support fine-scale diel inference."
+  )
+}
+module_context("coarse_day_night", diel_basis)
+```
+
+## Supporting sampling diagnostics
+
+### Species accumulation
+
+```{r}
+accumulation <- read_output("species_accumulation")
+if (!is.null(accumulation)) {
+  knitr::include_graphics(output_path("species_accumulation_plot"))
+} else {
+  cat(module_record("species_accumulation")$reason)
+}
+```
+
+```{r}
+#| results: asis
+module_context(
+  "species_accumulation",
+  paste(
+    "This shows how detected richness accumulated across sampled physical",
+    "locations. It is not an estimate of unseen or regional richness."
+  )
+)
+```
+
 ### Event-gap sensitivity
 
 ```{r}
 gap <- read_output("event_gap_sensitivity")
 if (!is.null(gap)) {
-  knitr::kable(gap, digits = 2)
   knitr::include_graphics(output_path("event_gap_sensitivity_plot"))
 } else {
   cat(module_record("event_gap_sensitivity")$reason)
@@ -193,28 +451,27 @@ if (!is.null(gap)) {
 ```
 
 ```{r}
-if (identical(inputs$scheme_id, "judbury-analysis-site")) {
-  cat(paste(
-    "The nine-site Judbury grouping is explicit and purpose-specific. It",
-    "groups 13 physical locations using approved, non-overlapping replacement",
-    "histories; it is not a generic default. Physical covariates were not",
-    "pooled, and representative mapped positions are orientation aids only."
-  ))
-}
+#| results: asis
+module_context(
+  "event_gap_sensitivity",
+  paste(
+    "This diagnostic shows how event counts depend on the chosen time-gap",
+    "rule. An operational event is a reproducible grouping, not necessarily",
+    "an independent animal visit."
+  )
+)
 ```
 
-## Analysis status
+## Analysis status and limits
 
 ```{r}
 knitr::kable(status_table)
 ```
 
 An omitted analysis lacked the evidence needed for a defensible result. A
-completed-with-warnings result remains usable within the explanation shown
-above. Detailed source, repair, entity, effort, event-membership, configuration,
-and fixity evidence is kept separately in the audit bundle.
-
-## Limits
+completed-with-warnings result remains usable only within the explanation shown
+beside it. Detailed source, repair, entity, effort, event-membership,
+configuration, and fixity evidence is kept separately in the audit bundle.
 
 - Camera-trap non-detection does not prove ecological absence.
 - Coarse day/night categories do not support fine-scale diel inference.

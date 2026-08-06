@@ -2,6 +2,9 @@
 # document prevents renv from treating every Quarto file as a Shiny document.
 analysis/report.qmd
 
+# Published bundles contain a copied report source and are generated evidence.
+outputs/
+
 # Historical records can contain obsolete executable examples.
 docs/goals/
 docs/log/

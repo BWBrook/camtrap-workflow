@@ -84,6 +84,14 @@ test_that("current seven-stage workflow publishes one verifiable bundle", {
     file.path(bundle, manifest$module_status),
     simplifyVector = FALSE
   )
+  report_html <- paste(
+    readLines(file.path(bundle, manifest$report), warn = FALSE),
+    collapse = "\n"
+  )
+  report_source <- paste(
+    readLines(file.path(bundle, "report", "report.qmd"), warn = FALSE),
+    collapse = "\n"
+  )
   source_ledger <- jsonlite::read_json(
     file.path(bundle, manifest$audit$events$source_row_ledger),
     simplifyVector = TRUE
@@ -91,6 +99,13 @@ test_that("current seven-stage workflow publishes one verifiable bundle", {
 
   expect_equal(manifest$manifest_schema, "camtrap-run-bundle/2.0")
   expect_true(independently_verified$valid)
+  expect_true(all(vapply(c(
+    "Sampling and observed richness",
+    "Detected community differences",
+    "Operational-event detection rates",
+    "Broad day/night patterns"
+  ), grepl, logical(1), x = report_html, fixed = TRUE)))
+  expect_false(grepl("knitr::kable(diel", report_source, fixed = TRUE))
   expect_equal(independently_verified$events, 2L)
   expect_equal(independently_verified$source_memberships, 2L)
   expect_equal(source_ledger$disposition_scope, "event_formation")
