@@ -35,6 +35,10 @@ the stage contract.
 Validation, entity/effort resolution, event construction, and selected spatial
 resolution are each computed once and reused downstream.
 
+The primary report reshapes already-emitted results for display only. Detailed
+rows remain in the bundle, and the report does not pool results into new
+ecological metrics.
+
 ## Failure Semantics
 
 Input or lineage integrity failures stop the run. Ecological eligibility is

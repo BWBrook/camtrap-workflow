@@ -834,3 +834,31 @@ Consequences / follow-ups:
 - Production repair remains deferred for zero-row selected-event preview
   serialization and CamtrapDP deployment lineage that omits the physical-
   location identifier required by grouped-site concurrency.
+
+---
+
+## 2026-08-06 - Keep the primary report downstream of emitted results
+
+Decision:
+- Use the existing emitted tables as the only ecological authority for the
+  primary report. Reshape and select rows for display, but do not pool
+  location-level results into new report-only ecological metrics.
+- Show Judbury's approved 13-physical-location to nine-analysis-site policy
+  only when that exact scheme is active.
+- Use the maintained synthetic forest four-table example as the bounded
+  non-Judbury portability proof for Goal 012.
+
+Rationale:
+- A concise report should improve ecological comprehension without creating a
+  second, less-auditable calculation layer.
+- Location-specific effort denominators and day/night proportions already
+  answer the present practitioner question honestly. A pooled species metric
+  would require an engine-level scientific decision, not a plotting shortcut.
+
+Consequences / follow-ups:
+- Complete rows remain in the machine/audit bundle; the primary report shows a
+  compact selected subset.
+- New pooled rates, temporal modules, common-name display contracts, external
+  datasets, and interfaces remain future goals rather than Goal 012 polish.
+
+---

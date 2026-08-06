@@ -2,9 +2,19 @@
 
 ## Current Product
 
-Goal 011 defines the lean current product and the only supported run contract.
-Implementation and acceptance evidence live in
-`docs/goals/011-kill-your-darlings/`.
+Goal 011 defines the lean run contract. Goal 012 adds a practitioner-facing
+report proof without changing the ecological engine. Local implementation and
+evidence live in `docs/goals/012-practitioner-report/` and await orchestrator
+review.
+
+## Goal 012 Local Evidence
+
+- [x] Replace broad tables with compact displays of existing emitted results.
+- [x] Keep warnings, spatial resolution, effort basis, and claim limits nearby.
+- [x] Prove the full Judbury journey against the accepted Jaccard oracle.
+- [x] Prove the same full journey on the maintained forest four-table example.
+- [x] Complete one scientific/visual review and material repair pass.
+- [ ] Obtain orchestrator acceptance and publication authority.
 
 ## Goal 011 Acceptance
 

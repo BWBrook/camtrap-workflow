@@ -64,6 +64,12 @@ A successful full run publishes `outputs/runs/<run_id>/`, writes
 pointer. The main user result is `report/report.html`; detailed evidence stays
 in `provenance/`, `tables/`, `results/`, and `run_manifest.json`.
 
+The primary report uses compact figures to show the sampling footprint,
+effort beside observed richness, descriptive detected-composition differences,
+physical-location operational-event rates, and broad day/night patterns. It
+does not replace the complete machine-readable tables or calculate a second
+set of ecological results.
+
 Verify a generic published bundle independently:
 
 ```sh

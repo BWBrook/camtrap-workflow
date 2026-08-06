@@ -1,7 +1,6 @@
 # Questions For Barry
 
-There are no open implementation questions for the authorized Goal 011 core.
-
-The next decision point is acceptance after scientific and architecture review,
-ordinary CI, and the single timed Judbury release. Any future module or user
-interface remains a separate proposal.
+There are no open implementation questions for the Goal 012 practitioner
+report. The next decision is orchestrator acceptance of the local evidence and
+whether to publish this bounded report improvement. Any new ecological module
+or user interface remains a separate proposal.
