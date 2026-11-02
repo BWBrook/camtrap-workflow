@@ -1,5 +1,7 @@
 # Camtrap Workflow
 
+> **Status:** developed in the open as a working record. This is work in progress: contents may change, and nothing here is peer-reviewed unless stated.
+
 Camtrap Workflow turns labelled camera-trap records, taxonomic identities,
 camera-operation evidence, and physical-location metadata into a concise HTML
 ecological report and an auditable, machine-readable run bundle.
